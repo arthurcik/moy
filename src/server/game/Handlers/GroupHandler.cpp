@@ -34,6 +34,8 @@
 #include "Vehicle.h"
 #include "World.h"
 #include "WorldPacket.h"
+#include "Chat.h"
+#include "Language.h"
 
 class Aura;
 
@@ -78,7 +80,15 @@ void WorldSession::HandleGroupInviteOpcode(WorldPackets::Party::PartyInviteClien
     // no player
     if (!invitedPlayer)
     {
+        //SendPartyResult(PARTY_OP_INVITE, packet.TargetName, ERR_BAD_PLAYER_NAME_S);
+        if (sWorld->getBoolConfig(CONFIG_FAKE_WHO_LIST))
+        {
+        ChatHandler(_player->GetSession()).PSendSysMessage(LANG_FAKE_NOT_DISTURB);
+        }
+        else
+        {
         SendPartyResult(PARTY_OP_INVITE, packet.TargetName, ERR_BAD_PLAYER_NAME_S);
+        }
         return;
     }
 
