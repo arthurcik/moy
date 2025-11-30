@@ -1533,7 +1533,7 @@ struct npc_gunship_boarding_addAI : public gunship_npc_AI
             return !me->_IsTargetAcceptable(player) || !me->CanStartAttack(player, true);
         });
 
-        //npcbot: allow bots as targets
+/*        //npcbot: allow bots as targets
         auto npcbot_check = [this](Creature const* creature) {
             return creature->IsNPCBotOrPet() && me->_IsTargetAcceptable(creature) && me->CanStartAttack(creature, true);
         };
@@ -1542,7 +1542,7 @@ struct npc_gunship_boarding_addAI : public gunship_npc_AI
         Cell::VisitWorldObjects(me, botsearcher, 70.0f);
         if (anybot)
             return true;
-        //end npcbot
+        //end npcbot */
 
         return !players.empty();
     }
