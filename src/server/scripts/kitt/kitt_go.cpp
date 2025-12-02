@@ -86,24 +86,24 @@ public:
                     player->TeleportTo(571, 5804.15f, 624.771f, 647.767f, 0.0f);
                 } break;	//Dalaran
                 case 501022: if (player->GetLevel() >= 55) {
-                    player->TeleportTo(609, 2390.51, -5640.49, 377.954, 0.0f);
+                    player->TeleportTo(609, 2390.51f, -5640.49f, 377.954f, 0.0f);
                 } break;	//DK1 jos DK Hall of Command
                 case 501023: if (player->GetLevel() >= 55) {
-                    player->TeleportTo(609, 2365.47, -5656.12, 426.083, 0.0f);
+                    player->TeleportTo(609, 2365.47f, -5656.12f, 426.083f, 0.0f);
                 } break;	//DK2 sus DK start area
                 case 501024: if (player->GetLevel() >= 70) {
-                    player->TeleportTo(571, 2828.46, 6177.56, 121.982, 0.0f);
+                    player->TeleportTo(571, 2828.46f, 6177.56f, 121.982f, 0.0f);
                 } break;	//Durotar to Warsong Hold
                 case 501025: if (player->GetLevel() >= 70) {
-                    player->TeleportTo(1, 1179.81, -4147.89, 52.3335, 0.0f);
+                    player->TeleportTo(1, 1179.81f, -4147.89f, 52.3335f, 0.0f);
                 } break;	//Warsong Hold to Durotar
                 case 501026: if (player->GetLevel() >= 70) {
-                    player->TeleportTo(571, 2231.51, 5132.28, 5.3438, 0.0f);
+                    player->TeleportTo(571, 2231.51f, 5132.28f, 5.3438f, 0.0f);
                 } break;	//Stormwind to Valiance Keep
                 case 501027: if (player->GetLevel() >= 70) {
-                    player->TeleportTo(0, -8291.1, 1404.3, 4.72375, 0.0f);
+                    player->TeleportTo(0, -8291.1f, 1404.3f, 4.72375f, 0.0f);
                 } break;		//Valiance Keep to Stormwind
-                case 501020: player->TeleportTo(0, -4854.04, -1004.33, 453.76, 0.0f); break;	//Portal Zone
+                case 501020: player->TeleportTo(0, -4854.04f, -1004.33f, 453.76f, 0.0f); break;	//Portal Zone
                     /*            case 501020:
                                     if (player->GetLevel() >= 1 )
                                     {
@@ -120,20 +120,20 @@ public:
                                     }
                                     break;*/
 
-                case 501028: player->TeleportTo(0, -14890.9, 454.866, 6.38416, 0.0f); break;	//event 900
-                case 501029: player->TeleportTo(1, -4995.06, -2961.62, 71.8169, 0.0f); break;	//event 901
+                case 501028: player->TeleportTo(0, -14890.9f, 454.866f, 6.38416f, 0.0f); break;	//event 900
+                case 501029: player->TeleportTo(1, -4995.06f, -2961.62f, 71.8169f, 0.0f); break;	//event 901
 
-                case 501100: player->TeleportTo(603, 924.092, -6.90067, 418.588, 0.0f); break;	//Ulduar A
-                case 501101: player->TeleportTo(603, 1497.23, -28.6204, 420.967, 0.0f); break;	//Ulduar B
-                case 501102: player->TeleportTo(603, 2356.05, 2567.9, 419.633, 0.0f); break;	//Ulduar D
+                case 501100: player->TeleportTo(603, 924.092f, -6.90067f, 418.588f, 0.0f); break;	//Ulduar A
+                case 501101: player->TeleportTo(603, 1497.23f, -28.6204f, 420.967f, 0.0f); break;	//Ulduar B
+                case 501102: player->TeleportTo(603, 2356.05f, 2567.9f, 419.633f, 0.0f); break;	//Ulduar D
 
-                case 501103: player->TeleportTo(578, 1285.59, 1070.35, 439.515, 0.0f); break;	//Ocu boss 2
-                case 501104: player->TeleportTo(578, 1120.02, 921.552, 526.811, 0.0f); break;	//Ocu boss 3
-                case 501105: player->TeleportTo(578, 1022.03, 1045.00, 605.626, 0.0f); break;	//Ocu boss 4
+                case 501103: player->TeleportTo(578, 1285.59f, 1070.35f, 439.515f, 0.0f); break;	//Ocu boss 2
+                case 501104: player->TeleportTo(578, 1120.02f, 921.552f, 526.811f, 0.0f); break;	//Ocu boss 3
+                case 501105: player->TeleportTo(578, 1022.03f, 1045.00f, 605.626f, 0.0f); break;	//Ocu boss 4
 
-                case 202243: player->TeleportTo(631, -548.908, 2206.96, 539.290, 0.0f); break;	//ICC B
-                case 202245: player->TeleportTo(631, -503.285, 2210.41, 62.8242, 0.0f); break;	//ICC A
-                case 501106: player->TeleportTo(631, 516.173, -2124.75, 1042.99, 0.0f); break;	//ICC LK
+                case 202243: player->TeleportTo(631, -548.908f, 2206.96f, 539.290f, 0.0f); break;	//ICC B
+                case 202245: player->TeleportTo(631, -503.285f, 2210.41f, 62.8242f, 0.0f); break;	//ICC A
+                case 501106: player->TeleportTo(631, 516.173f, -2124.75f, 1042.99f, 0.0f); break;	//ICC LK
                 }
             }
             return false;
