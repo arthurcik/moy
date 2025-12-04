@@ -352,9 +352,11 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
             //const char fake_players_db = (searchBool ? FAKE_CHAR_ONLINE_SEARCH : FAKE_CHAR_ONLINE);
         CharacterDatabasePreparedStatement* fake = CharacterDatabase.GetPreparedStatement(searchBool ? FAKE_CHAR_ONLINE_SEARCH : FAKE_CHAR_ONLINE);
        
-            fake->setUInt32(0, sWorld->getIntConfig(CONFIG_FAKE_WHO_ONLINE_INTERVAL));
+        fake->setUInt32(0, sWorld->getIntConfig(CONFIG_FAKE_WHO_ONLINE_INTERVAL));
         if (searchBool)
+        {
             fake->setString(1, searchName);
+        }
         
             PreparedQueryResult fakeresult = CharacterDatabase.Query(fake);
         if (fakeresult)
