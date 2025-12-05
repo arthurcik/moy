@@ -25,6 +25,10 @@
 #include "ObjectMgr.h"
 #include "SpellAuras.h"
 #include "Config.h"
+#include "World.h"
+#include "ObjectAccessor.h"
+#include "GuildMgr.h"
+
 
 ChatLog::ChatLog()
 {
@@ -56,55 +60,55 @@ ChatLog::~ChatLog()
 void ChatLog::Initialize()
 {
     // determine, if the chat logs are enabled
-    ChatLogEnable = sConfig->GetBoolDefault("ChatLogEnable", false);
-    ChatLogDateSplit = sConfig->GetBoolDefault("ChatLogDateSplit", false);
-    ChatLogUTFHeader = sConfig->GetBoolDefault("ChatLogUTFHeader", false);
-    ChatLogIgnoreUnprintable = sConfig->GetBoolDefault("ChatLogIgnoreUnprintable", false);
+    ChatLogEnable = sConfigMgr->GetBoolDefault("ChatLogEnable", false);
+    ChatLogDateSplit = sConfigMgr->GetBoolDefault("ChatLogDateSplit", false);
+    ChatLogUTFHeader = sConfigMgr->GetBoolDefault("ChatLogUTFHeader", false);
+    ChatLogIgnoreUnprintable = sConfigMgr->GetBoolDefault("ChatLogIgnoreUnprintable", false);
 
     if (ChatLogEnable)
     {
         // read chat log file names
-        names[CHAT_LOG_CHAT] = sConfig->GetStringDefault("ChatLogChatFile", "");
-        names[CHAT_LOG_PARTY] = sConfig->GetStringDefault("ChatLogPartyFile", "");
-        names[CHAT_LOG_GUILD] = sConfig->GetStringDefault("ChatLogGuildFile", "");
-        names[CHAT_LOG_WHISPER] = sConfig->GetStringDefault("ChatLogWhisperFile", "");
-        names[CHAT_LOG_CHANNEL] = sConfig->GetStringDefault("ChatLogChannelFile", "");
-        names[CHAT_LOG_RAID] = sConfig->GetStringDefault("ChatLogRaidFile", "");
-        names[CHAT_LOG_BATTLEGROUND] = sConfig->GetStringDefault("ChatLogBattleGroundFile", "");
+        names[CHAT_LOG_CHAT] = sConfigMgr->GetStringDefault("ChatLogChatFile", "");
+        names[CHAT_LOG_PARTY] = sConfigMgr->GetStringDefault("ChatLogPartyFile", "");
+        names[CHAT_LOG_GUILD] = sConfigMgr->GetStringDefault("ChatLogGuildFile", "");
+        names[CHAT_LOG_WHISPER] = sConfigMgr->GetStringDefault("ChatLogWhisperFile", "");
+        names[CHAT_LOG_CHANNEL] = sConfigMgr->GetStringDefault("ChatLogChannelFile", "");
+        names[CHAT_LOG_RAID] = sConfigMgr->GetStringDefault("ChatLogRaidFile", "");
+        names[CHAT_LOG_BATTLEGROUND] = sConfigMgr->GetStringDefault("ChatLogBattleGroundFile", "");
 
         // read screen log flags
-        screenflag[CHAT_LOG_CHAT] = sConfig->GetBoolDefault("ChatLogChatScreen", false);
-        screenflag[CHAT_LOG_PARTY] = sConfig->GetBoolDefault("ChatLogPartyScreen", false);
-        screenflag[CHAT_LOG_GUILD] = sConfig->GetBoolDefault("ChatLogGuildScreen", false);
-        screenflag[CHAT_LOG_WHISPER] = sConfig->GetBoolDefault("ChatLogWhisperScreen", false);
-        screenflag[CHAT_LOG_CHANNEL] = sConfig->GetBoolDefault("ChatLogChannelScreen", false);
-        screenflag[CHAT_LOG_RAID] = sConfig->GetBoolDefault("ChatLogRaidScreen", false);
-        screenflag[CHAT_LOG_BATTLEGROUND] = sConfig->GetBoolDefault("ChatLogBattleGroundScreen", false);
+        screenflag[CHAT_LOG_CHAT] = sConfigMgr->GetBoolDefault("ChatLogChatScreen", false);
+        screenflag[CHAT_LOG_PARTY] = sConfigMgr->GetBoolDefault("ChatLogPartyScreen", false);
+        screenflag[CHAT_LOG_GUILD] = sConfigMgr->GetBoolDefault("ChatLogGuildScreen", false);
+        screenflag[CHAT_LOG_WHISPER] = sConfigMgr->GetBoolDefault("ChatLogWhisperScreen", false);
+        screenflag[CHAT_LOG_CHANNEL] = sConfigMgr->GetBoolDefault("ChatLogChannelScreen", false);
+        screenflag[CHAT_LOG_RAID] = sConfigMgr->GetBoolDefault("ChatLogRaidScreen", false);
+        screenflag[CHAT_LOG_BATTLEGROUND] = sConfigMgr->GetBoolDefault("ChatLogBattleGroundScreen", false);
     }
 
     // lexics cutter
-    LexicsCutterEnable = sConfig->GetBoolDefault("LexicsCutterEnable", false);
+    LexicsCutterEnable = sConfigMgr->GetBoolDefault("LexicsCutterEnable", false);
 
     if (LexicsCutterEnable)
     {
         // initialize lexics cutter parameters
-        LexicsCutterInnormativeCut = sConfig->GetBoolDefault("LexicsCutterInnormativeCut", true);
-        LexicsCutterNoActionOnGM = sConfig->GetBoolDefault("LexicsCutterNoActionOnGM", true);
-        LexicsCutterScreenLog = sConfig->GetBoolDefault("LexicsCutterScreenLog", false);
-        LexicsCutterCutReplacement = sConfig->GetStringDefault("LexicsCutterCutReplacement", "&!@^%!^&*!!! [gibberish]");
-        LexicsCutterAction = sConfig->GetIntDefault("LexicsCutterAction", 0);
-        LexicsCutterActionDuration = sConfig->GetIntDefault("LexicsCutterActionDuration", 60000);
-        std::string fn_analogsfile = sConfig->GetStringDefault("LexicsCutterAnalogsFile", "");
-        std::string fn_wordsfile = sConfig->GetStringDefault("LexicsCutterWordsFile", "");
+        LexicsCutterInnormativeCut = sConfigMgr->GetBoolDefault("LexicsCutterInnormativeCut", true);
+        LexicsCutterNoActionOnGM = sConfigMgr->GetBoolDefault("LexicsCutterNoActionOnGM", true);
+        LexicsCutterScreenLog = sConfigMgr->GetBoolDefault("LexicsCutterScreenLog", false);
+        LexicsCutterCutReplacement = sConfigMgr->GetStringDefault("LexicsCutterCutReplacement", "&!@^%!^&*!!! [gibberish]");
+        LexicsCutterAction = sConfigMgr->GetIntDefault("LexicsCutterAction", 0);
+        LexicsCutterActionDuration = sConfigMgr->GetIntDefault("LexicsCutterActionDuration", 60000);
+        std::string fn_analogsfile = sConfigMgr->GetStringDefault("LexicsCutterAnalogsFile", "");
+        std::string fn_wordsfile = sConfigMgr->GetStringDefault("LexicsCutterWordsFile", "");
 
         // read lexics cutter flags
-        cutflag[CHAT_LOG_CHAT] = sConfig->GetBoolDefault("LexicsCutInChat", true);
-        cutflag[CHAT_LOG_PARTY] = sConfig->GetBoolDefault("LexicsCutInParty", true);
-        cutflag[CHAT_LOG_GUILD] = sConfig->GetBoolDefault("LexicsCutInGuild", true);
-        cutflag[CHAT_LOG_WHISPER] = sConfig->GetBoolDefault("LexicsCutInWhisper", true);
-        cutflag[CHAT_LOG_CHANNEL] = sConfig->GetBoolDefault("LexicsCutInChannel", true);
-        cutflag[CHAT_LOG_RAID] = sConfig->GetBoolDefault("LexicsCutInRaid", true);
-        cutflag[CHAT_LOG_BATTLEGROUND] = sConfig->GetBoolDefault("LexicsCutInBattleGround", true);
+        cutflag[CHAT_LOG_CHAT] = sConfigMgr->GetBoolDefault("LexicsCutInChat", true);
+        cutflag[CHAT_LOG_PARTY] = sConfigMgr->GetBoolDefault("LexicsCutInParty", true);
+        cutflag[CHAT_LOG_GUILD] = sConfigMgr->GetBoolDefault("LexicsCutInGuild", true);
+        cutflag[CHAT_LOG_WHISPER] = sConfigMgr->GetBoolDefault("LexicsCutInWhisper", true);
+        cutflag[CHAT_LOG_CHANNEL] = sConfigMgr->GetBoolDefault("LexicsCutInChannel", true);
+        cutflag[CHAT_LOG_RAID] = sConfigMgr->GetBoolDefault("LexicsCutInRaid", true);
+        cutflag[CHAT_LOG_BATTLEGROUND] = sConfigMgr->GetBoolDefault("LexicsCutInBattleGround", true);
 
         if (fn_analogsfile == "" || fn_wordsfile == "")
         {
@@ -119,9 +123,9 @@ void ChatLog::Initialize()
             if (Lexics) Lexics->Map_Innormative_Words();
 
             // read additional parameters
-            Lexics->IgnoreLetterRepeat = sConfig->GetBoolDefault("LexicsCutterIgnoreRepeats", true);
-            Lexics->IgnoreMiddleSpaces = sConfig->GetBoolDefault("LexicsCutterIgnoreSpaces", true);
-            fn_innormative = sConfig->GetStringDefault("LexicsCutterLogFile", "");
+            Lexics->IgnoreLetterRepeat = sConfigMgr->GetBoolDefault("LexicsCutterIgnoreRepeats", true);
+            Lexics->IgnoreMiddleSpaces = sConfigMgr->GetBoolDefault("LexicsCutterIgnoreSpaces", true);
+            fn_innormative = sConfigMgr->GetStringDefault("LexicsCutterLogFile", "");
         }
     }
 
@@ -213,12 +217,13 @@ void ChatLog::PartyMsg(Player *player, std::string &msg)
         // obtain group information
         log_str.append("[");
 
-        uint8 gm_count = group->GetMembersCount();
-        uint8 gm_count_m1 = gm_count - 1;
-        uint64 gm_leader_GUID = group->GetLeaderGUID();
+//        uint8 gm_count = group->GetMembersCount();
+//        uint8 gm_count_m1 = gm_count - 1;
+        ObjectGuid gm_leader_GUID = group->GetLeaderGUID();
         Player *gm_member;
 
-        gm_member = sObjectMgr->GetPlayer(gm_leader_GUID);
+       // gm_member = sWorld->GetPlayer(group->GetLeaderGUID());
+        gm_member = ObjectAccessor::FindPlayer(gm_leader_GUID);
         if (gm_member)
         {
             log_str.append(gm_member->GetName());
@@ -231,7 +236,7 @@ void ChatLog::PartyMsg(Player *player, std::string &msg)
         {
             if (itr->guid == gm_leader_GUID) continue;
 
-            gm_member = sObjectMgr->GetPlayer(itr->guid);
+            gm_member = ObjectAccessor::FindPlayer(itr->guid);
             if (gm_member)
             {
                 log_str.append(itr->name);
@@ -274,7 +279,9 @@ void ChatLog::GuildMsg(Player *player, std::string &msg, bool officer)
     }
     else
     {
-        Guild *guild = sObjectMgr->GetGuildById(player->GetGuildId());
+      //  Guild *guild = sObjectMgr->GetGuild(player->GetGuildId());
+        Guild* guild = sGuildMgr->GetGuildById(player->GetGuildId());
+
         if (!guild)
         {
             log_str.append("[unknown guild] ");
@@ -413,12 +420,15 @@ void ChatLog::RaidMsg(Player *player, std::string &msg, uint32 type)
         // obtain group information
         log_str.append("[");
 
-        uint8 gm_count = group->GetMembersCount();
-        uint8 gm_count_m1 = gm_count - 1;
-        uint64 gm_leader_GUID = group->GetLeaderGUID();
+//        uint8 gm_count = group->GetMembersCount();
+//        uint8 gm_count_m1 = gm_count - 1;
+        ObjectGuid gm_leader_GUID = group->GetLeaderGUID();
+//          uint64 gm_leader_GUID = group->GetLeaderGUID();
         Player *gm_member;
 
-        gm_member = sObjectMgr->GetPlayer(gm_leader_GUID);
+//        gm_member = sObjectMgr->GetPlayer(gm_leader_GUID);
+        gm_member = ObjectAccessor::FindPlayer(gm_leader_GUID);
+
         if (gm_member)
         {
             log_str.append(gm_member->GetName());
@@ -431,7 +441,7 @@ void ChatLog::RaidMsg(Player *player, std::string &msg, uint32 type)
         {
             if (itr->guid == gm_leader_GUID) continue;
 
-            gm_member = sObjectMgr->GetPlayer(itr->guid);
+            gm_member = ObjectAccessor::FindPlayer(itr->guid);
             if (gm_member)
             {
                 log_str.append(itr->name);
@@ -491,12 +501,14 @@ void ChatLog::BattleGroundMsg(Player *player, std::string &msg, uint32 type)
         // obtain group information
         log_str.append("[");
 
-        uint8 gm_count = group->GetMembersCount();
-        uint8 gm_count_m1 = gm_count - 1;
-        uint64 gm_leader_GUID = group->GetLeaderGUID();
+ //       uint8 gm_count = group->GetMembersCount();
+//        uint8 gm_count_m1 = gm_count - 1;
+//        uint64 gm_leader_GUID = group->GetLeaderGUID();
+        ObjectGuid gm_leader_GUID = group->GetLeaderGUID();
         Player *gm_member;
 
-        gm_member = sObjectMgr->GetPlayer(gm_leader_GUID);
+//        gm_member = sObjectMgr->GetPlayer(gm_leader_GUID);
+        gm_member = ObjectAccessor::FindPlayer(gm_leader_GUID);
         if (gm_member)
         {
             log_str.append(gm_member->GetName());
@@ -509,7 +521,7 @@ void ChatLog::BattleGroundMsg(Player *player, std::string &msg, uint32 type)
         {
             if (itr->guid == gm_leader_GUID) continue;
 
-            gm_member = sObjectMgr->GetPlayer(itr->guid);
+            gm_member = ObjectAccessor::FindPlayer(itr->guid);
             if (gm_member)
             {
                 log_str.append(itr->name);
@@ -723,21 +735,26 @@ void ChatLog::ChatBadLexicsAction(Player* player, std::string& msg)
     if (LexicsCutterNoActionOnGM && player->GetSession()->GetSecurity()) return;
 
     // special action
-    const SpellEntry* sl;
+//    const SpellEntry* sl;
 
     switch (LexicsCutterAction)
     {
         case LEXICS_ACTION_DIE:
         {
+
+            // Corectie pentru DealDamage: 
+            // Arg 1 (attacker): player
+            // Arg 2 (victim): player
+            // Arg 3 (damage amount): player->GetHealth() (pentru a-l omori instant)
             // oops, kicked the bucket
-            player->DealDamage(player, player->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+            player->DealDamage(player, player, player->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
         }
         break;
 
         case LEXICS_ACTION_DRAIN:
         {
             // living corpse :)
-            player->DealDamage(player, player->GetHealth() - 5, NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+            player->DealDamage(player, player, player->GetHealth() - 5, NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
         }
         break;
 

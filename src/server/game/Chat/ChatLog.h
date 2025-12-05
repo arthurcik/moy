@@ -22,7 +22,7 @@
 #include "SharedDefines.h"
 #include "ChatLexicsCutter.h"
 #include "ObjectMgr.h"
-#include "ace/Singleton.h"
+#include <string>
 
 #define CHATLOG_CHAT_TYPES_COUNT 7
 
@@ -52,10 +52,16 @@ enum LexicsActions
 
 class ChatLog
 {
-        friend class ACE_Singleton<ChatLog, ACE_Null_Mutex>;
+    private:
         ChatLog();
-    public:
         ~ChatLog();
+
+    public:
+        static ChatLog* instance()
+        {
+            static ChatLog instance;
+            return &instance;
+        }
 
         void Initialize();
 
@@ -104,5 +110,5 @@ class ChatLog
         void OutTimestamp(FILE *file);
 };
 
-#define sChatLog (*ACE_Singleton<ChatLog, ACE_Null_Mutex>::instance())
+#define sChatLog ChatLog::instance()
 #endif
