@@ -22,6 +22,7 @@
 #include "Channel.h"
 #include "ChannelMgr.h"
 #include "Chat.h"
+#include "ChatLog.h"
 #include "ChatPackets.h"
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
@@ -280,6 +281,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
     {
         case CHAT_MSG_SAY:
         {
+            sChatLog->ChatMsg(GetPlayer(), msg, type);
+
             // Prevent cheating
             if (!sender->IsAlive())
                 return;
@@ -295,6 +298,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_EMOTE:
         {
+            sChatLog->ChatMsg(GetPlayer(), msg, type);
+
             // Prevent cheating
             if (!sender->IsAlive())
                 return;
@@ -310,6 +315,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_YELL:
         {
+            sChatLog->ChatMsg(GetPlayer(), msg, type);
+
             // Prevent cheating
             if (!sender->IsAlive())
                 return;
@@ -325,6 +332,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_WHISPER:
         {
+            sChatLog->WhisperMsg(GetPlayer(), to, msg);
+
             if (!normalizePlayerName(to))
             {
                 SendPlayerNotFoundNotice(to);
@@ -383,6 +392,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         case CHAT_MSG_PARTY:
         case CHAT_MSG_PARTY_LEADER:
         {
+            sChatLog->PartyMsg(GetPlayer(), msg);
+
             // if player is in battleground, he cannot say to battleground members by /p
             Group* group = GetPlayer()->GetOriginalGroup();
             if (!group)
@@ -406,6 +417,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_GUILD:
         {
+            sChatLog->GuildMsg(GetPlayer(), msg, false);
+
             if (GetPlayer()->GetGuildId())
             {
                 if (Guild* guild = sGuildMgr->GetGuildById(GetPlayer()->GetGuildId()))
@@ -419,6 +432,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_OFFICER:
         {
+            sChatLog->GuildMsg(GetPlayer(), msg, true);
+
             if (GetPlayer()->GetGuildId())
             {
                 if (Guild* guild = sGuildMgr->GetGuildById(GetPlayer()->GetGuildId()))
@@ -432,6 +447,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_RAID:
         {
+            sChatLog->RaidMsg(GetPlayer(), msg, type);
+
             // if player is in battleground, he cannot say to battleground members by /ra
             Group* group = GetPlayer()->GetOriginalGroup();
             if (!group)
@@ -450,6 +467,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_RAID_LEADER:
         {
+            sChatLog->RaidMsg(GetPlayer(), msg, type);
+
             // if player is in battleground, he cannot say to battleground members by /ra
             Group* group = GetPlayer()->GetOriginalGroup();
             if (!group)
@@ -468,6 +487,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_RAID_WARNING:
         {
+            sChatLog->RaidMsg(GetPlayer(), msg, type);
+
             Group* group = GetPlayer()->GetGroup();
             if (!group || !(group->isRaidGroup() || sWorld->getBoolConfig(CONFIG_CHAT_PARTY_RAID_WARNINGS)) || !(group->IsLeader(GetPlayer()->GetGUID()) || group->IsAssistant(GetPlayer()->GetGUID())) || group->isBGGroup())
                 return;
@@ -482,6 +503,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_BATTLEGROUND:
         {
+            sChatLog->BattleGroundMsg(GetPlayer(), msg, type);
+
             //battleground raid is always in Player->GetGroup(), never in GetOriginalGroup()
             Group* group = GetPlayer()->GetGroup();
             if (!group || !group->isBGGroup())
@@ -496,6 +519,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_BATTLEGROUND_LEADER:
         {
+            sChatLog->BattleGroundMsg(GetPlayer(), msg, type);
+
             // battleground raid is always in Player->GetGroup(), never in GetOriginalGroup()
             Group* group = GetPlayer()->GetGroup();
             if (!group || !group->isBGGroup() || !group->IsLeader(GetPlayer()->GetGUID()))
@@ -510,6 +535,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_CHANNEL:
         {
+            sChatLog->ChannelMsg(GetPlayer(), channel, msg);
+
             if (!HasPermission(rbac::RBAC_PERM_SKIP_CHECK_CHAT_CHANNEL_REQ))
             {
                 if (sender->GetLevel() < sWorld->getIntConfig(CONFIG_CHAT_CHANNEL_LEVEL_REQ))
@@ -528,6 +555,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_AFK:
         {
+            sChatLog->ChatMsg(GetPlayer(), msg, type);
+
             if (!sender->IsInCombat())
             {
                 if (sender->isAFK())                       // Already AFK
@@ -553,6 +582,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_DND:
         {
+            sChatLog->ChatMsg(GetPlayer(), msg, type);
+
             if (sender->isDND())                           // Already DND
             {
                 if (msg.empty())
