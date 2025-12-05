@@ -165,6 +165,7 @@ void ChatLog::ChatMsg(Player *player, std::string &msg, uint32 type)
 
     CheckDateSwitch();
 
+    uint32 kitt_accid = player->GetSession()->GetAccountId();
     std::string log_str = "";
 
     switch (type)
@@ -178,6 +179,9 @@ void ChatLog::ChatMsg(Player *player, std::string &msg, uint32 type)
         break;
     }
 
+    log_str.append("[");
+    log_str.append(std::to_string(kitt_accid));
+    log_str.append("]");
     log_str.append("[");
     log_str.append(player->GetName());
     log_str.append("] ");
@@ -201,8 +205,12 @@ void ChatLog::PartyMsg(Player *player, std::string &msg)
 
     CheckDateSwitch();
 
+    uint32 kitt_accid = player->GetSession()->GetAccountId();
     std::string log_str = "";
 
+    log_str.append("[");
+    log_str.append(std::to_string(kitt_accid));
+    log_str.append("]");
     log_str.append("[");
     log_str.append(player->GetName());
     log_str.append("]->GROUP:");
@@ -267,8 +275,12 @@ void ChatLog::GuildMsg(Player *player, std::string &msg, bool officer)
 
     CheckDateSwitch();
 
+    uint32 kitt_accid = player->GetSession()->GetAccountId();
     std::string log_str = "";
 
+    log_str.append("[");
+    log_str.append(std::to_string(kitt_accid));
+    log_str.append("]");
     log_str.append("[");
     log_str.append(player->GetName());
     log_str.append((officer ? "]->GUILD_OFF:" : "]->GUILD:"));
@@ -314,8 +326,12 @@ void ChatLog::WhisperMsg(Player *player, std::string &to, std::string &msg)
 
     CheckDateSwitch();
 
+    uint32 kitt_accid = player->GetSession()->GetAccountId();
     std::string log_str = "";
 
+    log_str.append("[");
+    log_str.append(std::to_string(kitt_accid));
+    log_str.append("]");
     log_str.append("[");
     log_str.append(player->GetName());
     log_str.append("]->");
@@ -351,8 +367,12 @@ void ChatLog::ChannelMsg(Player *player, std::string &channel, std::string &msg)
 
     CheckDateSwitch();
 
+    uint32 kitt_accid = player->GetSession()->GetAccountId();
     std::string log_str = "";
 
+    log_str.append("[");
+    log_str.append(std::to_string(kitt_accid));
+    log_str.append("]");
     log_str.append("[");
     log_str.append(player->GetName());
     log_str.append("]->CHANNEL:");
@@ -387,8 +407,12 @@ void ChatLog::RaidMsg(Player *player, std::string &msg, uint32 type)
 
     CheckDateSwitch();
 
+    uint32 kitt_accid = player->GetSession()->GetAccountId();
     std::string log_str = "";
 
+    log_str.append("[");
+    log_str.append(std::to_string(kitt_accid));
+    log_str.append("]");
     log_str.append("[");
     log_str.append(player->GetName());
 
@@ -472,8 +496,12 @@ void ChatLog::BattleGroundMsg(Player *player, std::string &msg, uint32 type)
 
     CheckDateSwitch();
 
+    uint32 kitt_accid = player->GetSession()->GetAccountId();
     std::string log_str = "";
 
+    log_str.append("[");
+    log_str.append(std::to_string(kitt_accid));
+    log_str.append("]");
     log_str.append("[");
     log_str.append(player->GetName());
 
@@ -706,8 +734,14 @@ void ChatLog::OutTimestamp(FILE* file)
 void ChatLog::ChatBadLexicsAction(Player* player, std::string& msg)
 {
     // logging
+    uint32 kitt_accid = player->GetSession()->GetAccountId();
+//    std::string kitt_accname = player->GetSession()->GetAccountName();
     std::string log_str = "";
 
+    log_str.append("[");
+    log_str.append(std::to_string(kitt_accid));
+    log_str.append("]");
+//    log_str.append(kitt_accname);
     log_str.append("[");
     log_str.append(player->GetName());
     log_str.append("] ");
