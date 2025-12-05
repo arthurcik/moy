@@ -547,6 +547,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_AFK:
         {
+            sChatLog->ChatMsg(GetPlayer(), msg, type);
+
             if (!sender->IsInCombat())
             {
                 if (sender->isAFK())                       // Already AFK
@@ -572,6 +574,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
         }
         case CHAT_MSG_DND:
         {
+            sChatLog->ChatMsg(GetPlayer(), msg, type);
+
             if (sender->isDND())                           // Already DND
             {
                 if (msg.empty())
