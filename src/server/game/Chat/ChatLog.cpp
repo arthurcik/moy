@@ -606,7 +606,7 @@ void ChatLog::OpenAllFiles()
                     if (ChatLogDateSplit)
                     {
                         // append date instead of $d if applicable
-                        int dpos = tempname.find("$d");
+                        std::string::size_type dpos = tempname.find("$d");
                         if (dpos != tempname.npos)
                         {
                             tempname.replace(dpos, 2, &dstr[0], 10);
@@ -628,7 +628,7 @@ void ChatLog::OpenAllFiles()
             if (ChatLogDateSplit)
             {
                 // append date instead of $d if applicable
-                int dpos = tempname.find("$d");
+                std::string::size_type dpos = tempname.find("$d");
                 if (dpos != tempname.npos)
                 {
                     tempname.replace(dpos, 2, &dstr[0], 10);
