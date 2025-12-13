@@ -22,12 +22,19 @@
 #include "Vehicle.h"
 #include "World.h"
 #include "WorldSession.h"
+#include "DatabaseEnv.h"
+#include "Chat.h"
+#include <sstream>
+#include <string>
+
+
 
 // Enum pentru a defini constantele scriptului, folosind prefixe unice KITT_
 enum TeleporterVendorMenuKitt
 {
     KITT_MENU_ID_TELEPORT = 60901,   // gossip_menu_option.MenuID
     KITT_NPC_TEXT_HELLO = 90014,     // npc_text.entry
+    KITT_NPC_TEXT_INSTANCE = 90015,  // text instance reset
 
     // SENDER IDs: IMPORTANT!
     // GOSSIP_SENDER_MAIN este de obicei 0
@@ -48,6 +55,7 @@ enum TeleporterVendorMenuKitt
     KITT_SENDER_VENDOR_NAV = 13,   // vendor
     KITT_SENDER_MAIL_NAV = 14,  // mail open
     KITT_SENDER_BANK_NAV = 15,   // bank open
+    KITT_SENDER_MENU_INSTANCE_RESET = 16, // menu Instance Reset submenu in fun zone
 
 
     // GOSSIP OPTION IDs (din DB) - gossip_menu_option.optionID pentru afisare menu si actiune
@@ -208,6 +216,12 @@ enum TeleporterVendorMenuKitt
     // sub menu fun zone
     KITT_GOSSIP_OPTION_13 = 290,   // tele pvp arena
     KITT_GOSSIP_OPTION_16 = 291,   // Nu Apasa
+    KITT_GOSSIP_DUNGEONS_RESET = 292,   // Dungeons reset cd
+    KITT_GOSSIP_RAID_10_RESET = 293,   // Instance reset 10 normal
+    KITT_GOSSIP_RAID_25_RESET = 294,   // Instance reset 25 normal
+    KITT_GOSSIP_RAID_10H_RESET = 295,   // Instance reset 10 heroic
+    KITT_GOSSIP_RAID_25H_RESET = 296,   // Instance reset 25 heroic
+    KITT_GOSSIP_INSTANCE_RESET = 297,   // Instance Reset CD menu
     // main common action
     KITT_GOSSIP_BANK_OPEN = 396,   // bank open
     KITT_GOSSIP_MAIL_OPEN = 397,   //mail open
@@ -359,17 +373,22 @@ enum TeleporterVendorMenuKitt
     // sub menu fun zone
     KITT_ACTION_TELEPORT_13 = 290,   // tele pvp arena
     KITT_ACTION_TELEPORT_16 = 291,   // Nu Apasa
+    KITT_ACTION_DUNGEONS_RESET = 292,   // Dungeons Heroic reset CD
+    KITT_ACTION_RAID_10_RESET = 293,   // Raid reset 10 normal
+    KITT_ACTION_RAID_25_RESET = 294,   // Raid reset 25 normal
+    KITT_ACTION_RAID_10H_RESET = 295,   // Raid reset 10 Heroic
+    KITT_ACTION_RAID_25H_RESET = 296,   // Raid reset 25 Heroic
     // main menu
-    KITT_ACTION_BANK_OPEN = 296,   // bank open
-    KITT_ACTION_MAIL_OPEN = 297,   // mail open
-    KITT_ACTION_TELE_ZONE = 298,  // Teleport Zone
-    KITT_ACTION_VENDOR_OPEN = 299  //vendor open
+    KITT_ACTION_BANK_OPEN = 396,   // bank open
+    KITT_ACTION_MAIL_OPEN = 397,   // mail open
+    KITT_ACTION_TELE_ZONE = 398,  // Teleport Zone
+    KITT_ACTION_VENDOR_OPEN = 399  //vendor open
 };
 
 enum Spells
 {
     /*    SPELL_DEATH = 5, */
-    SPELL_DEATH = 27255,
+    SPELL_DEATH = 27255
 };
 
 class kitt_vendor_go : public CreatureScript
@@ -381,18 +400,18 @@ public:
     {
         kitt_vendor_goAI(Creature* creature) : ScriptedAI(creature) {}
 
-        uint32 m_uiSpell1Timer;
-        uint32 m_uiSpell2Timer;
-        uint32 m_uiSpell3Timer;
-        uint32 m_uiSpell4Timer;
-        uint32 m_uiSpell5Timer;
-        uint32 m_uiSpell6Timer;
-        uint32 m_uiSpell7Timer;
-        uint32 m_uiSpell8Timer;
-        uint32 m_uiSpell9Timer;
-        uint32 m_uiSpell10Timer;
-        uint32 m_uiSpell11Timer;
-        uint32 m_uiSpell_Death_Timer;
+        uint32 m_uiSpell1Timer = 2000;
+        uint32 m_uiSpell2Timer = 3000;
+        uint32 m_uiSpell3Timer = 4000;
+        uint32 m_uiSpell4Timer = 5000;
+        uint32 m_uiSpell5Timer = 6000;
+        uint32 m_uiSpell6Timer = 7000;
+        uint32 m_uiSpell7Timer = 8000;
+        uint32 m_uiSpell8Timer = 9000;
+        uint32 m_uiSpell9Timer = 10000;
+        uint32 m_uiSpell10Timer = 11000;
+        uint32 m_uiSpell11Timer = 12000;
+        uint32 m_uiSpell_Death_Timer = 14000;
 
 
         void Reset() override
@@ -422,6 +441,45 @@ public:
             m_uiSpell10Timer = 11000;
             m_uiSpell11Timer = 12000;
             m_uiSpell_Death_Timer = 14000;
+        }
+
+        void JustDied(Unit* killer) override
+        {
+            // Aici adaugi logica ta de dupa moarte.
+
+            // Exemplu 1: Trimite un mesaj catre jucatorul care l-a omorat
+            if (killer->GetTypeId() == TYPEID_PLAYER)
+            {
+                me->Yell("bbbhhhrrr brrr  hrrrr a a Aaa-a-a", LANG_UNIVERSAL);
+
+                Player* playerKiller = killer->ToPlayer();
+
+                if (playerKiller)
+                {
+                    // Suma in cupru: 20 aur * 100 argint * 100 cupru = 200000 cupru
+                    int32 amount = 20000000;
+
+                    // Adauga banii in inventarul jucatorului
+                    playerKiller->ModifyMoney(amount);
+
+                    // Optional: Trimite un mesaj de notificare jucatorului
+                    // Mesajul va aparea in chatul general/system
+                    std::string message = "Ai primit 2000 de aur de la NPC!";
+
+                    // Foloseste ChatHandler::PSendSysMessage pentru simplitate si compatibilitate
+                    // Aceasta functie stie sa formateze pachetul corect.
+                    // Primul parametru (ses) este sesiunea jucatorului
+                    ChatHandler(playerKiller->GetSession()).PSendSysMessage("%s", message.c_str());
+                }
+            }
+            // Exemplu 2: Face spawn la un alt NPC sau obiect
+            // me->SummonCreature(ENTRY_ID_ALT_NPC, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 30000);
+
+            // Exemplu 3: Activeaza un flag de quest (daca ai un sistem de questuri custom)
+            // Daca ai nevoie de logica complexa de quest, probabil folosesti deja SmartAI Event 11 (SMART_EVENT_ON_DEATH)
+
+            // Exemplu 4: Afiseaza un text pe ecranul tuturor jucatorilor din zona
+            // me->MonsterYell("Am fost invins!", LANG_UNIVERSAL, 0);
         }
 
         void KilledUnit(Unit* /*victim*/) override
@@ -539,6 +597,7 @@ public:
                 me->Yell("Cine nu-i gata il iau cu lopata! xa xa xa", LANG_UNIVERSAL, 0);
                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                 me->RemoveFlag(UNIT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
+                me->SetReactState(REACT_AGGRESSIVE);
                 me->GetMotionMaster()->MoveChase(me->GetVictim());
                 m_uiSpell11Timer = 3600000;
             }
@@ -893,8 +952,26 @@ public:
                 {
                     AddGossipItemCustom(player, KITT_GOSSIP_OPTION_13, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_TELEPORT_13);
                     AddGossipItemCustom(player, KITT_GOSSIP_OPTION_16, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_TELEPORT_16);
+                    AddGossipItemCustom(player, KITT_GOSSIP_INSTANCE_RESET, KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_OPEN_SUBMENU);
                     AddGossipItemCustom(player, KITT_GOSSIP_OPTION_BACK, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_OPEN_SUBMENU); // Inapoi la Hello
                     SendGossipMenuFor(player, KITT_NPC_TEXT_HELLO, me->GetGUID());
+                    /*                   me->Say("Unde vrei sa mergi? " + player->GetName(), LANG_UNIVERSAL); */
+                    return false;
+                }
+                break;
+            }
+            // Instance Reset submenu in fun zone
+            case KITT_SENDER_MENU_INSTANCE_RESET:
+            {
+                if (action == static_cast<uint32>(GOSSIP_ACTION_INFO_DEF) + KITT_ACTION_OPEN_SUBMENU)
+                {
+                    AddGossipItemCustom(player, KITT_GOSSIP_DUNGEONS_RESET, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_DUNGEONS_RESET);
+                    AddGossipItemCustom(player, KITT_GOSSIP_RAID_10_RESET, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_RAID_10_RESET);
+                    AddGossipItemCustom(player, KITT_GOSSIP_RAID_25_RESET, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_RAID_25_RESET);
+                    AddGossipItemCustom(player, KITT_GOSSIP_RAID_10H_RESET, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_RAID_10H_RESET);
+                    AddGossipItemCustom(player, KITT_GOSSIP_RAID_25H_RESET, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_RAID_25H_RESET);
+                    AddGossipItemCustom(player, KITT_GOSSIP_OPTION_BACK, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_OPEN_SUBMENU); // Inapoi la Hello
+                    SendGossipMenuFor(player, KITT_NPC_TEXT_INSTANCE, me->GetGUID());
                     /*                   me->Say("Unde vrei sa mergi? " + player->GetName(), LANG_UNIVERSAL); */
                     return false;
                 }
@@ -1400,17 +1477,182 @@ public:
                         player->ModifyMoney(-15000000);
                         CloseGossipMenuFor(player);
                         me->Say("Ai dat de naiba!!! Iti dau 10 secunde sa fugi.", LANG_UNIVERSAL, 0);
+                        me->SetFaction(14);
                         me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
                         me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
                         me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR);
                         me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_REPAIR);
-                        me->SetReactState(REACT_AGGRESSIVE);
+                        me->SetReactState(REACT_PASSIVE);
+                        me->GetMotionMaster()->MoveIdle();
+                        me->GetVictim();
+                        me->SetInCombatWith(me->SelectNearestPlayer(5.0f));
                         me->Attack(player, 0);
-                        /*                        me->GetMotionMaster()->MoveChase(me->GetVictim()); */
-                        me->SetFaction(14);
+                        /*                        me->GetMotionMaster()->MoveChase(me->GetVictim());
+                        me->SetFaction(14);*/
 
                     }
                     break;
+                    // Instance Reset CD
+                case static_cast<uint32>(GOSSIP_ACTION_INFO_DEF) + KITT_ACTION_DUNGEONS_RESET:
+                {
+                    // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
+                    QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 1)", player->GetGUID().GetCounter());
+
+                    if (!result/* || !result->GetRowCount() == 0 */)
+                    {
+/*                        me->Whisper("Nu ai nicio instanta (Dungeons Heroic) blocata (cu cooldown) pe care sa o resetezi.", LANG_UNIVERSAL, player); */
+                        std::string message = "|cffff0000!...|r Nu ai nicio instanta (Dungeons Heroic) blocata (cu cooldown) pe care sa o resetezi.";
+                        ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        CloseGossipMenuFor(player);
+                        break;
+                    }
+                    if (!player->HasEnoughMoney(300000))
+                    {
+                        player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                        me->Whisper(player->GetName() + ", ai nevoie de 30g pentru a reseta aceste instante (Dungeons Heroic)!", LANG_UNIVERSAL, player);
+                        CloseGossipMenuFor(player);
+                        break;
+                    }
+                    else
+                    {
+                        player->ModifyMoney(-300000);
+                        // 10 N
+                        CharacterDatabase.PExecute("DELETE FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 1)", player->GetGUID().GetCounter());
+                        CloseGossipMenuFor(player);
+                        /*me->Whisper("Instance reset: Dungeons Heroic (Necesita re-log), leave party/raid and re-log.", LANG_UNIVERSAL, player); */
+                        std::string message = "|cffff0000ATENTIE|r Instance reset: Dungeons Heroic (Necesita re-log), leave party/raid and re-log.";
+                        ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                    }
+                    break;
+                }
+                case static_cast<uint32>(GOSSIP_ACTION_INFO_DEF) + KITT_ACTION_RAID_10_RESET:
+                {
+                    // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
+                    QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 0)", player->GetGUID().GetCounter());
+
+                    if (!result/* || !result->GetRowCount() == 0 */)
+                    {
+/*                        me->Whisper("Nu ai nicio instanta (10-N) blocata (cu cooldown) pe care sa o resetezi.", LANG_UNIVERSAL, player); */
+                        std::string message = "|cffff0000!...|r Nu ai nicio instanta (10-N) blocata (cu cooldown) pe care sa o resetezi.";
+                        ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        CloseGossipMenuFor(player);
+                        break;
+                    }
+                        if (!player->HasEnoughMoney(1000000))
+                        {
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                            me->Whisper(player->GetName() + ", ai nevoie de 100g pentru a reseta aceste instante (10-N)!", LANG_UNIVERSAL, player);
+                            CloseGossipMenuFor(player);
+                            break;
+                        }
+                        else
+                        {
+                            player->ModifyMoney(-1000000);
+                            // 10 N
+                            CharacterDatabase.PExecute("DELETE FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 0)", player->GetGUID().GetCounter());
+                            CloseGossipMenuFor(player);
+/*                            me->Whisper("Instance reset: 10-N (Necesita re-log), leave party/raid and re-log.", LANG_UNIVERSAL, player); */
+                            std::string message = "|cffff0000Atentie|r Instance reset: 10-N (Necesita re-log), leave party/raid and re-log.";
+                            ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        }
+                    break;
+                }
+                case static_cast<uint32>(GOSSIP_ACTION_INFO_DEF) + KITT_ACTION_RAID_25_RESET:
+                {
+                    // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
+                    QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 1)", player->GetGUID().GetCounter());
+
+                    if (!result/* || !result->GetRowCount() == 0 */)
+                    {
+/*                        me->Whisper("Nu ai nicio instanta (25-N) blocata (cu cooldown) pe care sa o resetezi.", LANG_UNIVERSAL, player); */
+                        std::string message = "|cffff0000!...|r Nu ai nicio instanta (25-N) blocata (cu cooldown) pe care sa o resetezi.";
+                        ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        CloseGossipMenuFor(player);
+                        break;
+                    }
+                        if (!player->HasEnoughMoney(3500000))
+                        {
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                            me->Whisper(player->GetName() + ", ai nevoie de 350g pentru a reseta aceste instante (25-N)!", LANG_UNIVERSAL, player);
+                            CloseGossipMenuFor(player);
+                            break;
+                        }
+                        else
+                        {
+                            player->ModifyMoney(-3500000);
+                            // 25 N
+                            CharacterDatabase.PExecute("DELETE FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 1)", player->GetGUID().GetCounter());
+                            CloseGossipMenuFor(player);
+/*                            me->Whisper("Instance reset: 25-N (Necesita re-log), leave party/raid and re-log.", LANG_UNIVERSAL, player); */
+                            std::string message = "|cffff0000Atentie|r Instance reset: 25-N (Necesita re-log), leave party/raid and re-log.";
+                            ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        }
+                    break;
+                }
+                case static_cast<uint32>(GOSSIP_ACTION_INFO_DEF) + KITT_ACTION_RAID_10H_RESET:
+                {
+                    // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
+                    QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 2)", player->GetGUID().GetCounter());
+
+                    if (!result/* || !result->GetRowCount() == 0 */)
+                    {
+/*                        me->Whisper("Nu ai nicio instanta (10-Heroic) blocata (cu cooldown) pe care sa o resetezi.", LANG_UNIVERSAL, player); */
+                        std::string message = "|cffff0000!...|r Nu ai nicio instanta (10-Heroic) blocata (cu cooldown) pe care sa o resetezi.";
+                        ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        CloseGossipMenuFor(player);
+                        break;
+                    }
+                        if (!player->HasEnoughMoney(2000000))
+                        {
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                            me->Whisper(player->GetName() + ", ai nevoie de 200g pentru a reseta aceste instante (10-Heroic)!", LANG_UNIVERSAL, player);
+                            CloseGossipMenuFor(player);
+                            break;
+                        }
+                        else
+                        {
+                            player->ModifyMoney(-2000000);
+                            // 10 H
+                            CharacterDatabase.PExecute("DELETE FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 2)", player->GetGUID().GetCounter());
+                            CloseGossipMenuFor(player);
+/*                            me->Whisper("Instance reset: 10-Heroic (Necesita re-log), leave party/raid and re-log.", LANG_UNIVERSAL, player); */
+                            std::string message = "|cffff0000Atentie|r Instance reset: 10-Heroic (Necesita re-log), leave party/raid and re-log.";
+                            ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        }
+                    break;
+                }
+                case static_cast<uint32>(GOSSIP_ACTION_INFO_DEF) + KITT_ACTION_RAID_25H_RESET:
+                {
+                    // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
+                    QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 3)", player->GetGUID().GetCounter());
+
+                    if (!result/* || !result->GetRowCount() == 0 */)
+                    {
+/*                        me->Whisper("Nu ai nicio instanta (25-Heroic) blocata (cu cooldown) pe care sa o resetezi.", LANG_UNIVERSAL, player); */
+                        std::string message = "|cffff0000!...|r Nu ai nicio instanta (25-Heroic) blocata (cu cooldown) pe care sa o resetezi.";
+                        ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        CloseGossipMenuFor(player);
+                        break;
+                    }
+                        if (!player->HasEnoughMoney(5000000))
+                        {
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                            me->Whisper(player->GetName() + ", ai nevoie de 500g pentru a reseta aceste instante (25-Heroic)!", LANG_UNIVERSAL, player);
+                            CloseGossipMenuFor(player);
+                            break;
+                        }
+                        else
+                        {
+                            player->ModifyMoney(-5000000);
+                            // 25 H
+                            CharacterDatabase.PExecute("DELETE FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 3)", player->GetGUID().GetCounter());
+                            CloseGossipMenuFor(player);
+/*                            me->Whisper("Instance reset: 25-Heroic (Necesita re-log), leave party/raid and re-log.", LANG_UNIVERSAL, player); */
+                            std::string message = "|cffff0000Atentie|r Instance reset: 25-Heroic (Necesita re-log), leave party/raid and re-log.";
+                            ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        }
+                    break;
+                }
                     // select back
                 case static_cast<uint32>(GOSSIP_ACTION_INFO_DEF) + KITT_ACTION_OPEN_SUBMENU:
                     return OnGossipHello(player); // Merge la meniul principal
