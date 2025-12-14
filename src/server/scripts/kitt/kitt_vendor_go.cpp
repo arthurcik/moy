@@ -55,7 +55,8 @@ enum TeleporterVendorMenuKitt
     KITT_SENDER_VENDOR_NAV = 13,   // vendor
     KITT_SENDER_MAIL_NAV = 14,  // mail open
     KITT_SENDER_BANK_NAV = 15,   // bank open
-    KITT_SENDER_MENU_INSTANCE_RESET = 16, // menu Instance Reset submenu in fun zone
+    KITT_SENDER_AH_NAV = 16,   // AH open
+    KITT_SENDER_MENU_INSTANCE_RESET = 17, // menu Instance Reset submenu in fun zone
 
 
     // GOSSIP OPTION IDs (din DB) - gossip_menu_option.optionID pentru afisare menu si actiune
@@ -223,6 +224,7 @@ enum TeleporterVendorMenuKitt
     KITT_GOSSIP_RAID_25H_RESET = 296,   // Instance reset 25 heroic
     KITT_GOSSIP_INSTANCE_RESET = 297,   // Instance Reset CD menu
     // main common action
+    KITT_GOSSIP_AH_OPEN = 395,   // ah open
     KITT_GOSSIP_BANK_OPEN = 396,   // bank open
     KITT_GOSSIP_MAIL_OPEN = 397,   //mail open
     KITT_GOSSIP_OPTION_VENDOR = 398,   // menu vendor
@@ -379,6 +381,7 @@ enum TeleporterVendorMenuKitt
     KITT_ACTION_RAID_10H_RESET = 295,   // Raid reset 10 Heroic
     KITT_ACTION_RAID_25H_RESET = 296,   // Raid reset 25 Heroic
     // main menu
+    KITT_ACTION_AH_OPEN = 395,   // AH open
     KITT_ACTION_BANK_OPEN = 396,   // bank open
     KITT_ACTION_MAIL_OPEN = 397,   // mail open
     KITT_ACTION_TELE_ZONE = 398,  // Teleport Zone
@@ -425,6 +428,7 @@ public:
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR);
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_REPAIR);
+            me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_AUCTIONEER);
             me->RemoveFlag(UNIT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
             me->SetReactState(REACT_PASSIVE);
             me->SetFaction(35);
@@ -639,6 +643,7 @@ public:
             AddGossipItemCustom(player, KITT_GOSSIP_OPTION_22, KITT_SENDER_WRATH_DUNGEONS_NAV, KITT_ACTION_OPEN_SUBMENU);
             AddGossipItemCustom(player, KITT_GOSSIP_OPTION_23, KITT_SENDER_RAID_NAV, KITT_ACTION_OPEN_SUBMENU);
             AddGossipItemCustom(player, KITT_GOSSIP_OPTION_6, KITT_SENDER_MENU_FUN_ZONE, KITT_ACTION_OPEN_SUBMENU);
+            AddGossipItemCustom(player, KITT_GOSSIP_AH_OPEN, KITT_SENDER_AH_NAV, KITT_ACTION_AH_OPEN);
             AddGossipItemCustom(player, KITT_GOSSIP_BANK_OPEN, KITT_SENDER_BANK_NAV, KITT_ACTION_BANK_OPEN);
             AddGossipItemCustom(player, KITT_GOSSIP_MAIL_OPEN, KITT_SENDER_MAIL_NAV, KITT_ACTION_MAIL_OPEN);
             AddGossipItemCustom(player, KITT_GOSSIP_OPTION_VENDOR, KITT_SENDER_VENDOR_NAV, KITT_ACTION_VENDOR_OPEN);
@@ -973,6 +978,16 @@ public:
                     AddGossipItemCustom(player, KITT_GOSSIP_OPTION_BACK, KITT_SENDER_MAIN_MENU_NAV, KITT_ACTION_OPEN_SUBMENU); // Inapoi la Hello
                     SendGossipMenuFor(player, KITT_NPC_TEXT_INSTANCE, me->GetGUID());
                     /*                   me->Say("Unde vrei sa mergi? " + player->GetName(), LANG_UNIVERSAL); */
+                    return false;
+                }
+                break;
+            }
+            case KITT_SENDER_AH_NAV:
+            {
+                if (action == static_cast<uint32>(GOSSIP_ACTION_INFO_DEF) + KITT_ACTION_AH_OPEN)
+                {
+                    player->GetSession()->SendAuctionHello(me->GetGUID(), me);
+                    CloseGossipMenuFor(player);
                     return false;
                 }
                 break;
