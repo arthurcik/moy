@@ -5,8 +5,9 @@
 #include "Guild.h"
 #include "DatabaseEnv.h"
 #include "Log.h"
-#include "World.h"
-#include "Errors.h"
+#include "WorldSession.h"
+
+
 
 class kitt_p_start_guild : public PlayerScript
 {
@@ -17,6 +18,13 @@ class kitt_p_start_guild : public PlayerScript
    {
        if (firstLogin)
        {
+           bool excludeGMs = sConfigMgr->GetBoolDefault("StartGuild.ExcludeGMs", false);
+
+           if (excludeGMs && player->GetSession()->GetSecurity() > SEC_PLAYER)
+           {
+               return;
+           }
+
            uint32 GUILD_ID_ALLIANCE = sConfigMgr->GetIntDefault("StartGuild.Alliance", 0);
            uint32 GUILD_ID_HORDE = sConfigMgr->GetIntDefault("StartGuild.Horde", 0);
            uint32 desiredGuildId = (player->GetTeam() == ALLIANCE) ? GUILD_ID_ALLIANCE : GUILD_ID_HORDE;
@@ -28,7 +36,9 @@ class kitt_p_start_guild : public PlayerScript
 
            if (guild)
            {
-               guild->AddMember(CharacterDatabase.BeginTransaction(), player->GetGUID(), GUILD_RANK_NONE);
+               CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+               guild->AddMember(trans, player->GetGUID(), GUILD_RANK_NONE);
+               CharacterDatabase.CommitTransaction(trans);
            }
            else
            {

@@ -1,26 +1,52 @@
-###################################################################################################
+### Start Guild ###
+# StartGuild.Alliance: The ID of the guild for Alliance players on first login.
+# Default: 0
+StartGuild.Alliance = 0
 
-# Start Guild
-#
-# These settings set all new characters into a starting guild based on faction.
-#
-#    StartGuild.Alliance
-#        Description: Guild entry number for Alliance(Taken from guildid field in characters.guild table)
-#        Default: 45 (Default guildid)
-#                 1+ (guildid entry)
-#
+# StartGuild.Horde: The ID of the guild for Horde players on first login.
+# Default: 0
+StartGuild.Horde = 0
 
-StartGuild.Alliance = 1
+# StartGuild.ExcludeGMs: Exclude Game Masters (GM level > 0) from joining the start guild automatically.
+# Default: 0 (false)
+StartGuild.ExcludeGMs = 0
+#########
 
-#
-#    StartGuild.Horde
-#        Description: Guild entry number for Horde (Taken from guildid field in characters.guild table)
-#        Default: 46 (Default guildid)
-#                 1+ (guildid entry)
+### level up reward ###
+# kitt.Reward.Gold.80: The amount of gold granted to a player when they reach level 80.
+# kitt.Reward.Item.80: The Item ID on level 80
+# kitt.Reward.iCount.80: The count(default = 1) for the Item ID on level 80
+# item entry = 212202 Event Item
+# item entry = 230017 Event Item2
+# item entry = 230018 Event Item3
 
-#
+# Default: 0 (disable)
 
-StartGuild.Horde = 2
+kitt.Reward.Gold.21 = 0
+kitt.Reward.Item.21 = 0
+kitt.Reward.iCount.21 = 1
 
-#
-###################################################################################################
+kitt.Reward.Gold.30 = 0
+kitt.Reward.Item.30 = 0
+kitt.Reward.iCount.30 = 1
+
+kitt.Reward.Gold.40 = 0
+kitt.Reward.Item.40 = 0
+kitt.Reward.iCount.40 = 1
+
+kitt.Reward.Gold.50 = 0
+kitt.Reward.Item.50 = 0
+kitt.Reward.iCount.50 = 1
+
+kitt.Reward.Gold.60 = 0
+kitt.Reward.Item.60 = 0
+kitt.Reward.iCount.60 = 1
+
+kitt.Reward.Gold.70 = 0
+kitt.Reward.Item.70 = 0
+kitt.Reward.iCount.70 = 1
+
+kitt.Reward.Gold.80 = 0
+kitt.Reward.Item.80 = 0
+kitt.Reward.iCount.80 = 1
+#########
