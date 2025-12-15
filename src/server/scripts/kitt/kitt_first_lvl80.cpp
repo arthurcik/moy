@@ -55,7 +55,7 @@ class kitt_first_lvl80 : public PlayerScript
             uint32 lvl80Amount = lvl80Config * 100 * 100;
 
             ItemPosCountVec dest;
-            InventoryResult msg = player->CanStoreNewItem(NULL, NULL, dest, item70Config, iCount70Config);
+            InventoryResult msg = player->CanStoreNewItem(0, 0, dest, item70Config, iCount70Config);
 
             //uint32 itemId = 1977; // Exemplu: ID-ul itemului pe care vrei sa il adaugi
             //uint32 itemCount = 1;  // Cantitatea
