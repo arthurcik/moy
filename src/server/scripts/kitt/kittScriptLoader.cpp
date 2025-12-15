@@ -18,6 +18,7 @@
 // This is where scripts' loading functions should be declared:
 void AddSC_kitt_go();
 void AddSC_kitt_vendor_go();
+void AddSC_kitt_p_start_guild();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -25,4 +26,5 @@ void AddkittScripts()
 {
     AddSC_kitt_go();
     AddSC_kitt_vendor_go();
+    AddSC_kitt_p_start_guild();
 }
