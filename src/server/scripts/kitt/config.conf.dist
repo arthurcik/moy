@@ -1,3 +1,22 @@
+########################################
+# Kitt Auto Complete Quests
+########################################
+# Lista de ID-uri ale quest-urilor care vor fi completate automat la acceptare.
+# Foloseste virgula ca separator.
+# Default: "" (Niciunul) Ex.: "99,101,7023"
+kitt.Quests.AutoCompleteList = ""
+
+# Activeaza/Dezactiveaza completarea automata a reputatiei (1 = Activat, 0 = Dezactivat)
+# Defaul: 0
+kitt.Quests.AutoReputation.Enable = 0
+
+# Lista de ID-uri ale quest-urilor care AU VOIE sa primeasca reputatie automata (player).
+# Ex.: Daca jucatorul are reputatie 3000 si questul cere rep. 6000, la acceptare va primi jucatorul rep. 6000
+# Nota: Quest-ul trebuie sa fie prezent si in kitt.Quests.AutoCompleteList!
+# Default: "" # Ex.: "10733,10738"
+kitt.Quests.AutoReputation.List = ""
+################################
+
 ### Start Guild ###
 # StartGuild.Alliance: The ID of the guild for Alliance players on first login.
 # Default: 0
