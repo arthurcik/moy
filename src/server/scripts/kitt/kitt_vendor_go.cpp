@@ -642,7 +642,11 @@ public:
             AddGossipItemCustom(player, KITT_GOSSIP_OPTION_21, KITT_SENDER_BC_DUNGEONS_NAV, KITT_ACTION_OPEN_SUBMENU);
             AddGossipItemCustom(player, KITT_GOSSIP_OPTION_22, KITT_SENDER_WRATH_DUNGEONS_NAV, KITT_ACTION_OPEN_SUBMENU);
             AddGossipItemCustom(player, KITT_GOSSIP_OPTION_23, KITT_SENDER_RAID_NAV, KITT_ACTION_OPEN_SUBMENU);
-            AddGossipItemCustom(player, KITT_GOSSIP_OPTION_6, KITT_SENDER_MENU_FUN_ZONE, KITT_ACTION_OPEN_SUBMENU);
+            // daca jucatorul este pe harta 0, 1, 530, 571 va aparea si menu 
+            if (player->GetMapId() == 0 || player->GetMapId() == 1 || player->GetMapId() == 530 || player->GetMapId() == 571)
+            {
+                AddGossipItemCustom(player, KITT_GOSSIP_OPTION_6, KITT_SENDER_MENU_FUN_ZONE, KITT_ACTION_OPEN_SUBMENU);
+            }
             AddGossipItemCustom(player, KITT_GOSSIP_AH_OPEN, KITT_SENDER_AH_NAV, KITT_ACTION_AH_OPEN);
             AddGossipItemCustom(player, KITT_GOSSIP_BANK_OPEN, KITT_SENDER_BANK_NAV, KITT_ACTION_BANK_OPEN);
             AddGossipItemCustom(player, KITT_GOSSIP_MAIL_OPEN, KITT_SENDER_MAIL_NAV, KITT_ACTION_MAIL_OPEN);
