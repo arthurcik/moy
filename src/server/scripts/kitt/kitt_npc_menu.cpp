@@ -40,14 +40,25 @@
 };*/
 
 
-std::string KittResetCode = "RESET"; // Valoare default config
-uint32 MoneyDungeons = 300000;   // galbeni necesari pentru Dungeons
-uint32 MoneyRaid10   = 1000000;  // galbeni necesari pentru Raid 10
-uint32 MoneyRaid25   = 3500000;  // galbeni necesari pentru Raid 25
-uint32 MoneyRaid10H  = 2000000;  // galbeni necesari pentru Raid 10 Heroic
-uint32 MoneyRaid25H  = 5000000;  // galbeni necesari pentru Raid 25 Heroic
+static std::string KittResetCode = "RESET"; // Valoare default config
+static std::string KittNuApasaCode = "fun"; // default Fun Zone NuApasa
+
+// valoarea in gold
+static const uint32 MoneyDungeons    = 30 * 10000;   // galbeni necesari pentru Dungeons
+static const uint32 MoneyRaid10      = 100 * 10000;  // galbeni necesari pentru Raid 10
+static const uint32 MoneyRaid25      = 350 * 10000;  // galbeni necesari pentru Raid 25
+static const uint32 MoneyRaid10H     = 200 * 10000;  // galbeni necesari pentru Raid 10 Heroic
+static const uint32 MoneyRaid25H     = 500 * 10000;  // galbeni necesari pentru Raid 25 Heroic
+static const uint32 NuApasaPret      = 1500 * 10000; // Fun Zone nu apasa pret
+
 // conversie la string ca sa poate fi adaugat in mesaj
-//uint32 kittMoneyDungeons = MoneyDungeons / 10000;
+std::string sMoneyDungeons = std::to_string(MoneyDungeons / 10000);
+static const std::string sMoneyRaid10 = std::to_string(MoneyRaid10 / 10000);
+static const std::string sMoneyRaid25 = std::to_string(MoneyRaid25 / 10000);
+static const std::string sMoneyRaid10H = std::to_string(MoneyRaid10H / 10000);
+static const std::string sMoneyRaid25H = std::to_string(MoneyRaid25H / 10000);
+static const std::string sNuApasaPret = std::to_string(NuApasaPret / 10000);
+
 
 
 
@@ -59,22 +70,22 @@ namespace KittNpcText
     enum Texts
     {
         KITT_NPC_HELLO                = 90014,
-        KITT_INSTANCE_RESET           = 90015,
-        KITT_INSTANCE_RESET_NO_SHOW   = 90016
+        KITT_INSTANCE_RESET           = 90015
+        //KITT_INSTANCE_RESET_NO_SHOW   = 90016
     };
 
     // 2. Le punem automat in aceasta lista pentru verificare
     static const std::vector<uint32> KittAllNpcTexts = {
         KITT_NPC_HELLO,
         KITT_INSTANCE_RESET,
-        KITT_INSTANCE_RESET_NO_SHOW
+        //KITT_INSTANCE_RESET_NO_SHOW
     };
 }
 
 enum KittSender
 {
     // uniq ID start 0
-    KITT_SENDER_MAIN_MENU_SELECT        = 0,   // comun pentru action select
+    KITT_SENDER_MENU_DIRECT_SELECT      = 0,   // comun pentru action select
     KITT_SENDER_OPEN_SUBMENU            = 1,   // comun pentru meniu
     KITT_SENDER_MENU_FUN_ZONE           = 2,   // comun pentru meniu fun zone
     KITT_SENDER_MENU_INSTANCE_RESET     = 3,   // comun pentru meniu instance reset
@@ -120,7 +131,7 @@ enum KittAction
     KITT_ACTION_TELE_FUN_ZONE           = 112,   // teleport to Zona Fun (PVP Arena)
     KITT_ACTION_NU_APASA                = 113,   // action Nu Apasa!!! (1500 g)
     KITT_ACTION_MENU_INSTANCE_RESET     = 114,   // Instance reset cooldown
-    KITT_ACTION_RESET_DUNGEON          = 115,   // Instance Reset Dungeons
+    KITT_ACTION_RESET_DUNGEON           = 115,   // Instance Reset Dungeons
     KITT_ACTION_RESET_RAID10            = 116,   // Instance Reset Raid 10
     KITT_ACTION_RESET_RAID25            = 117,   // Instance Reset Raid 25
     KITT_ACTION_RESET_RAID10H           = 118,   // Instance Reset Raid 10 Heroic
@@ -129,11 +140,12 @@ enum KittAction
 
 
 
-    KITT_ACTION_AH_OPEN                 = 295,   // AH open
-    KITT_ACTION_BANK_OPEN               = 296,   // bank open
+    KITT_ACTION_AH_OPEN                 = 294,   // AH open
+    KITT_ACTION_BANK_OPEN               = 295,   // bank open
+    KITT_ACTION_GV_OPEN                 = 296,   // GV bank
     KITT_ACTION_MAIL_OPEN               = 297,   // mail open
     KITT_ACTION_VENDOR_OPEN             = 298,   // vendor open
-    KITT_ACTION_TELE_ZONE               = 299,   // Teleport Zone
+    //KITT_ACTION_TELE_ZONE               = 299,   // Teleport Zone
     KITT_ACTION_BACK_MAIN_MENU          = 300    // Inapoi la Meniul Principal
 
 };
@@ -157,19 +169,23 @@ struct MainMenuOptionConfirm {
 };
 
 // Meniu Principal
-static std::vector<MainMenuOption> KittMainMenu = {
-    { GOSSIP_ICON_CHAT, "Teleport to: Custom Zone",  KITT_SENDER_MAIN_MENU_SELECT, KITT_ACTION_TELE_ZONE },
+// pentru viteza adaugam "const" si "array" in loc de "vector"
+// metoda veche: static std::vector ....
+// nr de dupa "," reprezinta nr de meniuri
+static const std::array<MainMenuOption, 9> KittMainMenu = { {
+    { GOSSIP_ICON_CHAT, "Fun Zone (in constructie)", KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MENU_FUN_ZONE },
+    { GOSSIP_ICON_TALK, "Teleport to: Categorii",    KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_TELEPORT_TO },
     { GOSSIP_ICON_TALK, "Horde",                     KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MENU_HORDE },
     { GOSSIP_ICON_TALK, "Alliance",                  KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MENU_ALLIANCE },
-    { GOSSIP_ICON_TALK, "Teleport to:",              KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_TELEPORT_TO },
     { GOSSIP_ICON_CHAT, "Deschide AH",               KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_AH_OPEN },
     { GOSSIP_ICON_CHAT, "Deschide Bank",             KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_BANK_OPEN },
+    { GOSSIP_ICON_CHAT, "Adauga Guild Bank",         KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_GV_OPEN },
     { GOSSIP_ICON_CHAT, "Deschide Mail",             KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MAIL_OPEN },
-    { GOSSIP_ICON_CHAT, "Deschide Vendor",           KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_VENDOR_OPEN },
-    { GOSSIP_ICON_CHAT, "Fun Zone (in constructie)", KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MENU_FUN_ZONE }
-};
+    { GOSSIP_ICON_CHAT, "Deschide Vendor",           KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_VENDOR_OPEN }
+} };
 
-static std::vector<MainMenuOption> KittTeleportTo = {
+static const std::array<MainMenuOption, 8> KittTeleportTo = { {
+//    { GOSSIP_ICON_CHAT, "Teleport to: Custom Zone",  KITT_SENDER_MENU_DIRECT_SELECT, KITT_ACTION_TELE_ZONE },
     { GOSSIP_ICON_TALK, "Eastern Kingdoms",          KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_E_KINGDOM },
     { GOSSIP_ICON_TALK, "Kalimdor",                  KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_KALIMDOR },
     { GOSSIP_ICON_CHAT, "Outland",                   KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_OUTLAND },
@@ -178,23 +194,23 @@ static std::vector<MainMenuOption> KittTeleportTo = {
     { GOSSIP_ICON_CHAT, "BC Dungeons",               KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_BC_DUNGEONS },
     { GOSSIP_ICON_CHAT, "Wrath Dungeons",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_WRATH_DUNGEONS },
     { GOSSIP_ICON_CHAT, "Raid Teleports",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_RAID }
-};
+} };
 // Meniu Fun Zone
-static std::vector<MainMenuOption> KittFunZone = {
-    { GOSSIP_ICON_CHAT, "Zona Fun (PVP Arena)",  KITT_SENDER_OPEN_SUBMENU,       KITT_ACTION_TELE_FUN_ZONE },
-    { GOSSIP_ICON_CHAT, "Nu Apasa!!! (1500 g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA },
+static const std::array<MainMenuOptionConfirm, 3> KittFunZone = { {
+    { GOSSIP_ICON_CHAT, "Fun Zone (Teleport)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TELE_FUN_ZONE },
+    { GOSSIP_ICON_CHAT, "Nu Apasa!!! (" + sNuApasaPret + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Esti sigur?", NuApasaPret, true},
     { GOSSIP_ICON_CHAT, "Instance Reset CD",     KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_MENU_INSTANCE_RESET }
-};
+} };
 
 // Meniu Instance Reset Cooldown cu confirmare.
 // menu code. daca are TRUE optiunea finala se adauga la OnGossipSelectCode
 
 static std::vector<MainMenuOptionConfirm> KittInstanceReset = {
-    { GOSSIP_ICON_CHAT, "Reset Dungeon Heroic (" + std::to_string(MoneyDungeons / 10000) + " g)", KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_DUNGEON,  "Reset Dungeon Heroic",  MoneyDungeons, false},
-    { GOSSIP_ICON_CHAT, "Reset Raid 10 Normal (" + std::to_string(MoneyRaid10 / 10000) + " g)",   KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID10,   "Reset Raid 10 Normal",  MoneyRaid10,   false },
-    { GOSSIP_ICON_CHAT, "Reset Raid 25 Normal (" + std::to_string(MoneyRaid25 / 10000) + " g)",   KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID25,   "Reset Raid 25 Normal",  MoneyRaid25,   false },
-    { GOSSIP_ICON_CHAT, "Reset Raid 10 Heroic (" + std::to_string(MoneyRaid10H / 10000) + " g)",  KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID10H,  "Reset Raid 10 Heroic",  MoneyRaid10H,  false },
-    { GOSSIP_ICON_CHAT, "Reset Raid 25 Heroic (" + std::to_string(MoneyRaid25H / 10000) + " g)",  KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID25H,  "Reset Raid 25 Heroic",  MoneyRaid25H,  false },
+    { GOSSIP_ICON_CHAT, "Reset Dungeon Heroic (" + sMoneyDungeons + " g)", KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_DUNGEON,  "Reset Dungeon Heroic",  MoneyDungeons, false},
+    { GOSSIP_ICON_CHAT, "Reset Raid 10 Normal (" + sMoneyRaid10 + " g)",   KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID10,   "Reset Raid 10 Normal",  MoneyRaid10,   false },
+    { GOSSIP_ICON_CHAT, "Reset Raid 25 Normal (" + sMoneyRaid25 + " g)",   KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID25,   "Reset Raid 25 Normal",  MoneyRaid25,   false },
+    { GOSSIP_ICON_CHAT, "Reset Raid 10 Heroic (" + sMoneyRaid10H + " g)",  KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID10H,  "Reset Raid 10 Heroic",  MoneyRaid10H,  false },
+    { GOSSIP_ICON_CHAT, "Reset Raid 25 Heroic (" + sMoneyRaid25H + " g)",  KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID25H,  "Reset Raid 25 Heroic",  MoneyRaid25H,  false },
     { GOSSIP_ICON_CHAT, "<<< Back <<<",      KITT_SENDER_OPEN_SUBMENU,        KITT_ACTION_MENU_FUN_ZONE,  "",  0,  false }
 };
 
@@ -207,14 +223,6 @@ struct TeleportLocation {
 };
 
 
-// Tabel pentru Alliance
-static std::vector<TeleportLocation> AllianceLocs = {
-    {0, -8837.57f, 637.394f, 94.8055f, 4.96f, "Stormwind"},
-    {1, 9946.02f, 2588.77f, 1316.19f, 0.0f, "Darnassus"},
-    {0, -5002.33f, -857.664f, 497.054f, 0.0f, "Ironforge"},
-    {530, -4004.39f, -11878.5f, -1.01131f, 0.0f, "Exodar"}
-};
-
 // Tabel pentru Horde
 static std::vector<TeleportLocation> HordeLocs = {
     {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "Orgrimmar"},
@@ -223,8 +231,33 @@ static std::vector<TeleportLocation> HordeLocs = {
     {530, 9380.18f, -7277.81f, 14.2404f, 0.0f, "Silvermoon"}
 };
 
+// Tabel pentru Alliance
+static std::vector<TeleportLocation> AllianceLocs = {
+    {0, -8837.57f, 637.394f, 94.8055f, 4.96f, "Stormwind"},
+    {1, 9946.02f, 2588.77f, 1316.19f, 0.0f, "Darnassus"},
+    {0, -5002.33f, -857.664f, 497.054f, 0.0f, "Ironforge"},
+    {530, -4004.39f, -11878.5f, -1.01131f, 0.0f, "Exodar"}
+};
+
+// Tabel pentru Horde factiune Alianta
+static std::vector<TeleportLocation> HordeALocs = {
+    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "Orgrimmar A"},
+    {0, 1572.00f, 213.637f, -43.1031f, 0.85f, "Undercity A"},
+    {1, -1386.75f, 138.474f, 23.0348f, 0.0f, "Thunder Bluff A"},
+    {530, 9380.18f, -7277.81f, 14.2404f, 0.0f, "Silvermoon A"}
+};
+
+// Tabel pentru Alliance factiune Hoarda
+static std::vector<TeleportLocation> AllianceHLocs = {
+    {0, -8837.57f, 637.394f, 94.8055f, 4.96f, "Stormwind H"},
+    {1, 9946.02f, 2588.77f, 1316.19f, 0.0f, "Darnassus H"},
+    {0, -5002.33f, -857.664f, 497.054f, 0.0f, "Ironforge H"},
+    {530, -4004.39f, -11878.5f, -1.01131f, 0.0f, "Exodar H"}
+};
+
+
 // Eastern Kingdoms
-static std::vector<TeleportLocation> EKingdomLocs = {
+static const std::array<TeleportLocation, 24> EKingdomLocs = { {
     {0, -9449.06f, 64.8392f, 56.3581f, 3.07047f, "Elwynn Forest"},
     {530, 9024.37f, -6682.55f, 16.8973f, 3.14131f, "Eversong Woods"},
     {0, -5603.76f, -482.704f, 396.98f, 5.23499f, "Dun Morogh"},
@@ -249,7 +282,7 @@ static std::vector<TeleportLocation> EKingdomLocs = {
     {0, 1743.69f, -1723.86f, 59.6648f, 5.23722f, "Western Plaguelands (lvl 48-60)"},
     {0, 2280.64f, -5275.05f, 82.0166f, 4.7479f, "Eastern Plaguelands (lvl 53-63)"},
     {530, 12806.5f, -6911.11f, 41.1156f, 2.22935f, "Isle of Quel\'Danas (lvl 69-72)"}
-};
+} };
 
 // Kalimdor
 static std::vector<TeleportLocation> KalimadorLocs = {
@@ -289,10 +322,9 @@ static std::vector<TeleportLocation> RaidLocs = {
 
 
 // Tabel pentru Fun Zone
-static std::vector<TeleportLocation> FunZoneLocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "Orgrimmar Test"},
-    {0, 1572.00f, 213.637f, -43.1031f, 0.85f, "Undercity Test"}
-};
+static const std::array<TeleportLocation, 1> FunZoneLocs = { {
+    {0, -4854.04f, -1004.33f, 453.76f, 0.0f, "Custom Zone"}
+} };
 
 
 
@@ -354,14 +386,13 @@ public:
         {
             // aici se adauga optiunea doar daca are TRUE la meniu. se adauga doar actiunea finala.
             KittResetCode = sConfigMgr->GetStringDefault("Kitt.Reset.Code", "test");
+            KittNuApasaCode = sConfigMgr->GetStringDefault("Kitt.Fun.NuApasa.Code", "test");
             uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
             uint32 const sender = player->PlayerTalkClass->GetGossipOptionSender(gossipListId);
             std::string codeStr = code; // Transformam codul primit in string pentru verificare
 
-            if (sender == KITT_SENDER_MENU_INSTANCE_RESET)
+            if (sender == KITT_SENDER_MENU_INSTANCE_RESET && action == KITT_ACTION_RESET_RAID10)
             {
-                if (action == KITT_ACTION_RESET_RAID10)
-                {
                     // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
                     QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 0)", player->GetGUID().GetCounter());
 
@@ -401,8 +432,44 @@ public:
                         ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                     }
                     return true;
-                }
             }
+
+            if (sender == KITT_SENDER_MENU_FUN_ZONE && action == KITT_ACTION_NU_APASA)
+            {
+                if (codeStr != KittNuApasaCode)
+                {
+                    ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Eroare:|r Cod incorect. Scrie |cff00ff00%s|r si apasa butonul |cff00ff00[Accept]|r cu mouse-ul.", KittNuApasaCode);
+                    CloseGossipMenuFor(player);
+                    return true;
+                }
+
+                if (!player->HasEnoughMoney(NuApasaPret))
+                {
+                    player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                    me->Say(player->GetName() + ", ai nevoie de 1500g.", LANG_UNIVERSAL, 0);
+                    CloseGossipMenuFor(player);
+                }
+                else
+                {
+                    player->ModifyMoney(-int32(NuApasaPret));
+                    CloseGossipMenuFor(player);
+
+                    me->Say("Ai dat de naiba!!! Iti dau 10 secunde sa fugi.", LANG_UNIVERSAL, 0);
+                    me->SetFaction(14);
+                    me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                    me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+                    me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR);
+                    me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_REPAIR);
+                    me->SetReactState(REACT_PASSIVE);
+                    me->GetMotionMaster()->MoveIdle();
+                    me->GetVictim();
+                    me->SetInCombatWith(me->SelectNearestPlayer(5.0f));
+                    me->Attack(player, 0);
+                }
+                return true;
+                //break;
+            }
+
 
             CloseGossipMenuFor(player);
             return false;
@@ -412,23 +479,6 @@ public:
         {
             uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
             uint32 const sender = player->PlayerTalkClass->GetGossipOptionSender(gossipListId);
-            // std::string codeStr = code;
-
-
-            // Verificam prima data butonul de BACK sau REVENIRE LA MAIN MENU
-            if (sender == KITT_SENDER_MAIN_MENU_SELECT && action == KITT_ACTION_BACK_MAIN_MENU)
-            {
-                return OnGossipHello(player);
-            }
-
-            // Actiune direct din Main Menu
-            if (sender == KITT_SENDER_MAIN_MENU_SELECT && action == KITT_ACTION_TELE_ZONE)
-            {
-                player->TeleportTo(0, -4854.04f, -1004.33f, 453.76f, 0.0f);
-                CloseGossipMenuFor(player);
-                return true;
-            }
-
 
             switch (sender)
             {
@@ -450,17 +500,39 @@ public:
 
                         case KITT_ACTION_MENU_HORDE:
                         {
-                            for (size_t i = 0; i < HordeLocs.size(); ++i)
+                            if (player->GetTeam() == HORDE)
                             {
-                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, HordeLocs[i].name, KITT_AUTO_SENDER_HORDE, i);
+                                for (size_t i = 0; i < HordeLocs.size(); ++i)
+                                {
+                                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, HordeLocs[i].name, KITT_AUTO_SENDER_HORDE, i);
+                                }
+                            }
+                            else
+                            {
+                                for (size_t i = 0; i < HordeALocs.size(); ++i)
+                                {
+                                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, HordeALocs[i].name, KITT_AUTO_SENDER_HORDE, i);
+                                }
                             }
                             break;
                         }
 
                         case KITT_ACTION_MENU_ALLIANCE:
                         {
-                            for (size_t i = 0; i < AllianceLocs.size(); ++i)
-                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, AllianceLocs[i].name, KITT_AUTO_SENDER_ALLIANCE, i);
+                            if (player->GetTeam() == ALLIANCE)
+                            {
+                                for (size_t i = 0; i < AllianceLocs.size(); ++i)
+                                {
+                                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, AllianceLocs[i].name, KITT_AUTO_SENDER_ALLIANCE, i);
+                                }
+                            }
+                            else
+                            {
+                                for (size_t i = 0; i < AllianceHLocs.size(); ++i)
+                                {
+                                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, AllianceHLocs[i].name, KITT_AUTO_SENDER_ALLIANCE, i);
+                                }
+                            }
                             break;
                         }
 
@@ -471,7 +543,7 @@ public:
                             {
                                 for (auto const& option : KittFunZone)
                                 {
-                                    AddGossipItemFor(player, option.icon, option.name, option.sender, option.action);
+                                    AddGossipItemFor(player, option.icon, option.name, option.sender, option.action, option.ctext, option.money, option.confirm);
                                 }
                             }
                             else
@@ -483,28 +555,49 @@ public:
                             break;
                         }
 
-                        case KITT_ACTION_TELE_FUN_ZONE:
-                        {
-                            {
-                                for (size_t i = 0; i < FunZoneLocs.size(); ++i)
-                                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, FunZoneLocs[i].name, KITT_AUTO_SENDER_FUN_ZONE, i);
-                            }
-                            break;
-                        }
-
                         case KITT_ACTION_AH_OPEN:
                         {
                             player->GetSession()->SendAuctionHello(me->GetGUID(), me);
                             CloseGossipMenuFor(player);
-                            return false;
+                            return true;
                         }
 
                         case KITT_ACTION_BANK_OPEN:
                         {
                             player->GetSession()->SendShowBank(me->GetGUID());
                             CloseGossipMenuFor(player);
-                            return false;
+                            return true;
                         }
+
+                        case KITT_ACTION_GV_OPEN:
+                        {
+                            uint32 KittGVObj = 187299;    // Guild Value object
+                            Seconds despawnTime = Seconds(120);
+                            // X = +fata/-spate , Y = +stanga/-dreapta , Z = +sus/-jos , 0.0 = orientarea
+                            Position Kittoffset(-1.0f, 2.0f, 0.0f, 0.0f);
+                            Position KittspawnPos = me->GetPositionWithOffset(Kittoffset);
+                            // verifica ca pozitiile sa fie pe sol dupa map si vmap (anuleaza pozitia Z personalizata)
+                            me->UpdateAllowedPositionZ(KittspawnPos.GetPositionX(), KittspawnPos.GetPositionY(), KittspawnPos.m_positionZ);
+
+                            QuaternionData KittmyRotation = QuaternionData();
+                            float distance = 50.0f;  // distanta de a verifica daca exista deja
+                            if (player->FindNearestGameObject(KittGVObj, distance, true))
+                            {
+                                player->GetSession()->SendNotification("Exista deja o banca activa in apropiere (50yd)!");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            if (me->SummonGameObject(KittGVObj, KittspawnPos.GetPositionX(), KittspawnPos.GetPositionY(), KittspawnPos.GetPositionZ(), me->GetOrientation(), KittmyRotation, despawnTime, GO_SUMMON_TIMED_DESPAWN))
+                            {
+                                player->GetSession()->SendNotification("Guild Bank invocat pentru 2 minute!");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
 
                         case KITT_ACTION_MAIL_OPEN:
                         {
@@ -512,22 +605,48 @@ public:
 
                             // Nu inchide meniul de gossip aici, deoarece interfata de mail va aparea deasupra
                             // CloseGossipMenuFor(player);
-                            return false;
+                            return true;
                         }
 
                         case KITT_ACTION_VENDOR_OPEN:
                         {
                             player->GetSession()->SendListInventory(me->GetGUID());
                             CloseGossipMenuFor(player);
-                            return false;
+                            return true;
                         }
+
                         default:
                             break;
                     }
                     // Adaugam butonul de inapoi care sa trimita spre Main Menu
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<< Back Back <<", KITT_SENDER_MAIN_MENU_SELECT, KITT_ACTION_BACK_MAIN_MENU);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<< Back", KITT_SENDER_MENU_DIRECT_SELECT, KITT_ACTION_BACK_MAIN_MENU);
                     SendGossipMenuFor(player, KittNpcText::KITT_NPC_HELLO, me->GetGUID());
                     return true; // Returnam true pentru a confirma afisarea meniului
+                }
+
+                case KITT_SENDER_MENU_DIRECT_SELECT:
+                {
+                    player->PlayerTalkClass->ClearMenus();
+                    switch (action)
+                    {
+                        case KITT_ACTION_BACK_MAIN_MENU:
+                        {
+                            return OnGossipHello(player);
+                            return true; // scriptul se opreste aici. cu breack sau false scriptul continua
+                        }
+
+                        /*case KITT_ACTION_TELE_ZONE:
+                        {
+                            player->TeleportTo(0, -4854.04f, -1004.33f, 453.76f, 0.0f);
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }*/
+
+                        default:
+                            break;
+                    }
+                    // adaugam optiuni finale
+                    return true; // aici se opreste script
                 }
 
                 // 2.2 Logica pentru deschiderea sub-meniurilor Principale
@@ -612,7 +731,7 @@ public:
                         default:
                             break;
                     }
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<< Inapoi la Categorii <<", KITT_SENDER_OPEN_SUBMENU, KITT_ACTION_TELEPORT_TO);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<<< Back", KITT_SENDER_OPEN_SUBMENU, KITT_ACTION_TELEPORT_TO);
                     SendGossipMenuFor(player, KittNpcText::KITT_NPC_HELLO, me->GetGUID());
                     return true; // Returnam true pentru a confirma afisarea meniului
                 }
@@ -861,6 +980,60 @@ public:
                     }
                     SendGossipMenuFor(player, KittNpcText::KITT_INSTANCE_RESET, me->GetGUID());
                     return true;
+                }
+
+                case KITT_SENDER_MENU_FUN_ZONE:
+                {
+                    player->PlayerTalkClass->ClearMenus();
+
+                    switch (action)
+                    {
+                        case KITT_ACTION_TELE_FUN_ZONE:
+                        {
+                            {
+                                for (size_t i = 0; i < FunZoneLocs.size(); ++i)
+                                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, FunZoneLocs[i].name, KITT_AUTO_SENDER_FUN_ZONE, i);
+                            }
+
+                            break;
+                        }
+
+                        case KITT_ACTION_NU_APASA:
+                        {
+                            if (!player->HasEnoughMoney(NuApasaPret))
+                            {
+                                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                                me->Say(player->GetName() + ", ai nevoie de 1500g.", LANG_UNIVERSAL, 0);
+                                CloseGossipMenuFor(player);
+                            }
+                            else
+                            {
+                                player->ModifyMoney(-int32(NuApasaPret));
+                                CloseGossipMenuFor(player);
+
+                                me->Say("Ai dat de naiba!!! Iti dau 10 secunde sa fugi.", LANG_UNIVERSAL, 0);
+                                me->SetFaction(14);
+                                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+                                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR);
+                                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_REPAIR);
+                                me->SetReactState(REACT_PASSIVE);
+                                me->GetMotionMaster()->MoveIdle();
+                                me->GetVictim();
+                                me->SetInCombatWith(me->SelectNearestPlayer(5.0f));
+                                me->Attack(player, 0);
+                            }
+                            return true;
+                            //break;
+                        }
+
+                        default:
+                            break;
+                    }
+
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<<< Back <<<", KITT_SENDER_OPEN_SUBMENU, KITT_ACTION_MENU_FUN_ZONE);
+                    SendGossipMenuFor(player, KittNpcText::KITT_NPC_HELLO, me->GetGUID());
+                    return true; // Returnam true pentru a confirma afisarea meniului
                 }
 
                 //  3. Logica pentru Teleportare sau Logica finala action
