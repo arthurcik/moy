@@ -327,6 +327,11 @@ static const std::array<TeleportLocation, 1> FunZoneLocs = { {
 } };
 
 
+enum Spells
+{
+    /*    SPELL_DEATH = 5, */
+    SPELL_DEATH = 27255
+};
 
 
 class kitt_npc_menu : public CreatureScript
@@ -337,6 +342,19 @@ public:
     struct kitt_npc_menuAI : public ScriptedAI
     {
         kitt_npc_menuAI(Creature* creature) : ScriptedAI(creature) {}
+
+        uint32 m_uiSpell1Timer = 2000;
+        uint32 m_uiSpell2Timer = 3000;
+        uint32 m_uiSpell3Timer = 4000;
+        uint32 m_uiSpell4Timer = 5000;
+        uint32 m_uiSpell5Timer = 6000;
+        uint32 m_uiSpell6Timer = 7000;
+        uint32 m_uiSpell7Timer = 8000;
+        uint32 m_uiSpell8Timer = 9000;
+        uint32 m_uiSpell9Timer = 10000;
+        uint32 m_uiSpell10Timer = 11000;
+        uint32 m_uiSpell11Timer = 12000;
+        uint32 m_uiSpell_Death_Timer = 14000;
 
         void Reset() override
         {
@@ -353,6 +371,245 @@ public:
             me->RemoveFlag(UNIT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
             me->SetReactState(REACT_PASSIVE);
             me->SetFaction(35);
+
+            m_uiSpell1Timer = 2000;
+            m_uiSpell2Timer = 3000;
+            m_uiSpell3Timer = 4000;
+            m_uiSpell4Timer = 5000;
+            m_uiSpell5Timer = 6000;
+            m_uiSpell6Timer = 7000;
+            m_uiSpell7Timer = 8000;
+            m_uiSpell8Timer = 9000;
+            m_uiSpell9Timer = 10000;
+            m_uiSpell10Timer = 11000;
+            m_uiSpell11Timer = 12000;
+            m_uiSpell_Death_Timer = 14000;
+
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            me->Yell("bbbhhhrrr brrr hrrrr a a Aaa-a-a", LANG_UNIVERSAL);
+
+            int32 totalAmount = 20000000; // 2000 Aur
+            float distantaParticipare = 100.0f;
+            std::set<Player*> jucatoriDePremiat;
+
+            // METODA SUPREMA: Verificam cine are dreptul de loot (Tap List)
+            // GetLootRecipient() returneaza Jucatorul care a "tapat" NPC-ul (sau liderul grupului)
+            Player* recipient = me->GetLootRecipient();
+
+            if (recipient)
+            {
+                if (Group* group = recipient->GetGroup())
+                {
+                    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                    {
+                        Player* member = itr->GetSource();
+                        // Verificam sa fie OM (GetSession) si sa fie in zona
+                        if (member && member->GetSession() && member->IsWithinDistInMap(me, distantaParticipare))
+                            jucatoriDePremiat.insert(member);
+                    }
+                }
+                else if (recipient->GetSession()) // Daca e singur si e om
+                {
+                    jucatoriDePremiat.insert(recipient);
+                }
+            }
+
+            // FALLBACK: Daca recipientul e NULL (cazuri rare), scanam zona pentru oameni in combat
+            if (jucatoriDePremiat.empty())
+            {
+                Map::PlayerList const& players = me->GetMap()->GetPlayers();
+                for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+                {
+                    Player* p = itr->GetSource();
+                    if (p && p->GetSession() && p->IsWithinDistInMap(me, distantaParticipare) && p->IsInCombat())
+                        jucatoriDePremiat.insert(p);
+                }
+            }
+
+            // Distribuirea banilor
+            if (!jucatoriDePremiat.empty())
+            {
+                int32 share = totalAmount / (int32)jucatoriDePremiat.size();
+                for (Player* player : jucatoriDePremiat)
+                {
+                    player->ModifyMoney(share);
+                    ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00[Recompensa]|r Ai primit |cffffd700%u|r aur.", share / 10000);
+                }
+            }
+
+/*            // Aici adaugi logica ta de dupa moarte.
+
+            // Exemplu 1: Trimite un mesaj catre jucatorul care l-a omorat
+            if (killer->GetTypeId() == TYPEID_PLAYER)
+            {
+                me->Yell("bbbhhhrrr brrr  hrrrr a a Aaa-a-a", LANG_UNIVERSAL);
+
+                Player* playerKiller = killer->ToPlayer();
+
+                if (playerKiller)
+                {
+                    // Suma in cupru: 20 aur * 100 argint * 100 cupru = 200000 cupru
+                    int32 amount = 20000000;
+
+                    // Adauga banii in inventarul jucatorului
+                    playerKiller->ModifyMoney(amount);
+
+                    // Optional: Trimite un mesaj de notificare jucatorului
+                    // Mesajul va aparea in chatul general/system
+                    std::string message = "Ai primit 2000 de aur de la NPC!";
+
+                    // Foloseste ChatHandler::PSendSysMessage pentru simplitate si compatibilitate
+                    // Aceasta functie stie sa formateze pachetul corect.
+                    // Primul parametru (ses) este sesiunea jucatorului
+                    ChatHandler(playerKiller->GetSession()).PSendSysMessage("%s", message.c_str());
+                }
+            }
+            // Exemplu 2: Face spawn la un alt NPC sau obiect
+            // me->SummonCreature(ENTRY_ID_ALT_NPC, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 30000);
+
+            // Exemplu 3: Activeaza un flag de quest (daca ai un sistem de questuri custom)
+            // Daca ai nevoie de logica complexa de quest, probabil folosesti deja SmartAI Event 11 (SMART_EVENT_ON_DEATH)
+
+            // Exemplu 4: Afiseaza un text pe ecranul tuturor jucatorilor din zona
+            // me->MonsterYell("Am fost invins!", LANG_UNIVERSAL, 0);*/
+        }
+
+        void KilledUnit(Unit* /*victim*/) override
+        {
+            if (me->IsAlive())
+            {
+                Player* nearestPlayer = me->SelectNearestPlayer(50.0f);
+
+                if (nearestPlayer)
+                {
+                    AttackStart(nearestPlayer);
+                    me->Yell(/*me->GetVictim()->GetName() + */ " Vin dupa tine!", LANG_UNIVERSAL, 0);
+                }
+            }
+        }
+
+        void UpdateAI(const uint32 uiDiff) override
+        {
+            if (!UpdateVictim())
+                return;
+
+            //Spell 1 time
+            if (m_uiSpell1Timer <= uiDiff)
+            {
+                me->Yell("10", LANG_UNIVERSAL, 0);
+                m_uiSpell1Timer = 3600000;
+            }
+            else
+                m_uiSpell1Timer -= uiDiff;
+
+            //Spell 2 time
+            if (m_uiSpell2Timer <= uiDiff)
+            {
+                me->Yell("9", LANG_UNIVERSAL, 0);
+                m_uiSpell2Timer = 3600000;
+            }
+            else
+                m_uiSpell2Timer -= uiDiff;
+
+            //Spell 3 time
+            if (m_uiSpell3Timer <= uiDiff)
+            {
+                me->Yell("8", LANG_UNIVERSAL, 0);
+                m_uiSpell3Timer = 3600000;
+            }
+            else
+                m_uiSpell3Timer -= uiDiff;
+
+            //Spell 4 time
+            if (m_uiSpell4Timer <= uiDiff)
+            {
+                me->Yell("7", LANG_UNIVERSAL, 0);
+                m_uiSpell4Timer = 3600000;
+            }
+            else
+                m_uiSpell4Timer -= uiDiff;
+
+            //Spell 5 time
+            if (m_uiSpell5Timer <= uiDiff)
+            {
+                me->Yell("6", LANG_UNIVERSAL, 0);
+                m_uiSpell5Timer = 3600000;
+            }
+            else
+                m_uiSpell5Timer -= uiDiff;
+
+            //Spell 6 time
+            if (m_uiSpell6Timer <= uiDiff)
+            {
+                me->Yell("5", LANG_UNIVERSAL, 0);
+                m_uiSpell6Timer = 3600000;
+            }
+            else
+                m_uiSpell6Timer -= uiDiff;
+
+            //Spell 7 time
+            if (m_uiSpell7Timer <= uiDiff)
+            {
+                me->Yell("4", LANG_UNIVERSAL, 0);
+                m_uiSpell7Timer = 3600000;
+            }
+            else
+                m_uiSpell7Timer -= uiDiff;
+
+            //Spell 8 time
+            if (m_uiSpell8Timer <= uiDiff)
+            {
+                me->Yell("3", LANG_UNIVERSAL, 0);
+                m_uiSpell8Timer = 3600000;
+            }
+            else
+                m_uiSpell8Timer -= uiDiff;
+
+            //Spell 9 time
+            if (m_uiSpell9Timer <= uiDiff)
+            {
+                me->Yell("2", LANG_UNIVERSAL, 0);
+                m_uiSpell9Timer = 3600000;
+            }
+            else
+                m_uiSpell9Timer -= uiDiff;
+
+            //Spell 10 time
+            if (m_uiSpell10Timer <= uiDiff)
+            {
+                me->Yell("1", LANG_UNIVERSAL, 0);
+                m_uiSpell10Timer = 3600000;
+            }
+            else
+                m_uiSpell10Timer -= uiDiff;
+
+            //Spell 11 time
+            if (m_uiSpell11Timer <= uiDiff)
+            {
+                me->Yell("Cine nu-i gata il iau cu lopata! xa xa xa", LANG_UNIVERSAL, 0);
+                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                me->RemoveFlag(UNIT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
+                me->SetReactState(REACT_AGGRESSIVE);
+                me->GetMotionMaster()->MoveChase(me->GetVictim());
+                m_uiSpell11Timer = 3600000;
+            }
+            else
+                m_uiSpell11Timer -= uiDiff;
+
+            //Spell Death
+            if (m_uiSpell_Death_Timer <= uiDiff)
+            {
+                DoCast(me->GetVictim(), SPELL_DEATH);
+                me->Say("Voiai sa fugi de mine?!", LANG_UNIVERSAL, 0);
+                m_uiSpell_Death_Timer = 6000;
+            }
+            else
+                m_uiSpell_Death_Timer -= uiDiff;
+
+            DoMeleeAttackIfReady();
         }
 
         bool OnGossipHello(Player* player) override
@@ -557,7 +814,24 @@ public:
 
                         case KITT_ACTION_AH_OPEN:
                         {
+
+                            uint32 oldFaction = me->GetFaction();
+
+                            // team_alliance = 0 / team_horde = 1
+                            if (player->GetTeam() == ALLIANCE)
+                            {
+                                // Setam temporar factiunea la 12 (Human/Alliance) sau 29 (Orc/Horde)
+                                me->SetFaction(12);
+                            }
+                            else
+                            {
+                                me->SetFaction(29);
+                            }
                             player->GetSession()->SendAuctionHello(me->GetGUID(), me);
+
+                            // Resetam factiunea la cea originala imediat
+                            me->SetFaction(oldFaction);
+
                             CloseGossipMenuFor(player);
                             return true;
                         }

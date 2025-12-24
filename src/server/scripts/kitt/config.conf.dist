@@ -15,9 +15,24 @@ kitt.Quests.AutoReputation.Enable = 0
 # Nota: Quest-ul trebuie sa fie prezent si in kitt.Quests.AutoCompleteList!
 # Default: "" # Ex.: "10733,10738"
 kitt.Quests.AutoReputation.List = ""
-################################
 
-### Start Guild ###
+###################
+# KITT NPC CONFIG
+##################
+#    Kitt.Reset.Code
+#        Codul de confirmare pentru resetarea instantelor.
+#        Default: "RESET"
+#
+Kitt.Reset.Code = "tfcc"
+
+# Cod pentru Fun Zone "Nu apasa"
+# defaul "fun"
+#
+Kitt.Fun.NuApasa.Code = "4fun"
+
+##############
+# Start Guild
+##############
 # StartGuild.Alliance: The ID of the guild for Alliance players on first login.
 # Default: 0
 StartGuild.Alliance = 0
@@ -29,9 +44,10 @@ StartGuild.Horde = 0
 # StartGuild.ExcludeGMs: Exclude Game Masters (GM level > 0) from joining the start guild automatically.
 # Default: 0 (false)
 StartGuild.ExcludeGMs = 0
-#########
 
-### level up reward ###
+##################
+# level up reward
+##################
 # kitt.Reward.Gold.80: The amount of gold granted to a player when they reach level 80.
 # kitt.Reward.Item.80: The Item ID on level 80
 # kitt.Reward.iCount.80: The count(default = 1) for the Item ID on level 80
