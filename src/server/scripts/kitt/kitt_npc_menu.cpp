@@ -169,6 +169,7 @@ struct MainMenuOptionConfirm {
 };
 
 // Meniu Principal
+// maxim 32 elemente per pagina cu tot cu Back
 // pentru viteza adaugam "const" si "array" in loc de "vector"
 // metoda veche: static std::vector ....
 // nr de dupa "," reprezinta nr de meniuri
@@ -205,14 +206,14 @@ static const std::array<MainMenuOptionConfirm, 3> KittFunZone = { {
 // Meniu Instance Reset Cooldown cu confirmare.
 // menu code. daca are TRUE optiunea finala se adauga la OnGossipSelectCode
 
-static std::vector<MainMenuOptionConfirm> KittInstanceReset = {
+static const std::array<MainMenuOptionConfirm, 6> KittInstanceReset = { {
     { GOSSIP_ICON_CHAT, "Reset Dungeon Heroic (" + sMoneyDungeons + " g)", KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_DUNGEON,  "Reset Dungeon Heroic",  MoneyDungeons, false},
     { GOSSIP_ICON_CHAT, "Reset Raid 10 Normal (" + sMoneyRaid10 + " g)",   KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID10,   "Reset Raid 10 Normal",  MoneyRaid10,   false },
     { GOSSIP_ICON_CHAT, "Reset Raid 25 Normal (" + sMoneyRaid25 + " g)",   KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID25,   "Reset Raid 25 Normal",  MoneyRaid25,   false },
     { GOSSIP_ICON_CHAT, "Reset Raid 10 Heroic (" + sMoneyRaid10H + " g)",  KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID10H,  "Reset Raid 10 Heroic",  MoneyRaid10H,  false },
     { GOSSIP_ICON_CHAT, "Reset Raid 25 Heroic (" + sMoneyRaid25H + " g)",  KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID25H,  "Reset Raid 25 Heroic",  MoneyRaid25H,  false },
     { GOSSIP_ICON_CHAT, "<<< Back <<<",      KITT_SENDER_OPEN_SUBMENU,        KITT_ACTION_MENU_FUN_ZONE,  "",  0,  false }
-};
+} };
 
 
 // Structura teleport
@@ -224,48 +225,48 @@ struct TeleportLocation {
 
 
 // Tabel pentru Horde
-static std::vector<TeleportLocation> HordeLocs = {
+static const std::array<TeleportLocation, 4> HordeLocs = { {
     {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "Orgrimmar"},
     {0, 1572.00f, 213.637f, -43.1031f, 0.85f, "Undercity"},
     {1, -1386.75f, 138.474f, 23.0348f, 0.0f, "Thunder Bluff"},
     {530, 9380.18f, -7277.81f, 14.2404f, 0.0f, "Silvermoon"}
-};
+} };
 
 // Tabel pentru Alliance
-static std::vector<TeleportLocation> AllianceLocs = {
+static const std::array<TeleportLocation, 4> AllianceLocs = { {
     {0, -8837.57f, 637.394f, 94.8055f, 4.96f, "Stormwind"},
     {1, 9946.02f, 2588.77f, 1316.19f, 0.0f, "Darnassus"},
     {0, -5002.33f, -857.664f, 497.054f, 0.0f, "Ironforge"},
     {530, -4004.39f, -11878.5f, -1.01131f, 0.0f, "Exodar"}
-};
+} };
 
 // Tabel pentru Horde factiune Alianta
-static std::vector<TeleportLocation> HordeALocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "Orgrimmar A"},
-    {0, 1572.00f, 213.637f, -43.1031f, 0.85f, "Undercity A"},
-    {1, -1386.75f, 138.474f, 23.0348f, 0.0f, "Thunder Bluff A"},
-    {530, 9380.18f, -7277.81f, 14.2404f, 0.0f, "Silvermoon A"}
-};
+static const std::array<TeleportLocation, 4> HordeALocs = { {
+    {1, 1107.23f, -4360.45f, 26.2786f, 6.056f, "Orgrimmar A"},
+    {0, 1993.49f, 284.063f, 47.8923f, 3.673f, "Undercity A"},
+    {1, -1457.53f, 73.2452f, 13.9765f, 0.580f, "Thunder Bluff A"},
+    {530, 9269.27f, -7305.51f, 22.4224f, 0.426f, "Silvermoon A"}
+} };
 
 // Tabel pentru Alliance factiune Hoarda
-static std::vector<TeleportLocation> AllianceHLocs = {
-    {0, -8837.57f, 637.394f, 94.8055f, 4.96f, "Stormwind H"},
-    {1, 9946.02f, 2588.77f, 1316.19f, 0.0f, "Darnassus H"},
-    {0, -5002.33f, -857.664f, 497.054f, 0.0f, "Ironforge H"},
-    {530, -4004.39f, -11878.5f, -1.01131f, 0.0f, "Exodar H"}
-};
+static const std::array<TeleportLocation, 4> AllianceHLocs = { {
+    {0, -9121.74f, 286.842f, 100.404f, 1.333f, "Stormwind H"},
+    {1, 10023.5f, 1945.38f, 1331.05f, 2.527f, "Darnassus H"},
+    {0, -5102.12f, -728.699f, 467.572f, 5.420f, "Ironforge H"},
+    {530, -4059.18f, -12150.0f, -0.78815f, 1.672f, "Exodar H"}
+} };
 
 
 // Eastern Kingdoms
 static const std::array<TeleportLocation, 24> EKingdomLocs = { {
-    {0, -9449.06f, 64.8392f, 56.3581f, 3.07047f, "Elwynn Forest"},
-    {530, 9024.37f, -6682.55f, 16.8973f, 3.14131f, "Eversong Woods"},
-    {0, -5603.76f, -482.704f, 396.98f, 5.23499f, "Dun Morogh"},
-    {0, 2274.95f, 323.918f, 34.1137f, 4.24367f, "Tirisfal Glades"},
-    {530, 7595.73f, -6819.6f, 84.3718f, 2.56561f, "Ghostlands"},
-    {0, -5405.85f, -2894.15f, 341.972f, 5.48238f, "Loch Modan"},
-    {0, 505.126f, 1504.63f, 124.808f, 1.77987f, "Silverpine Forest"},
-    {0, -10684.9f, 1033.63f, 32.5389f, 6.07384f, "Westfall"},
+    {0, -9449.06f, 64.8392f, 56.3581f, 3.07047f, "Elwynn Forest (lvl 1-14)"},
+    {530, 9024.37f, -6682.55f, 16.8973f, 3.14131f, "Eversong Woods (lvl 1-14)"},
+    {0, -5603.76f, -482.704f, 396.98f, 5.23499f, "Dun Morogh (lvl 1-14)"},
+    {0, 2274.95f, 323.918f, 34.1137f, 4.24367f, "Tirisfal Glades (lvl 1-14)"},
+    {530, 7595.73f, -6819.6f, 84.3718f, 2.56561f, "Ghostlands (lvl 8-24)"},
+    {0, -5405.85f, -2894.15f, 341.972f, 5.48238f, "Loch modan (lvl 8-24)"},
+    {0, 505.126f, 1504.63f, 124.808f, 1.77987f, "Silverpine Forest (lvl 8-24)"},
+    {0, -10684.9f, 1033.63f, 32.5389f, 6.07384f, "Westfall (lvl 8-24)"},
     {0, -9447.8f, -2270.85f, 71.8224f, 0.283853f, "Redridge mountains (lvl 13-30)"},
     {0, -10531.7f, -1281.91f, 38.8647f, 1.56959f, "Duskwood (lvl 18-34)"},
     {0, -385.805f, -787.954f, 54.6655f, 1.03926f, "Hillsbrad Foothills (lvl 18-34)"},
@@ -285,39 +286,129 @@ static const std::array<TeleportLocation, 24> EKingdomLocs = { {
 } };
 
 // Kalimdor
-static std::vector<TeleportLocation> KalimadorLocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "kalimador"},
-};
+static const std::array<TeleportLocation, 19> KalimadorLocs = { {
+    {530, -4192.62f, -12576.7f, 36.7598f, 1.62813f, "Azuremyst Isle (lvl 1-14)"},
+    {1, 9889.03f, 915.869f, 1307.43f, 1.9336f, "Teldrassil (lvl 1-14)"},
+    {1, 228.978f, -4741.87f, 10.1027f, 0.416883f, "Durotar (lvl 1-14)"},
+    {1, -2473.87f, -501.225f, -9.42465f, 0.6525f, "Mulgore (lvl 1-14)"},
+    {530, -2095.7f, -11841.1f, 51.1557f, 6.19288f, "Bloodmyst Isle (lvl 8-24)"},
+    {1, 6463.25f, 683.986f, 8.92792f, 4.33534f, "Darkshore (lvl 8-24)"},
+    {1, -575.772f, -2652.45f, 95.6384f, 0.006469f, "The Barrens (lvl 8-30)"},
+    {1, 1574.89f, 1031.57f, 137.442f, 3.8013f, "Stonetalon Mountains (lvl 13-32)"},
+    {1, 1919.77f, -2169.68f, 94.6729f, 6.14177f, "Ashenvale (lvl 18-34)"},
+    {1, -5375.53f, -2509.2f, -40.432f, 2.41885f, "Thousand Needles (lvl 22-40)"},
+    {1, -656.056f, 1510.12f, 88.3746f, 3.29553f, "Desolace (lvl 28-44)"},
+    {1, -3350.12f, -3064.85f, 33.0364f, 5.12666f, "Dustwallow Marsh (lvl 33-50)"},
+    {1, -4808.31f, 1040.51f, 103.769f, 2.90655f, "Feralas (lvl 38-54)"},
+    {1, -6940.91f, -3725.7f, 48.9381f, 3.11174f, "Tanaris (lvl 38-54)"},
+    {1, 3117.12f, -4387.97f, 91.9059f, 5.49897f, "Azshara (lvl 43-60)"},
+    {1, 3898.8f, -1283.33f, 220.519f, 6.24307f, "Felwood (lvl 46-60)"},
+    {1, -6291.55f, -1158.62f, -258.138f, 0.457099f, "Un\'Goro Crater (lvl 45-60)"},
+    {1, -6815.25f, 730.015f, 40.9483f, 2.39066f, "Silithus (lvl 53-60)"},
+    {1, 6658.57f, -4553.48f, 718.019f, 5.18088f, "Winterspring (lvl 53-63)"}
+} };
 
 // Outland
-static std::vector<TeleportLocation> OutlandLocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "outland"},
-};
+static const std::array<TeleportLocation, 8> OutlandLocs = { {
+    {530, -1812.93f, 5452.93f, 2.68198f, 3.5534f, "Shattrath"},
+    {530, -207.335f, 2035.92f, 96.464f, 1.59676f, "Hellfire Peninsula"},
+    {530, -220.297f, 5378.58f, 23.3223f, 1.61718f, "Zangarmarsh"},
+    {530, -2266.23f, 4244.73f, 1.47728f, 3.68426f, "Terokkar Forest"},
+    {530, -1610.85f, 7733.62f, -17.2773f, 1.33522f, "Nagrand"},
+    {530, 2029.75f, 6232.07f, 133.495f, 1.30395f, "Blade\'s Edge Mountains"},
+    {530, 3271.2f, 3811.61f, 143.153f, 3.44101f, "Netherstorm"},
+    {530, -3681.01f, 2350.76f, 76.587f, 4.25995f, "Shadowmoon Valley"}
+} };
 
 // Northrend
-static std::vector<TeleportLocation> NorthrendLocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "northrend"},
-};
+static const std::array<TeleportLocation, 11> NorthrendLocs = { {
+    {571, 5804.15f, 624.771f, 647.767f, 0.0f, "Dalaran"},
+    {571, 2954.24f, 5379.13f, 60.4538f, 2.55544f, "Borean Tundra"},
+    {571, 682.848f, -3978.3f, 230.161f, 1.54207f, "Howling Fjord"},
+    {571, 2678.17f, 891.826f, 4.37494f, 0.101121f, "Dragonblight"},
+    {571, 4017.35f, -3404.22f, 289.925f, 5.35431f, "Grizzly Hills"},
+    {571, 5560.23f, -3211.66f, 371.709f, 5.55055f, "Zul\'Drak"},
+    {571, 5614.67f, 5818.86f, -69.722f, 3.60807f, "Sholazar Basin"},
+    {571, 5411.17f, -966.37f, 167.082f, 1.57167f, "Crystalsong Forest"},
+    {571, 6120.46f, -1013.89f, 408.39f, 5.12322f, "Storm Peaks"},
+    {571, 8323.28f, 2763.5f, 655.093f, 2.87223f, "Icecrown"},
+    {571, 4522.23f, 2828.01f, 389.975f, 0.215009f, "Wintergrasp"},
+} };
 
 // Classic Dungeons
-static std::vector<TeleportLocation> ClassicDungeonsLocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "classic dungeons"},
-};
+static const std::array<TeleportLocation, 19> ClassicDungeonsLocs = { {
+    {0, -5163.54f, 925.423f, 257.181f, 1.57423f, "Gnomeregan (lvl 25-28)"},
+    {0, -11209.6f, 1666.54f, 24.6974f, 1.42053f, "The Deadmines (lvl 17-20)"},
+    {0, -8799.15f, 832.718f, 97.6348f, 6.04085f, "The Stockade (lvl 22-25)"},
+    {1, 1811.78f, -4410.5f, -18.4704f, 5.20165f, "Ragefire Chasm (lvl 15-16)"},
+    {1, -4657.3f, -2519.35f, 81.0529f, 4.54808f, "Razorfen Downs (lvl 34-37)"},
+    {1, -4470.28f, -1677.77f, 81.3925f, 1.16302f, "Razorfen Kraul (lvl 24-27)"},
+    {0, 2873.15f, -764.523f, 160.332f, 5.10447f, "Scarlet Monastery (lvl 29-40)"},
+    {0, -234.675f, 1561.63f, 76.8921f, 1.24031f, "Shadowfang Keep (lvl 18-21)"},
+    {1, -731.607f, -2218.39f, 17.0281f, 2.78486f, "Wailing Caverns (lvl 17-20)"},
+    {1, 4249.99f, 740.102f, -25.671f, 1.34062f, "Blackfathom Deeps (lvl 21-24)"},
+    {0, -7179.34f, -921.212f, 165.821f, 5.09599f, "Blackrock Depths (lvl 49-56)"},
+    {0, -7527.05f, -1226.77f, 285.732f, 5.29626f, "Blackrock Spire (lvl 57-63)"},
+    {1, -3520.14f, 1119.38f, 161.025f, 4.70454f, "Dire Maul (lvl 55-60)"},
+    {1, -1421.42f, 2907.83f, 137.415f, 1.70718f, "Maraudon (lvl 41-48)"},
+    {0, 1269.64f, -2556.21f, 93.6088f, 0.620623f, "Scholomance (lvl 55-60)"},
+    {0, 3352.92f, -3379.03f, 144.782f, 6.25978f, "Stratholme (lvl 55-60)"},
+    {0, -10177.9f, -3994.9f, -111.239f, 6.01885f, "Sunken Temple (lvl 47-50)"},
+    {0, -6071.37f, -2955.16f, 209.782f, 0.015708f, "Uldaman (lvl 37-40)"},
+    {1, -6801.19f, -2893.02f, 9.00388f, 0.158639f, "Zul\'Farrak (lvl 43-46)"},
+} };
 
 // BC Dungeons
-static std::vector<TeleportLocation> BcDungeonsLocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "bc dungeons"},
-};
+static const std::array<TeleportLocation, 6> BcDungeonsLocs = { {
+    {530, -3324.49f, 4943.45f, -101.239f, 4.63901f, "Auchindoun"},
+    {1, -8369.65f, -4253.11f, -204.272f, -2.70526f, "The Caverns of Time"},
+    {530, 738.865f, 6865.77f, -69.4659f, 6.27655f, "Coilfang Reservoir"},
+    {530, -347.29f, 3089.82f, 21.394f, 5.68114f, "Hellfire Citadel"},
+    {530, 12884.6f, -7317.69f, 65.5023f, 4.799f, "Magisters\' Terrace"},
+    {530, 3100.48f, 1536.49f, 190.3f, 4.62226f, "Tempest Keep"},
+} };
 
 // Wrath Dungeons
-static std::vector<TeleportLocation> WrathDungeonsLocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "wrath dungeons"},
-};
+static const std::array<TeleportLocation, 12> WrathDungeonsLocs = { {
+    {571, 3707.86f, 2150.23f, 36.76f, 3.22f, "Azjol-Nerub"},
+    {1, -8756.39f, -4440.68f, -199.489f, 4.66289f, "The Culling of Stratholme"},
+    {571, 8590.95f, 791.792f, 558.235f, 3.13127f, "Trial of the Champion"},
+    {571, 4765.59f, -2038.24f, 229.363f, 0.887627f, "Drak\'Tharon Keep"},
+    {571, 6722.44f, -4640.67f, 450.632f, 3.91123f, "Gundrak"},
+    {571, 5643.16f, 2028.81f, 798.274f, 4.60242f, "Icecrown Citadel Dungeons"},
+    {571, 3782.89f, 6965.23f, 105.088f, 6.14194f, "The Nexus Dungeons"},
+    {571, 5693.08f, 502.588f, 652.672f, 4.0229f, "The Violet Hold"},
+    {571, 9136.52f, -1311.81f, 1066.29f, 5.19113f, "Halls of Lightning"},
+    {571, 8922.12f, -1009.16f, 1039.56f, 1.57044f, "Halls of Stone"},
+    {571, 1203.41f, -4868.59f, 41.2486f, 0.283237f, "Utgarde Keep"},
+    {571, 1267.24f, -4857.3f, 215.764f, 3.22768f, "Utgarde Pinnacle"},
+} };
 
 // Raid Teleports
-static std::vector<TeleportLocation> RaidLocs = {
-    {1, 1493.17f, -4414.95f, 23.04f, 0.0f, "raid"},
-};
+static const std::array<TeleportLocation, 22> RaidLocs = { {
+    {530, -3649.92f, 317.469f, 35.2827f, 2.94285f, "Black Temple (lvl 70+)"},
+    {229, 152.451f, -474.881f, 116.84f, 0.001073f, "Blackwing Lair (req. Raid lvl 60+)"},
+    {1, -8177.89f, -4181.23f, -167.552f, 0.913338f, "Hyjal Summit (lvl 70+)"},
+    {530, 797.855f, 6865.77f, -65.4165f, 0.005938f, "Serpentshrine Cavern (lvl 68+)"},
+    {571, 8515.61f, 714.153f, 558.248f, 1.57753f, "Trial of the Crusader (lvl 80)"},
+    {530, 3530.06f, 5104.08f, 3.50861f, 5.51117f, "Gruul\'s Lair (lvl 70+)"},
+    {530, -336.411f, 3130.46f, -102.928f, 5.20322f, "Magtheridon\'s Lair (lvl 65+)"},
+    {571, 5855.22f, 2102.03f, 635.991f, 3.57899f, "Icecrown Citadel (lvl 80)"},
+    {0, -11118.9f, -2010.33f, 47.0819f, 0.649895f, "Karazhan (lvl 68+)"},
+    {230, 1126.64f, -459.94f, -102.535f, 3.46095f, "Molten Core (req. Raid lvl 50+)"},
+    {571, 3668.72f, -1262.46f, 243.622f, 4.785f, "Naxxramas (lvl 80+)"},
+    {1, -4708.27f, -3727.64f, 54.5589f, 3.72786f, "Onyxia\'s Lair')"},
+    {1, -8409.82f, 1499.06f, 27.7179f, 2.51868f, "Ruins of Ahn\'Qiraj (lvl 50+)"},
+    {530, 12574.1f, -6774.81f, 15.0904f, 3.13788f, "Sunwell Plateau (lvl 70+)"},
+    {530, 3088.49f, 1381.57f, 184.863f, 4.61973f, "The Eye"},
+    {1, -8240.09f, 1991.32f, 129.072f, 0.941603f, "Temple of Ahn\'Qiraj"},
+    {571, 3784.17f, 7028.84f, 161.258f, 5.79993f, "The Eye of Eternity (lvl 80)"},
+    {571, 3472.43f, 264.923f, -120.146f, 3.27923f, "The Obsidian Sanctum (lvl 80)"},
+    {571, 9222.88f, -1113.59f, 1216.12f, 6.27549f, "Ulduar (lvl 80)"},
+    {571, 5453.72f, 2840.79f, 421.28f, 0.0f, "Vault of Archavon (lvl 80)"},
+    {0, -11916.7f, -1215.72f, 92.289f, 4.72454f, "Zul\'Gurub (lvl 50)"},
+    {530, 6851.78f, -7972.57f, 179.242f, 4.64691f, "Zul\'Aman (lvl 70)"},
+} };
 
 
 
@@ -1314,10 +1405,21 @@ public:
                 // menu de cautare automata pentru enum
                 case KITT_AUTO_SENDER_HORDE:
                 {
-                    if (action < HordeLocs.size())
+                    if (player->GetTeam() == HORDE)
                     {
-                        TeleportLocation const& loc = HordeLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        if (action < HordeLocs.size())
+                        {
+                            TeleportLocation const& loc = HordeLocs[action];
+                            player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        }
+                    }
+                    else
+                    {
+                        if (action < HordeALocs.size())
+                        {
+                            TeleportLocation const& loc = HordeALocs[action];
+                            player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        }
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1325,10 +1427,21 @@ public:
 
                 case KITT_AUTO_SENDER_ALLIANCE:
                 {
-                    if (action < AllianceLocs.size())
+                    if (player->GetTeam() == ALLIANCE)
                     {
-                        TeleportLocation const& loc = AllianceLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        if (action < AllianceLocs.size())
+                        {
+                            TeleportLocation const& loc = AllianceLocs[action];
+                            player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        }
+                    }
+                    else
+                    {
+                        if (action < AllianceHLocs.size())
+                        {
+                            TeleportLocation const& loc = AllianceHLocs[action];
+                            player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        }
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1339,6 +1452,83 @@ public:
                     if (action < EKingdomLocs.size())
                     {
                         TeleportLocation const& loc = EKingdomLocs[action];
+                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                    }
+                    CloseGossipMenuFor(player);
+                    return true;
+                }
+
+                case KITT_AUTO_SENDER_KALIMDOR:
+                {
+                    if (action < KalimadorLocs.size())
+                    {
+                        TeleportLocation const& loc = KalimadorLocs[action];
+                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                    }
+                    CloseGossipMenuFor(player);
+                    return true;
+                }
+
+                case KITT_AUTO_SENDER_OUTLAND:
+                {
+                    if (action < OutlandLocs.size())
+                    {
+                        TeleportLocation const& loc = OutlandLocs[action];
+                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                    }
+                    CloseGossipMenuFor(player);
+                    return true;
+                }
+
+                case KITT_AUTO_SENDER_NORTHREND:
+                {
+                    if (action < NorthrendLocs.size())
+                    {
+                        TeleportLocation const& loc = NorthrendLocs[action];
+                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                    }
+                    CloseGossipMenuFor(player);
+                    return true;
+                }
+
+                case KITT_AUTO_SENDER_CLASSIC_DUNGEONS:
+                {
+                    if (action < ClassicDungeonsLocs.size())
+                    {
+                        TeleportLocation const& loc = ClassicDungeonsLocs[action];
+                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                    }
+                    CloseGossipMenuFor(player);
+                    return true;
+                }
+
+                case KITT_AUTO_SENDER_BC_DUNGEONS:
+                {
+                    if (action < BcDungeonsLocs.size())
+                    {
+                        TeleportLocation const& loc = BcDungeonsLocs[action];
+                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                    }
+                    CloseGossipMenuFor(player);
+                    return true;
+                }
+
+                case KITT_AUTO_SENDER_WRATH_DUNGEONS:
+                {
+                    if (action < WrathDungeonsLocs.size())
+                    {
+                        TeleportLocation const& loc = WrathDungeonsLocs[action];
+                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                    }
+                    CloseGossipMenuFor(player);
+                    return true;
+                }
+
+                case KITT_AUTO_SENDER_RAID:
+                {
+                    if (action < RaidLocs.size())
+                    {
+                        TeleportLocation const& loc = RaidLocs[action];
                         player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
                     }
                     CloseGossipMenuFor(player);
@@ -1418,7 +1608,6 @@ public:
 
 void AddSC_kitt_npc_menu()
 {
-    // KittResetCode = sConfigMgr->GetStringDefault("Kitt.Reset.Code", "test");
     new kitt_npc_menu();
     new kitt_npc_menu_validator();
 }
