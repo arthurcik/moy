@@ -67,7 +67,7 @@ class ChatLog
 
         void ChatMsg(Player *player, std::string &msg, uint32 type);
         void PartyMsg(Player *player, std::string &msg);
-        void GuildMsg(Player *player, std::string &msg, bool officer);
+        void GuildMsg(Player *player, std::string &msg, bool officer, bool isMaster);
         void WhisperMsg(Player *player, std::string &to, std::string &msg);
         void ChannelMsg(Player *player, std::string &channel, std::string &msg);
         void RaidMsg(Player *player, std::string &msg, uint32 type);
