@@ -52,10 +52,7 @@ static std::map<ObjectGuid, uint8> KittWarnedCount;
 };*/
 
 static const std::map<std::string, std::string> KittBannedAddons = {
-    {"crb", "Carbonite"},
-    {"ch1", "Carbonite Module 1"},
-    {"ch2", "Carbonite Module 2"},
-    {"recount", "Recount"}
+    {"crb", "Carbonite"}
 };
 
 
@@ -72,7 +69,7 @@ public:
         KittWarnedCount.erase(player->GetGUID());
     }
 
-    // pe say /s
+    // pe say /s /me /y
     void OnChat(Player* player, uint32 type, uint32 lang, std::string& msg) override
     {
         if (!player)

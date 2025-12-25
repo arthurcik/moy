@@ -45,6 +45,81 @@ StartGuild.Horde = 0
 # Default: 0 (false)
 StartGuild.ExcludeGMs = 0
 
+############
+# CHAT LOGS
+############
+# Chat log parameters
+ChatLogEnable = 1
+
+# If this is enabled, all $d in file names are replaced with current date
+# This does include innormative lexics log
+ChatLogDateSplit = 1
+
+# If this is enabled, UTF8 header is written into new files
+ChatLogUTFHeader = 1
+
+# If this is enabled, chat log will ignore messages with unprintable chars
+ChatLogIgnoreUnprintable = 1
+
+# Chat log files
+ChatLogChatFile = "./chat-log/$d.main_chat.log" 
+ChatLogPartyFile = "./chat-log/$d.party_chat.log"
+ChatLogGuildFile = "./chat-log/$d.guild_chat.log"
+ChatLogWhisperFile = "./chat-log/$d.whisper_chat.log"
+ChatLogChannelFile = "./chat-log/$d.channel_chat.log"
+ChatLogRaidFile = "./chat-log/$d.raid_chat.log"
+ChatLogBattleGroundFile = "./chat-log/$d.bg_chat.log"
+
+# Chat log screen logging
+ChatLogChatScreen = 0
+ChatLogPartyScreen = 0
+ChatLogGuildScreen = 0
+ChatLogWhisperScreen = 0
+ChatLogChannelScreen = 0
+ChatLogRaidScreen = 0
+ChatLogBattleGroundScreen = 0
+
+# Lexics cutter parameters
+# activeaza pedeapsa+cenzura+logs
+LexicsCutterEnable = 1
+
+# activeaza cenzura
+LexicsCutterInnormativeCut = 0
+LexicsCutterCutReplacement = "Yo te quiero"
+LexicsCutterLogFile = "./chat-log/$d.innormative.log"
+LexicsCutterScreenLog = 0
+LexicsCutterAnalogsFile = letter_analogs.txt
+LexicsCutterWordsFile = innormative_words.txt
+
+# Where to cut lexics
+LexicsCutInChat = 1
+LexicsCutInParty = 1
+LexicsCutInGuild = 1
+LexicsCutInWhisper = 1
+LexicsCutInChannel = 1
+LexicsCutInRaid = 1
+LexicsCutInBattleGround = 1
+
+# Ignore word spaces like: W O R D
+LexicsCutterIgnoreSpaces = 1
+
+# Ignore repeats like: WWOOOORRRRRD
+LexicsCutterIgnoreRepeats = 1
+
+# --- Action:
+# ---   0: log only
+# ---def   1: sheep
+# ---   2: stun
+# ---   3: kill
+# ---   4: leave 5 health
+# ---   5: disable chat
+# ---def   6: stuck (works as stun + 50% health) [by KAPATEJIb]
+LexicsCutterAction = 0
+LexicsCutterActionDuration = 20000
+
+# Do not perform action on GM if this is enabled
+LexicsCutterNoActionOnGM = 0
+
 ##################
 # level up reward
 ##################
