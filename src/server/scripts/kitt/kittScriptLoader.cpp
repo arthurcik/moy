@@ -25,6 +25,8 @@ void AddSC_kitt_quest_complet();
 void AddSC_kitt_item_spawn();
 void AddSC_kitt_npc_menu();
 void AddSC_kitt_anti_addons();
+void AddSC_kitt_chat_logs();
+
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -39,4 +41,5 @@ void AddkittScripts()
     AddSC_kitt_item_spawn();
     AddSC_kitt_npc_menu();
     AddSC_kitt_anti_addons();
+    AddSC_kitt_chat_logs();
 }

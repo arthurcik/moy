@@ -28,6 +28,7 @@
 #include "World.h"
 #include "ObjectAccessor.h"
 #include "GuildMgr.h"
+#include "WorldSession.h"
 
 
 ChatLog::ChatLog()
@@ -269,7 +270,7 @@ void ChatLog::PartyMsg(Player *player, std::string &msg)
     }
 }
 
-void ChatLog::GuildMsg(Player *player, std::string &msg, bool officer)
+void ChatLog::GuildMsg(Player *player, std::string &msg, bool officer, bool isMaster)
 {
     if (!_ChatCommon(CHAT_LOG_GUILD, player, msg)) return;
 
@@ -281,7 +282,8 @@ void ChatLog::GuildMsg(Player *player, std::string &msg, bool officer)
     log_str.append("[");
     log_str.append(std::to_string(kitt_accid));
     log_str.append("]");
-    log_str.append("[");
+    //log_str.append("[");
+    log_str.append((isMaster ? "M->[" : "["));
     log_str.append(player->GetName());
     log_str.append((officer ? "]->GUILD_OFF:" : "]->GUILD:"));
 
@@ -429,6 +431,14 @@ void ChatLog::RaidMsg(Player *player, std::string &msg, uint32 type)
         case CHAT_MSG_RAID_WARNING:
         log_str.append("]->RAID_WARN:");
         break;
+
+        case CHAT_MSG_PARTY:
+            log_str.append("]->RAID_Party:");
+        break;
+
+        case CHAT_MSG_PARTY_LEADER:
+            log_str.append("]->RAID_L_Party:");
+            break;
 
         default:
         log_str.append("]->RAID_UNKNOWN:");
