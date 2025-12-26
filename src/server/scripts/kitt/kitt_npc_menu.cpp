@@ -211,7 +211,7 @@ static const std::array<MainMenuOptionConfirm, 5> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Nu Apasa!!! (" + sNuApasaPret + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Esti sigur?", NuApasaPret, true},
     { GOSSIP_ICON_CHAT, "Instance Reset CD",     KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_MENU_INSTANCE_RESET },
     { GOSSIP_ICON_CHAT, "Reset All Aura & Buff (" + sResetAllAura + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_BUFF, "UnBuff all spell & aura", ResetAllAura, false},
-    { GOSSIP_ICON_CHAT, "Reset All cd (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all cooldown", ResetAllSpellCd, false},
+    { GOSSIP_ICON_CHAT, "Reset All cooldown (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all cooldown", ResetAllSpellCd, false},
 } };
 
 // Meniu Instance Reset Cooldown cu confirmare.
