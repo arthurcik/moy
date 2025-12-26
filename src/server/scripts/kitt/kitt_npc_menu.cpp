@@ -50,6 +50,9 @@ static const uint32 MoneyRaid25      = 350 * 10000;  // galbeni necesari pentru 
 static const uint32 MoneyRaid10H     = 200 * 10000;  // galbeni necesari pentru Raid 10 Heroic
 static const uint32 MoneyRaid25H     = 500 * 10000;  // galbeni necesari pentru Raid 25 Heroic
 static const uint32 NuApasaPret      = 1500 * 10000; // Fun Zone nu apasa pret
+static const uint32 ResetAllSpellCd  = 100 * 10000;  // pret Reset all spell cooldown
+static const uint32 ResetAllAura     = 50 * 10000;   // pret UnAura all spell
+
 
 // conversie la string ca sa poate fi adaugat in mesaj
 std::string sMoneyDungeons = std::to_string(MoneyDungeons / 10000);
@@ -58,6 +61,9 @@ static const std::string sMoneyRaid25 = std::to_string(MoneyRaid25 / 10000);
 static const std::string sMoneyRaid10H = std::to_string(MoneyRaid10H / 10000);
 static const std::string sMoneyRaid25H = std::to_string(MoneyRaid25H / 10000);
 static const std::string sNuApasaPret = std::to_string(NuApasaPret / 10000);
+static const std::string sResetAllSpellCd = std::to_string(ResetAllSpellCd / 10000);
+static const std::string sResetAllAura = std::to_string(ResetAllAura / 10000);
+
 
 
 
@@ -137,6 +143,9 @@ enum KittAction
     KITT_ACTION_RESET_RAID10H           = 118,   // Instance Reset Raid 10 Heroic
     KITT_ACTION_RESET_RAID25H           = 119,   // Instance Reset Raid 25 Heroic
     KITT_ACTION_TELEPORT_TO             = 120,   // meniu Teleport To
+    KITT_ACTION_RESET_ALL_BUFF          = 121,   // Reset all buff & aura
+    KITT_ACTION_RESET_ALL_CD_SPELL      = 122,   // Reset all cooldown spell
+
 
 
 
@@ -197,10 +206,12 @@ static const std::array<MainMenuOption, 8> KittTeleportTo = { {
     { GOSSIP_ICON_CHAT, "Raid Teleports",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_RAID }
 } };
 // Meniu Fun Zone
-static const std::array<MainMenuOptionConfirm, 3> KittFunZone = { {
+static const std::array<MainMenuOptionConfirm, 5> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Fun Zone (Teleport)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TELE_FUN_ZONE },
     { GOSSIP_ICON_CHAT, "Nu Apasa!!! (" + sNuApasaPret + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Esti sigur?", NuApasaPret, true},
-    { GOSSIP_ICON_CHAT, "Instance Reset CD",     KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_MENU_INSTANCE_RESET }
+    { GOSSIP_ICON_CHAT, "Instance Reset CD",     KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_MENU_INSTANCE_RESET },
+    { GOSSIP_ICON_CHAT, "Reset All Aura & Buff (" + sResetAllAura + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_BUFF, "UnBuff all spell & aura", ResetAllAura, false},
+    { GOSSIP_ICON_CHAT, "Reset All cd (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all cooldown", ResetAllSpellCd, false},
 } };
 
 // Meniu Instance Reset Cooldown cu confirmare.
@@ -1390,6 +1401,58 @@ public:
                             }
                             return true;
                             //break;
+                        }
+
+                        case KITT_ACTION_RESET_ALL_BUFF:
+                        {
+                            // Verificam daca jucatorul are vreo aura activa
+                            if (player->GetAppliedAuras().empty())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Eroare:|r Nu ai nicio aura activa pentru a fi eliminata.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            else if (!player->HasEnoughMoney(ResetAllAura))
+                            {
+                                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, nullptr, 0, 0);
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            else
+                            {
+                                player->RemoveAllAuras();
+                                player->ModifyMoney(-int32(ResetAllAura));
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Toate |cffffffffaura\'s & buff|r au fost eliminate.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            break;
+                        }
+
+                        case KITT_ACTION_RESET_ALL_CD_SPELL:
+                        {
+                            // Verificam daca jucatorul are cooldown-uri active
+                            if (player->GetSpellHistory()->GetCooldownsSizeForPacket() == 0)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Eroare:|r Nu ai niciun cooldown activ pentru a fi resetat.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            else if (!player->HasEnoughMoney(ResetAllSpellCd))
+                            {
+                                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, nullptr, 0, 0);
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            else
+                            {
+                                player->GetSpellHistory()->ResetAllCooldowns();
+                                player->ModifyMoney(-int32(ResetAllSpellCd));
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Toate |cffffffffspell\'s cooldown|r au fost resetate.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            break;
                         }
 
                         default:
