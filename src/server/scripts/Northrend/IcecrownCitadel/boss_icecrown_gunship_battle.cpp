@@ -1952,7 +1952,7 @@ private:
 
     void CalculateDamage(SpellEffIndex /*effIndex*/)
     {
-        SetEffectValue(GetEffectValue() + _energyLeft * _energyLeft * 8);
+        SetEffectValue(GetEffectValue() + _energyLeft * _energyLeft * 58);   // kitt original (* 8)
     }
 
     void Register() override
