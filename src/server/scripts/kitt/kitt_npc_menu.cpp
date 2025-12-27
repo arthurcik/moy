@@ -1481,7 +1481,8 @@ public:
                         if (action < HordeLocs.size())
                         {
                             TeleportLocation const& loc = HordeLocs[action];
-                            player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                            //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                            BeginDelayedTeleport(player, loc);
                         }
                     }
                     else
@@ -1489,7 +1490,9 @@ public:
                         if (action < HordeALocs.size())
                         {
                             TeleportLocation const& loc = HordeALocs[action];
-                            player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                            //BeginDelayedTeleport(player, loc.map, loc.x, loc.y, loc.z, loc.o);
+                            BeginDelayedTeleport(player, loc);
+                            //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
                         }
                     }
                     CloseGossipMenuFor(player);
@@ -1503,7 +1506,8 @@ public:
                         if (action < AllianceLocs.size())
                         {
                             TeleportLocation const& loc = AllianceLocs[action];
-                            player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                            //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                            BeginDelayedTeleport(player, loc);
                         }
                     }
                     else
@@ -1511,7 +1515,8 @@ public:
                         if (action < AllianceHLocs.size())
                         {
                             TeleportLocation const& loc = AllianceHLocs[action];
-                            player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                            BeginDelayedTeleport(player, loc);
+                            //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
                         }
                     }
                     CloseGossipMenuFor(player);
@@ -1523,7 +1528,8 @@ public:
                     if (action < EKingdomLocs.size())
                     {
                         TeleportLocation const& loc = EKingdomLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1534,7 +1540,8 @@ public:
                     if (action < KalimadorLocs.size())
                     {
                         TeleportLocation const& loc = KalimadorLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1545,7 +1552,8 @@ public:
                     if (action < OutlandLocs.size())
                     {
                         TeleportLocation const& loc = OutlandLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1556,7 +1564,8 @@ public:
                     if (action < NorthrendLocs.size())
                     {
                         TeleportLocation const& loc = NorthrendLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1567,7 +1576,8 @@ public:
                     if (action < ClassicDungeonsLocs.size())
                     {
                         TeleportLocation const& loc = ClassicDungeonsLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1578,7 +1588,8 @@ public:
                     if (action < BcDungeonsLocs.size())
                     {
                         TeleportLocation const& loc = BcDungeonsLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1589,7 +1600,8 @@ public:
                     if (action < WrathDungeonsLocs.size())
                     {
                         TeleportLocation const& loc = WrathDungeonsLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1600,7 +1612,8 @@ public:
                     if (action < RaidLocs.size())
                     {
                         TeleportLocation const& loc = RaidLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1611,7 +1624,8 @@ public:
                     if (action < FunZoneLocs.size())
                     {
                         TeleportLocation const& loc = FunZoneLocs[action];
-                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                        BeginDelayedTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1622,6 +1636,47 @@ public:
             return true;
         }
 
+        // Folosim structura locatiei direct pentru a nu trimite 5 parametri separati
+        static void BeginDelayedTeleport(Player* player, TeleportLocation const& loc)
+        {
+            //if (!player || player->HasAura(36901)) // Folosim 36901 doar ca block intern rapid
+            //    return;
+
+            player->PlayerTalkClass->SendCloseGossip();
+
+            // Model 169
+            // creature_template set faction 32, flags_extra=128 (trigger)
+            player->CastSpell(player, 45451, false);   // hearthstone cosmetic
+            TempSummon* visualTrigger = player->SummonCreature(90015, player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 5500ms);
+            if (visualTrigger)
+            {
+                visualTrigger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_ATTACKABLE_1 | UNIT_FLAG_IMMUNE | UNIT_FLAG_PACIFIED);
+
+                visualTrigger->AddAura(42050, visualTrigger);
+                visualTrigger->AddAura(48387, visualTrigger);
+                visualTrigger->AddAura(50771, visualTrigger);
+                
+            }
+
+            player->m_Events.AddEventAtOffset([player, loc, visualTrigger]()
+            {
+                if (player && player->IsInWorld())
+                {
+                    //player->RemoveAura(36901);
+                    //if (visualTrigger)
+                    //    visualTrigger->DespawnOrUnsummon(); // Curatam trigger-ul
+                    if (!player->IsNonMeleeSpellCast(false))
+                    {
+                        if (visualTrigger)
+                            visualTrigger->DespawnOrUnsummon(); // Stergem efectele daca a anulat
+                        return; // Iesim din functie, deci NU mai are loc teleportarea
+                    }
+
+                    if (player->IsAlive())
+                        player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                }
+            }, 4410ms);  // teleport delay
+        }
     };
 
     CreatureAI* GetAI(Creature* creature) const override
