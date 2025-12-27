@@ -724,7 +724,8 @@ public:
                 //ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                 //"Actiune imposibila in timpul luptei!"
                 //"Esti prea ocupat cu batalia! Termin-o inainte de a folosi meniul."
-                player->GetSession()->SendNotification("Nu poti face asta in lupta!");
+                player->PlayerTalkClass->SendCloseGossip();
+                player->GetSession()->SendNotification("Nu poti folosi meniul in timpul luptei!");
                 //ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Eroare]:|r Nu poti folosi meniul in timpul luptei!");
                 return true;
             }
@@ -838,6 +839,13 @@ public:
         {
             uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
             uint32 const sender = player->PlayerTalkClass->GetGossipOptionSender(gossipListId);
+
+            if (player->IsInCombat())
+            {
+                player->PlayerTalkClass->SendCloseGossip();
+                player->GetSession()->SendNotification("Nu poti folosi meniul in timpul luptei!");
+                return true;
+            }
 
             switch (sender)
             {
