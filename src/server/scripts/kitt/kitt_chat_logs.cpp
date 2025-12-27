@@ -85,7 +85,7 @@ public:
     }
 
     // pe whisp /w
-    void OnChat(Player* player, uint32 type, uint32 lang, std::string& msg, Player* receiver) override
+    void OnChat(Player* player, uint32/* type */, uint32 lang, std::string& msg, Player* receiver) override
     {
         if (!player || !receiver)
             return;
@@ -152,7 +152,7 @@ public:
     }
 
     // pe channel
-    void OnChat(Player* player, uint32 type, uint32 lang, std::string& msg, Channel* channel) override
+    void OnChat(Player* player, uint32/* type*/, uint32 lang, std::string& msg, Channel* channel) override
     {
 
         if (!player || !channel)
