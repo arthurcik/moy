@@ -80,7 +80,7 @@ public:
             return;
         }
 
-        TC_LOG_ERROR("kitt", "player: {} type: {} lang: {} msg: {}", player->GetName(), type, lang, msg);
+        //TC_LOG_ERROR("kitt", "player: {} type: {} lang: {} msg: {}", player->GetName(), type, lang, msg);
         sChatLog->ChatMsg(player, msg, type);
     }
 
@@ -96,7 +96,7 @@ public:
         }
 
 
-        TC_LOG_ERROR("kitt", "player: {} type: {} lang: {} msg: {} receiver: {}", player->GetName(), type, lang, msg, receiver->GetName());
+        //TC_LOG_ERROR("kitt", "player: {} type: {} lang: {} msg: {} receiver: {}", player->GetName(), type, lang, msg, receiver->GetName());
 
         std::string receiverName = receiver->GetName();
         sChatLog->WhisperMsg(player, receiverName, msg);
@@ -136,7 +136,7 @@ public:
         if (!player || !guild)
             return;
 
-        TC_LOG_ERROR("kitt", "[all data] player: {} type: {} lang: {} msg: {} guild: {}", player->GetName(), type, lang, msg, guild->GetName());
+        //TC_LOG_ERROR("kitt", "[all data] player: {} type: {} lang: {} msg: {} guild: {}", player->GetName(), type, lang, msg, guild->GetName());
 
         if (lang == KITT_LANG_ADDON_WOW)
         {
@@ -144,7 +144,7 @@ public:
             return;
         }
 
-        TC_LOG_ERROR("kitt", "player: {} type: {} lang: {} msg: {} guild: {}", player->GetName(), type, lang, msg, guild->GetName());
+        //TC_LOG_ERROR("kitt", "player: {} type: {} lang: {} msg: {} guild: {}", player->GetName(), type, lang, msg, guild->GetName());
 
         bool isMaster = (player->GetGuildRank() == 0);
         bool isOfficerChannel = (type == CHAT_MSG_OFFICER);
@@ -158,7 +158,7 @@ public:
         if (!player || !channel)
             return;
 
-        TC_LOG_ERROR("kitt", "[view all data]player: {} type: {} lang: {} msg: {} channel: {}", player->GetName(), type, lang, msg, channel->GetName());
+        //TC_LOG_ERROR("kitt", "[view all data]player: {} type: {} lang: {} msg: {} channel: {}", player->GetName(), type, lang, msg, channel->GetName());
 
         /*ProcessKittAddonBlock(player, msg, channel->GetName());
         if (msg == "-.-")
@@ -218,7 +218,7 @@ public:
         /*if (lang == KITT_LANG_ADDON_WOW)
             return;*/
 
-        TC_LOG_ERROR("kitt", "[log start]player: {} type: {} lang: {} msg: {} channel: {}", player->GetName(), type, lang, msg, channel->GetName());
+        //TC_LOG_ERROR("kitt", "[log start]player: {} type: {} lang: {} msg: {} channel: {}", player->GetName(), type, lang, msg, channel->GetName());
 
         std::string channelName = channel->GetName();
         sChatLog->ChannelMsg(player, channelName, msg);

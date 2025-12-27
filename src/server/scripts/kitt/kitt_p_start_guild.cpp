@@ -42,7 +42,7 @@ class kitt_p_start_guild : public PlayerScript
            }
            else
            {
-               TC_LOG_ERROR("kitt", "Start guild {} not found in GuildMgr cache!", desiredGuildId);
+               TC_LOG_ERROR("sql.sql", "Start guild {} not found in GuildMgr cache!", desiredGuildId);
            }
        }
    }
