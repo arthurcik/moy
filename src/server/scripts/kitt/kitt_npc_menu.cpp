@@ -435,6 +435,157 @@ enum Spells
     SPELL_DEATH = 27255
 };
 
+enum KittWinterTransform
+{
+    SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_1 = 26157,
+    SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_2 = 26272,
+    SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_3 = 26273,
+    SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_4 = 26274
+};
+
+std::array<uint32, 4> const KittWinterTransformSpells =
+{
+    SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_1,
+    SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_2,
+    SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_3,
+    SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_4
+};
+
+static void BeginDelayedTeleport(Player* player, TeleportLocation const& loc)
+{
+    if (!player)
+        return;
+    if (player->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+        return;
+
+    player->PlayerTalkClass->SendCloseGossip();
+
+    // Lans?m anima?ia vizual? (Hearthstone cosmetic)
+    player->CastSpell(player, 45451, false);
+
+    // Summon trigger vizual
+    TempSummon* visualTrigger = player->SummonCreature(90015, player->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 5500ms);
+    if (visualTrigger)
+    {
+        visualTrigger->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_ATTACKABLE_1 | UNIT_FLAG_IMMUNE | UNIT_FLAG_PACIFIED);
+        visualTrigger->AddAura(42050, visualTrigger);
+        visualTrigger->AddAura(48387, visualTrigger);
+        visualTrigger->AddAura(50771, visualTrigger);
+    }
+
+    // Salv?m GUID-urile pentru a preveni crash-ul la logout
+    ObjectGuid playerGuid = player->GetGUID();
+    ObjectGuid triggerGuid = visualTrigger ? visualTrigger->GetGUID() : ObjectGuid::Empty;
+
+    // Ad?ug?m evenimentul am?nat
+    player->m_Events.AddEventAtOffset([playerGuid, triggerGuid, loc]()
+    {
+            // Re-valid?m pointerul la player folosind GUID
+            Player* p = ObjectAccessor::FindPlayer(playerGuid);
+            if (!p || !p->IsInWorld())
+                return;
+
+            // Recuper?m trigger-ul pentru cur??are (safe check)
+            Creature* trigger = ObjectAccessor::GetCreature(*p, triggerGuid);
+
+            // Verific?m dac? juc?torul mai face cast la spell-ul vizual. 
+            // Dac? s-a mi?cat sau a anulat, oprim teleportarea.
+            if (!p->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+            {
+                if (trigger)
+                    trigger->DespawnOrUnsummon();
+                return;
+            }
+
+            if (p->IsAlive())
+            {
+                // Execut?m teleportarea
+                p->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+
+                // Verific?m dac? are deja una din aurele de transformare
+                bool hasAura = false;
+                for (uint32 kittspell : KittWinterTransformSpells)
+                {
+                    if (p->HasAura(kittspell))
+                    {
+                        hasAura = true;
+                        break;
+                    }
+                }
+
+                if (!hasAura)
+                {
+                    uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittWinterTransformSpells);
+                    p->CastSpell(p, randomSpell, true);
+                }
+            }
+
+            // Cur???m trigger-ul dup? teleportare
+            if (trigger)
+                trigger->DespawnOrUnsummon();
+
+    }, 4410ms);
+}
+
+static void BeginDelayedTeleportOFF1(Player* player, TeleportLocation const& loc)
+{
+    //if (!player || player->HasAura(36901)) // Folosim 36901 doar ca block intern rapid
+    //    return;
+
+    player->PlayerTalkClass->SendCloseGossip();
+
+    // Model 169
+    // creature_template set faction 32, flags_extra=128 (trigger)
+    player->CastSpell(player, 45451, false);   // hearthstone cosmetic
+    TempSummon* visualTrigger = player->SummonCreature(90015, player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 5500ms);
+    if (visualTrigger)
+    {
+        visualTrigger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_ATTACKABLE_1 | UNIT_FLAG_IMMUNE | UNIT_FLAG_PACIFIED);
+
+        visualTrigger->AddAura(42050, visualTrigger);
+        visualTrigger->AddAura(48387, visualTrigger);
+        visualTrigger->AddAura(50771, visualTrigger);
+
+    }
+
+    //ObjectGuid playerGuid = player->GetGUID();
+    //ObjectGuid triggerGuid = visualTrigger ? visualTrigger->GetGUID() : ObjectGuid::Empty;
+
+    player->m_Events.AddEventAtOffset([player, loc, visualTrigger]()
+    {
+            //Player* player = ObjectAccessor::FindPlayer(playerGuid);
+            if (player && player->IsInWorld())
+            {
+                //player->RemoveAura(36901);
+                //if (visualTrigger)
+                //    visualTrigger->DespawnOrUnsummon(); // Curatam trigger-ul
+                if (!player->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                {
+                    if (visualTrigger)
+                        visualTrigger->DespawnOrUnsummon(); // Stergem daca a anulat
+                    return; // Iesim din functie, deci NU mai are loc teleportarea
+                }
+
+                if (player->IsAlive())
+                {
+                    player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+                    // verificam aura
+                    bool hasAura = false;
+                    for (uint32 kittspell : KittWinterTransformSpells)
+                        if (player->HasAura(kittspell))
+                            hasAura = true;
+
+                    if (!hasAura)
+                    {
+                        uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittWinterTransformSpells);
+                        player->CastSpell(player, randomSpell, true);
+                    }
+                }
+            }
+            return;
+    }, 4410ms);  // teleport delay
+}
+
 
 class kitt_npc_menu : public CreatureScript
 {
@@ -1637,7 +1788,7 @@ public:
         }
 
         // Folosim structura locatiei direct pentru a nu trimite 5 parametri separati
-        static void BeginDelayedTeleport(Player* player, TeleportLocation const& loc)
+        static void BeginDelayedTeleportOFF(Player* player, TeleportLocation const& loc)
         {
             //if (!player || player->HasAura(36901)) // Folosim 36901 doar ca block intern rapid
             //    return;
