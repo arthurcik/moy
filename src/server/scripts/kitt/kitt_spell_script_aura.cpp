@@ -22,7 +22,7 @@
 // INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES
 // (42683, 'kitt_spell_fly_mount_aura')
 // spell ID      = 47977
-// aura map 0,1  = 42683
+// aura map 0,1  = 42683 mount 100%  // 42680 mount 60%
 class kitt_spell_fly_mount_aura : public AuraScript
 {
     PrepareAuraScript(kitt_spell_fly_mount_aura);
@@ -75,9 +75,17 @@ class kitt_spell_fly_mount_aura : public AuraScript
             player->SetCanFly(false);
             player->SetSpeedRate(MOVE_FLIGHT, 1.0f);
             player->SetSpeedRate(MOVE_RUN, 1.0f);
+            player->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_CAN_FLY | MOVEMENTFLAG_FLYING);
 
+            // IMPORTANT: Trimitem pachetul de oprire fortata catre client
+            WorldPacket data(SMSG_MOVE_UNSET_CAN_FLY, 12);
+            data << player->GetPackGUID();
+            data << uint32(0); // Sequence number sau timestamp
+            player->GetSession()->SendPacket(&data);
+
+            player->SetFallInformation(0, player->GetPositionZ());
             // Reset hover vizual
-            //player->SetByteValue(UNIT_FIELD_BYTES_1, 3, 0);
+            player->SetByteValue(UNIT_FIELD_BYTES_1, 3, uint8(AnimTier::Ground));
 
             //  aducem botii
             if (BotMgr* mgr = player->GetBotMgr())
