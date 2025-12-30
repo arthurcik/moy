@@ -145,6 +145,7 @@ enum KittAction
     KITT_ACTION_TELEPORT_TO             = 120,   // meniu Teleport To
     KITT_ACTION_RESET_ALL_BUFF          = 121,   // Reset all buff & aura
     KITT_ACTION_RESET_ALL_CD_SPELL      = 122,   // Reset all cooldown spell
+    KITT_ACTION_FLY_BABY_FLY            = 123,   // Poti sa zbori pe map 0 & 1
 
 
 
@@ -206,8 +207,9 @@ static const std::array<MainMenuOption, 8> KittTeleportTo = { {
     { GOSSIP_ICON_CHAT, "Raid Teleports",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_RAID }
 } };
 // Meniu Fun Zone
-static const std::array<MainMenuOptionConfirm, 5> KittFunZone = { {
+static const std::array<MainMenuOptionConfirm, 6> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Fun Zone (Teleport)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TELE_FUN_ZONE },
+    { GOSSIP_ICON_CHAT, "Fly baby! Fly...",     KITT_SENDER_MENU_FUN_ZONE, KITT_ACTION_FLY_BABY_FLY },
     { GOSSIP_ICON_CHAT, "Nu Apasa!!! (" + sNuApasaPret + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Esti sigur?", NuApasaPret, true},
     { GOSSIP_ICON_CHAT, "Instance Reset CD",     KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_MENU_INSTANCE_RESET },
     { GOSSIP_ICON_CHAT, "Reset All Aura & Buff (" + sResetAllAura + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_BUFF, "UnBuff all spell & aura", ResetAllAura, false},
@@ -431,8 +433,7 @@ static const std::array<TeleportLocation, 1> FunZoneLocs = { {
 
 enum Spells
 {
-    /*    SPELL_DEATH = 5, */
-    SPELL_DEATH = 27255
+    SPELL_DEATH = 5 //27255
 };
 
 enum KittWinterTransform
@@ -451,81 +452,6 @@ std::array<uint32, 4> const KittWinterTransformSpells =
     SPELL_KITT_WINTER_WONDERVOLT_TRANSFORM_4
 };
 
-static void BeginDelayedTeleport(Player* player, TeleportLocation const& loc)
-{
-    if (!player)
-        return;
-    if (player->GetCurrentSpell(CURRENT_GENERIC_SPELL))
-        return;
-
-    player->PlayerTalkClass->SendCloseGossip();
-
-    // Lans?m anima?ia vizual? (Hearthstone cosmetic)
-    player->CastSpell(player, 45451, false);
-
-    // Summon trigger vizual
-    TempSummon* visualTrigger = player->SummonCreature(90015, player->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 5500ms);
-    if (visualTrigger)
-    {
-        visualTrigger->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_ATTACKABLE_1 | UNIT_FLAG_IMMUNE | UNIT_FLAG_PACIFIED);
-        visualTrigger->AddAura(42050, visualTrigger);
-        visualTrigger->AddAura(48387, visualTrigger);
-        visualTrigger->AddAura(50771, visualTrigger);
-    }
-
-    // Salv?m GUID-urile pentru a preveni crash-ul la logout
-    ObjectGuid playerGuid = player->GetGUID();
-    ObjectGuid triggerGuid = visualTrigger ? visualTrigger->GetGUID() : ObjectGuid::Empty;
-
-    // Ad?ug?m evenimentul am?nat
-    player->m_Events.AddEventAtOffset([playerGuid, triggerGuid, loc]()
-    {
-            // Re-valid?m pointerul la player folosind GUID
-            Player* p = ObjectAccessor::FindPlayer(playerGuid);
-            if (!p || !p->IsInWorld())
-                return;
-
-            // Recuper?m trigger-ul pentru cur??are (safe check)
-            Creature* trigger = ObjectAccessor::GetCreature(*p, triggerGuid);
-
-            // Verific?m dac? juc?torul mai face cast la spell-ul vizual. 
-            // Dac? s-a mi?cat sau a anulat, oprim teleportarea.
-            if (!p->GetCurrentSpell(CURRENT_GENERIC_SPELL))
-            {
-                if (trigger)
-                    trigger->DespawnOrUnsummon();
-                return;
-            }
-
-            if (p->IsAlive())
-            {
-                // Execut?m teleportarea
-                p->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-
-                // Verific?m dac? are deja una din aurele de transformare
-                bool hasAura = false;
-                for (uint32 kittspell : KittWinterTransformSpells)
-                {
-                    if (p->HasAura(kittspell))
-                    {
-                        hasAura = true;
-                        break;
-                    }
-                }
-
-                if (!hasAura)
-                {
-                    uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittWinterTransformSpells);
-                    p->CastSpell(p, randomSpell, true);
-                }
-            }
-
-            // Cur???m trigger-ul dup? teleportare
-            if (trigger)
-                trigger->DespawnOrUnsummon();
-
-    }, 4410ms);
-}
 
 static void BeginDelayedTeleportOFF1(Player* player, TeleportLocation const& loc)
 {
@@ -613,6 +539,8 @@ public:
         {
             me->SetMaxHealth(551000);
             me->SetHealth(550500);
+            me->RemoveFlag(UNIT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
+            me->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_ALLOW_CHEAT_SPELLS);
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_MAILBOX);
@@ -621,7 +549,6 @@ public:
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR);
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_REPAIR);
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_AUCTIONEER);
-            me->RemoveFlag(UNIT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
             me->SetReactState(REACT_PASSIVE);
             me->SetFaction(35);
 
@@ -1614,6 +1541,13 @@ public:
                             break;
                         }
 
+                        case KITT_ACTION_FLY_BABY_FLY:
+                        {
+                            CloseGossipMenuFor(player);
+                            player->CastSpell(player, 47977, false);
+                            return true;
+                        }
+
                         default:
                             break;
                     }
@@ -1633,7 +1567,7 @@ public:
                         {
                             TeleportLocation const& loc = HordeLocs[action];
                             //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                            BeginDelayedTeleport(player, loc);
+                            BeginTeleport(player, loc);
                         }
                     }
                     else
@@ -1642,7 +1576,7 @@ public:
                         {
                             TeleportLocation const& loc = HordeALocs[action];
                             //BeginDelayedTeleport(player, loc.map, loc.x, loc.y, loc.z, loc.o);
-                            BeginDelayedTeleport(player, loc);
+                            BeginTeleport(player, loc);
                             //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
                         }
                     }
@@ -1658,7 +1592,7 @@ public:
                         {
                             TeleportLocation const& loc = AllianceLocs[action];
                             //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                            BeginDelayedTeleport(player, loc);
+                            BeginTeleport(player, loc);
                         }
                     }
                     else
@@ -1666,7 +1600,7 @@ public:
                         if (action < AllianceHLocs.size())
                         {
                             TeleportLocation const& loc = AllianceHLocs[action];
-                            BeginDelayedTeleport(player, loc);
+                            BeginTeleport(player, loc);
                             //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
                         }
                     }
@@ -1680,7 +1614,7 @@ public:
                     {
                         TeleportLocation const& loc = EKingdomLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1692,7 +1626,7 @@ public:
                     {
                         TeleportLocation const& loc = KalimadorLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1704,7 +1638,7 @@ public:
                     {
                         TeleportLocation const& loc = OutlandLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1716,7 +1650,7 @@ public:
                     {
                         TeleportLocation const& loc = NorthrendLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1728,7 +1662,7 @@ public:
                     {
                         TeleportLocation const& loc = ClassicDungeonsLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1740,7 +1674,7 @@ public:
                     {
                         TeleportLocation const& loc = BcDungeonsLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1752,7 +1686,7 @@ public:
                     {
                         TeleportLocation const& loc = WrathDungeonsLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1764,7 +1698,7 @@ public:
                     {
                         TeleportLocation const& loc = RaidLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1776,7 +1710,7 @@ public:
                     {
                         TeleportLocation const& loc = FunZoneLocs[action];
                         //player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
-                        BeginDelayedTeleport(player, loc);
+                        BeginTeleport(player, loc);
                     }
                     CloseGossipMenuFor(player);
                     return true;
@@ -1787,7 +1721,34 @@ public:
             return true;
         }
 
-        // Folosim structura locatiei direct pentru a nu trimite 5 parametri separati
+        static void BeginTeleport(Player* player, TeleportLocation const& loc)
+        {
+            if (!player || !player->IsInWorld())
+                return;
+
+            player->PlayerTalkClass->SendCloseGossip();
+
+            if (player->IsAlive())
+            {
+                bool hasAura = false;
+                for (uint32 kittspell : KittWinterTransformSpells)
+                {
+                    if (player->HasAura(kittspell))
+                    {
+                        hasAura = true;
+                        break;
+                    }
+                }
+
+                if (!hasAura)
+                {
+                    uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittWinterTransformSpells);
+                    player->CastSpell(player, randomSpell, true);
+                }
+                player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
+            }
+        }
+
         static void BeginDelayedTeleportOFF(Player* player, TeleportLocation const& loc)
         {
             //if (!player || player->HasAura(36901)) // Folosim 36901 doar ca block intern rapid

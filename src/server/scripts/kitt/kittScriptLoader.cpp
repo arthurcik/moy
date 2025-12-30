@@ -26,6 +26,7 @@ void AddSC_kitt_item_spawn();
 void AddSC_kitt_npc_menu();
 //void AddSC_kitt_anti_addons();
 void AddSC_kitt_chat_logs();
+void AddSC_kitt_spell_script_aura();
 
 
 // The name of this function should match:
@@ -42,4 +43,5 @@ void AddkittScripts()
     AddSC_kitt_npc_menu();
     //AddSC_kitt_anti_addons();
     AddSC_kitt_chat_logs();
+    AddSC_kitt_spell_script_aura();
 }
