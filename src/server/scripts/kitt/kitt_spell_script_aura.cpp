@@ -16,6 +16,8 @@
 #include "Containers.h"
 #include "WorldSession.h"
 
+#include "botmgr.h"
+
 
 // INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES
 // (42683, 'kitt_spell_fly_mount_aura')
@@ -42,6 +44,25 @@ class kitt_spell_fly_mount_aura : public AuraScript
                 player->SetCanFly(true);
                 player->SetSpeedRate(MOVE_RUN, 2.0f);
                 player->SetSpeedRate(MOVE_FLIGHT, 2.0f);
+
+                // "Ascundem" botii
+                if (BotMgr* mgr = player->GetBotMgr())
+                {
+                    // Verificam daca are boti
+                    if (!player->HaveBot())
+                        return;
+
+                    // Verificam daca este viu
+                    if (!player->IsAlive())
+                        return;
+
+                    // Daca nu sunt deja ascunsi, ii ascundem
+                    if (!mgr->GetBotsHidden())
+                    {
+                        mgr->SetBotsHidden(true);
+                        // player->GetSession()->SendNotification("Partenerii tai au fost ascunsi pe durata zborului.");
+                    }
+                }
             }
         }
     }
@@ -57,6 +78,24 @@ class kitt_spell_fly_mount_aura : public AuraScript
 
             // Reset hover vizual
             //player->SetByteValue(UNIT_FIELD_BYTES_1, 3, 0);
+
+            //  aducem botii
+            if (BotMgr* mgr = player->GetBotMgr())
+            {
+                // Verificam daca are boti
+                if (!player->HaveBot())
+                    return;
+
+                // Verificam daca este viu
+                if (!player->IsAlive())
+                    return;
+
+                // Daca sunt deja ascunsi, ii aducem inapoi
+                if (mgr->GetBotsHidden())
+                {
+                    mgr->SetBotsHidden(false);
+                }
+            }
         }
     }
 
