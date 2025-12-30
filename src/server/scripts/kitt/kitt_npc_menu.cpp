@@ -1544,6 +1544,11 @@ public:
                         case KITT_ACTION_FLY_BABY_FLY:
                         {
                             CloseGossipMenuFor(player);
+                            if (player->GetSkillValue(762) < 75)
+                            {
+                                player->GetSession()->SendNotification("Ai nevoie de skill-ul Riding (75) pentru a folosi acest meniu!");
+                                return true;
+                            }
                             player->CastSpell(player, 47977, false);
                             return true;
                         }
