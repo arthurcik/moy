@@ -1735,7 +1735,8 @@ public:
 
             if (player->IsAlive())
             {
-                bool hasAura = false;
+                // efect winter, random spell to player
+                /*bool hasAura = false;
                 for (uint32 kittspell : KittWinterTransformSpells)
                 {
                     if (player->HasAura(kittspell))
@@ -1749,7 +1750,7 @@ public:
                 {
                     uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittWinterTransformSpells);
                     player->CastSpell(player, randomSpell, true);
-                }
+                }*/
                 player->TeleportTo(loc.map, loc.x, loc.y, loc.z, loc.o);
             }
         }

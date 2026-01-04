@@ -139,8 +139,9 @@ public:
             if (Creature* csummon = player->SummonCreature(npcId, *player, TEMPSUMMON_TIMED_DESPAWN, despawnTime))
             {
                 csummon->CastSpell(csummon, spellEfect, true); // true = instant cast, false = normal cast
-                uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittItemWinterTransformSpells);
-                csummon->CastSpell(csummon, randomSpell, true);
+                // random spell, efect winter
+                //uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittItemWinterTransformSpells);
+                //csummon->CastSpell(csummon, randomSpell, true);
                 player->GetSession()->SendNotification("NPC invocat pentru 3 minute!");
                 return false; //Returnam false pentru a permite animatia de cast daca exista
             }
