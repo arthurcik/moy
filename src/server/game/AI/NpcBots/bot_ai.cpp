@@ -3456,11 +3456,27 @@ void bot_ai::ReceiveEmote(Player* player, uint32 emote)
 {
     switch (emote)
     {
+        case TEXT_EMOTE_DANCE:
+            if (master != player)
+            {
+                me->HandleEmoteCommand(EMOTE_ONESHOT_RUDE);
+                break;
+            }
+            me->HandleEmoteCommand(EMOTE_ONESHOT_DANCE);
+            break;
+        case TEXT_EMOTE_TRAIN:
+            if (master != player)
+            {
+                me->HandleEmoteCommand(EMOTE_ONESHOT_RUDE);
+                break;
+            }
+            me->HandleEmoteCommand(EMOTE_ONESHOT_TRAIN);
+            break;
         case TEXT_EMOTE_BONK:
-            _listAuras(player, me);
+            //_listAuras(player, me);
             break;
         case TEXT_EMOTE_SALUTE:
-            _listAuras(player, player);
+            //_listAuras(player, player);
             break;
         case TEXT_EMOTE_STAND:
             if (master != player)
@@ -3618,7 +3634,10 @@ void bot_ai::ReceiveEmote(Player* player, uint32 emote)
 
             me->BotStopMovement();
             me->TextEmote(LocalizedNpcText(player, BOT_TEXT_BOT_TICKLED));
-            ChatHandler(player->GetSession()).SendSysMessage(report.str());
+            if (player->GetSession()->GetSecurity() >= 1)
+            {
+                ChatHandler(player->GetSession()).SendSysMessage(report.str());
+            }
             break;
         }
         default:

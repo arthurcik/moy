@@ -25,6 +25,9 @@
 #include "Config.h"
 #include <sstream>
 #include <string>
+#include "botmgr.h"
+#include "bot_ai.h"
+
 
 /*enum kittGossipOptionIcon : uint8
 {
@@ -52,6 +55,7 @@ static const uint32 MoneyRaid25H     = 500 * 10000;  // galbeni necesari pentru 
 static const uint32 NuApasaPret      = 1500 * 10000; // Fun Zone nu apasa pret
 static const uint32 ResetAllSpellCd  = 100 * 10000;  // pret Reset all spell cooldown
 static const uint32 ResetAllAura     = 50 * 10000;   // pret UnAura all spell
+static const uint32 KittBotFix       = 50 * 10000;   // Bot Fix
 
 
 // conversie la string ca sa poate fi adaugat in mesaj
@@ -63,6 +67,7 @@ static const std::string sMoneyRaid25H = std::to_string(MoneyRaid25H / 10000);
 static const std::string sNuApasaPret = std::to_string(NuApasaPret / 10000);
 static const std::string sResetAllSpellCd = std::to_string(ResetAllSpellCd / 10000);
 static const std::string sResetAllAura = std::to_string(ResetAllAura / 10000);
+static const std::string sKittBotFix = std::to_string(KittBotFix / 10000);
 
 
 
@@ -146,6 +151,7 @@ enum KittAction
     KITT_ACTION_RESET_ALL_BUFF          = 121,   // Reset all buff & aura
     KITT_ACTION_RESET_ALL_CD_SPELL      = 122,   // Reset all cooldown spell
     KITT_ACTION_FLY_BABY_FLY            = 123,   // Poti sa zbori pe map 0 & 1
+    KITT_ACTION_TFC_BOT_FIX             = 124,   // Reparare bot
 
 
 
@@ -207,13 +213,14 @@ static const std::array<MainMenuOption, 8> KittTeleportTo = { {
     { GOSSIP_ICON_CHAT, "Raid Teleports",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_RAID }
 } };
 // Meniu Fun Zone
-static const std::array<MainMenuOptionConfirm, 6> KittFunZone = { {
+static const std::array<MainMenuOptionConfirm, 7> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Fun Zone (Teleport)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TELE_FUN_ZONE },
     { GOSSIP_ICON_CHAT, "Fly baby! Fly...",     KITT_SENDER_MENU_FUN_ZONE, KITT_ACTION_FLY_BABY_FLY },
     { GOSSIP_ICON_CHAT, "Nu Apasa!!! (" + sNuApasaPret + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Esti sigur?", NuApasaPret, true},
     { GOSSIP_ICON_CHAT, "Instance Reset CD",     KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_MENU_INSTANCE_RESET },
     { GOSSIP_ICON_CHAT, "Reset All Aura & Buff (" + sResetAllAura + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_BUFF, "UnBuff all spell & aura", ResetAllAura, false},
     { GOSSIP_ICON_CHAT, "Reset All Spell cooldown (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all cooldown", ResetAllSpellCd, false},
+    { GOSSIP_ICON_CHAT, "Fix b0t (" + sKittBotFix + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_TFC_BOT_FIX, "1. selecteaza TFCbot cu probleme si apasa accept \n2. dupa reparare: cast normal/fly mount", KittBotFix, false}
 } };
 
 // Meniu Instance Reset Cooldown cu confirmare.
@@ -1550,6 +1557,70 @@ public:
                                 return true;
                             }
                             player->CastSpell(player, 47977, false);
+                            return true;
+                        }
+
+                        case KITT_ACTION_TFC_BOT_FIX:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            // 1. Verific?ri de baz?
+                            if (!player->IsAlive() || !player->HaveBot())
+                                return true;
+
+                            if (!player->HasEnoughMoney(KittBotFix))
+                            {
+                                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, nullptr, 0, 0);
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
+                            // 2. Verific?m target-ul
+                            Unit* target = player->GetSelectedUnit();
+                            if (!target || !target->ToCreature() || !target->ToCreature()->IsNPCBot())
+                            {
+                                ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Eroare:|r Trebuie sa ai un bot selectat! Inainte de confirmare selecteaza botul cu probleme.");
+                                return true;
+                            }
+
+                            Creature* botTarget = target->ToCreature();
+
+                            // 3. Ob?inem AI-ul ?i verific?m proprietatea (f?r? a depinde de mgr->IsMyBot)
+                            // Folosim bot_ai* pentru a putea apela ReceiveEmote
+                            if (bot_ai* botAI = dynamic_cast<bot_ai*>(botTarget->GetAI()))
+                            {
+                                // Verific?m dac? juc?torul este owner-ul botului selectat
+                                if (botAI->GetBotOwnerGuid() != player->GetGUID().GetCounter())
+                                {
+                                    ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Eroare:|r Acest bot apartine altui jucator!");
+                                    return true;
+                                }
+
+                                // 1. Salv?m starea original? a flag-urilor de GM
+                                // PLAYER_FLAGS_EXTRA este locul unde se stocheaz? dac? GM este ON sau OFF
+                                uint32 wasGM = player->IsGameMaster();
+
+                                // 2. For??m activarea flag-ului de GM ON ?n sesiune ?i pe juc?tor
+                                player->SetGameMaster(true);
+
+                                // 4. Execut?m ReceiveEmote. 
+                                // ATEN?IE: Dac? ?n bot_ai.cpp ai "if (!player->IsGameMaster()) break;",
+                                // aceast? apelare tot nu va trece pentru un juc?tor normal.
+                                botAI->ReceiveEmote(player, TEXT_EMOTE_TICKLE);
+                                player->ModifyMoney(-int32(KittBotFix));
+
+                                if (!wasGM)
+                                {
+                                    player->SetGameMaster(false);
+                                }
+
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Comanda Fix trimisa catre |cffffffff%s|r.", botTarget->GetName().c_str());
+                            }
+                            else
+                            {
+                                ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Eroare:|r Nu s-a putut accesa sistemul botului.");
+                            }
+
                             return true;
                         }
 
