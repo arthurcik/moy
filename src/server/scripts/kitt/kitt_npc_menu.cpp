@@ -229,8 +229,7 @@ static const std::array<MainMenuOptionConfirm, 8> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Reset All Aura & Buff (" + sResetAllAura + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_BUFF, "UnBuff all spell & aura", ResetAllAura, false},
     { GOSSIP_ICON_CHAT, "Reset All Spell cooldown (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all cooldown", ResetAllSpellCd, false},
     { GOSSIP_ICON_CHAT, "Fix b0t (" + sKittBotFix + " g)",  KITT_SENDER_MENU_FUN_ZONE,      KITT_ACTION_TFC_BOT_FIX, "1. selecteaza TFCbot cu probleme si apasa accept \n2. dupa reparare: cast normal/fly mount", KittBotFix, false},
-    { GOSSIP_ICON_CHAT, "Select Dr0p (" + sKittSelectDrop + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_DB_DROP_SHOW, "Indrodu ID item \nVei fi taxat doar daca primesti rezultate.", KittSelectDrop, true},
-
+    { GOSSIP_ICON_CHAT, "Select Dr0p (" + sKittSelectDrop + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_DB_DROP_SHOW, "Indrodu ID item \nVei fi taxat doar daca primesti rezultate.", KittSelectDrop, true}
 } };
 
 // Meniu Instance Reset Cooldown cu confirmare.
@@ -790,8 +789,6 @@ public:
             {
                 me->Yell("Cine nu-i gata il iau cu lopata! xa xa xa", LANG_UNIVERSAL, 0);
                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC);
                 me->RemoveFlag(UNIT_FIELD_FLAGS, GO_FLAG_NOT_SELECTABLE);
                 me->SetReactState(REACT_AGGRESSIVE);
                 me->GetMotionMaster()->MoveChase(me->GetVictim());
@@ -859,226 +856,228 @@ public:
 
             switch (sender)
             {
-                case KITT_SENDER_MENU_INSTANCE_RESET:
-                {
-                    player->PlayerTalkClass->ClearMenus();
-                    switch (action)
-                    {
-                        case KITT_ACTION_RESET_RAID10:
-                        {
-                            // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
-                            QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 0)", player->GetGUID().GetCounter());
-
-                            // Verificam daca jucatorul a scris exact cuvantul corect
-                            if (codeStr != KittResetCode)
-                            {
-                                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Eroare:|r Cod de confirmare incorect. Trebuie sa scrii ....");
-                                CloseGossipMenuFor(player);
-                                return true;
-                            }
-
-                            if (!result/* || !result->GetRowCount() == 0 */)
-                            {
-                                /*                        me->Whisper("Nu ai nicio instanta (10-N) blocata (cu cooldown) pe care sa o resetezi.", LANG_UNIVERSAL, player); */
-                                std::string message = "|cffff0000!...|r Nu ai nicio instanta (10-N) blocata (cu cooldown) pe care sa o resetezi.";
-                                ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
-                                CloseGossipMenuFor(player);
-                                return true;
-                            }
-
-                            if (!player->HasEnoughMoney(MoneyRaid10))
-                            {
-                                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
-                                me->Whisper(player->GetName() + ", ai nevoie de 100g pentru a reseta aceste instante (10-N)!", LANG_UNIVERSAL, player);
-                                CloseGossipMenuFor(player);
-                                return true;
-                            }
-
-                            else
-                            {
-                                player->ModifyMoney(-int32(MoneyRaid10));
-                                // 10 N
-                                CharacterDatabase.PExecute("DELETE FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 0)", player->GetGUID().GetCounter());
-                                CloseGossipMenuFor(player);
-                                /*                            me->Whisper("Instance reset: 10-N (Necesita re-log), leave party/raid and re-log.", LANG_UNIVERSAL, player); */
-                                std::string message = "|cffff0000Atentie|r Instance reset: 10-N (Necesita re-log), leave party/raid and re-log.";
-                                ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
-                            }
-                            return true;
-                        }
-
-                        default:
-                            break;
-                    }
-                }
-
                 case KITT_SENDER_MENU_FUN_ZONE:
                 {
                     player->PlayerTalkClass->ClearMenus();
                     switch (action)
                     {
-                        case KITT_ACTION_NU_APASA:
+                    case KITT_ACTION_NU_APASA:
+                    {
+                        if (codeStr != KittNuApasaCode)
                         {
-                            if (codeStr != KittNuApasaCode)
-                            {
-                                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Eroare:|r Cod incorect. Scrie |cff00ff00%s|r si apasa butonul |cff00ff00[Accept]|r cu mouse-ul.", KittNuApasaCode);
-                                CloseGossipMenuFor(player);
-                                return true;
-                            }
-
-                            if (!player->HasEnoughMoney(NuApasaPret))
-                            {
-                                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
-                                me->Say(player->GetName() + ", ai nevoie de 1500g.", LANG_UNIVERSAL, 0);
-                                CloseGossipMenuFor(player);
-                            }
-                            else
-                            {
-                                player->ModifyMoney(-int32(NuApasaPret));
-                                CloseGossipMenuFor(player);
-
-                                me->Say("Ai dat de naiba!!! Iti dau 10 secunde sa fugi.", LANG_UNIVERSAL, 0);
-                                me->SetFaction(14);
-                                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
-                                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
-                                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR);
-                                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_REPAIR);
-                                me->SetReactState(REACT_PASSIVE);
-                                me->GetMotionMaster()->MoveIdle();
-                                me->GetVictim();
-                                me->SetInCombatWith(me->SelectNearestPlayer(5.0f));
-                                me->Attack(player, 0);
-                            }
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Eroare:|r Cod incorect. Scrie |cff00ff00%s|r si apasa butonul |cff00ff00[Accept]|r cu mouse-ul.", KittNuApasaCode);
+                            CloseGossipMenuFor(player);
                             return true;
-                            //break;
                         }
 
-                        case KITT_ACTION_DB_DROP_SHOW:
+                        if (!player->HasEnoughMoney(NuApasaPret))
                         {
-
-                            uint32 currentTime = uint32(GameTime::GetGameTime());
-
-                            if (kitt_select_drop_cooldowns.count(player->GetGUID()) && kitt_select_drop_cooldowns[player->GetGUID()] > currentTime)
-                            {
-                                uint32 waitTime = kitt_select_drop_cooldowns[player->GetGUID()] - currentTime;
-                                ChatHandler(player->GetSession()).PSendSysMessage("Te rugam sa astepti %u secunde pentru o noua cautare.", waitTime);
-                                player->PlayerTalkClass->SendCloseGossip();
-                                return true;
-                            }
-
-                            if (!code || code[0] == '\0')
-                            {
-                                ChatHandler(player->GetSession()).SendSysMessage("Trebuie sa introduci un Item ID!");
-                                player->PlayerTalkClass->SendCloseGossip();
-                                return true;
-                            }
-
-                            std::string checkCode = code;
-                            if (!std::all_of(checkCode.begin(), checkCode.end(), ::isdigit))
-                            {
-                                ChatHandler(player->GetSession()).SendSysMessage("Eroare: Introdu doar cifre (0-9)!");
-                                player->PlayerTalkClass->SendCloseGossip();
-                                return true;
-                            }
-
-                            uint32 kitt_itemID = uint32(std::stoul(checkCode));
-
-                            if (kitt_itemID == 0 || kitt_itemID > 56806)
-                            {
-                                ChatHandler(player->GetSession()).SendSysMessage("ID invalid!");
-                                player->PlayerTalkClass->SendCloseGossip();
-                                return true;
-                            }
-
-                            if (!player->HasEnoughMoney(KittSelectDrop))
-                            {
-                                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
-                                CloseGossipMenuFor(player);
-                                return true;
-                            }
-
-
-                            kitt_select_drop_cooldowns[player->GetGUID()] = currentTime + 50; // secunde
-
-
-                            player->PlayerTalkClass->ClearMenus();
-
-                            QueryResult result = WorldDatabase.PQuery(
-                                "SELECT CAST(MAX(FinalChance) AS FLOAT) as MaxChance, entry, name FROM ("
-                                // 1. Drop Direct (Chance > 0)
-                                "SELECT b.Chance as FinalChance, a.entry, a.name "
-                                "FROM creature_template a "
-                                "JOIN creature_loot_template b ON a.lootid = b.Entry "
-                                "WHERE b.Item = {0} AND b.Chance > 0 "
-                                "UNION ALL "
-                                // 2. Drop Direct (GroupId - Chance este 0)
-                                "SELECT (100 / (SELECT COUNT(*) FROM creature_loot_template WHERE Entry = a.lootid AND GroupId = b.GroupId)) as FinalChance, a.entry, a.name "
-                                "FROM creature_template a "
-                                "JOIN creature_loot_template b ON a.lootid = b.Entry "
-                                "WHERE b.Item = {0} AND b.Chance = 0 AND b.GroupId > 0 "
-                                "UNION ALL "
-                                // 3. Drop prin Reference
-                                "SELECT ABS(r.Chance) * (IF(b.Chance > 0, b.Chance, (100 / (SELECT COUNT(*) FROM reference_loot_template WHERE Entry = r.Reference AND GroupId = b.GroupId)))) / 100 as FinalChance, a.entry, a.name "
-                                "FROM creature_template a "
-                                "JOIN creature_loot_template r ON a.lootid = r.Entry "
-                                "JOIN reference_loot_template b ON r.Reference = b.Entry "
-                                "WHERE b.Item = {0}"
-                                ") AS combined_loot "
-                                "GROUP BY entry, name " // Am adaugat 'name' aici pentru a elimina eroarea 1055
-                                "ORDER BY MaxChance DESC LIMIT 25;",
-                                kitt_itemID);
-
-                            std::string kitt_header = "Item ID: " + std::to_string(kitt_itemID) + "\nDropRate % | CreatureID | CreatureName";
-                            std::string kitt_header2 = "---------------------------------------------";
-                            player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_CHAT, kitt_header, KITT_SENDER_ACTION_SHOW_RESULTS, KITT_GOSSIP_ACTION_SHOW_RESULTS, "Acesta este doar un antet.", 0, false);
-                            player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_CHAT, kitt_header2, KITT_SENDER_ACTION_SHOW_RESULTS, KITT_GOSSIP_ACTION_SHOW_RESULTS, "Acesta este doar un antet.", 0, false);
-                            if (result)
-                            {
-                                do
-                                {
-                                    Field* fields = result->Fetch();
-
-                                    float chance = fields[0].GetFloat();
-                                    uint32 entry = fields[1].GetUInt32();
-                                    std::string name = fields[2].GetString();
-
-                                    std::stringstream stream;
-                                    stream << std::fixed << std::setprecision(1) << chance;
-                                    std::string chanceStr = stream.str();
-
-                                    std::string row = chanceStr + "% | " + std::to_string(entry) + " | " + name;
-
-                                    player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_MONEY_BAG, row, KITT_SENDER_ACTION_SHOW_RESULTS, KITT_GOSSIP_ACTION_SHOW_RESULTS + entry, "Doresti sa te teleportezi la creatura selectata? \nServiciile de taxi nu sunt gratis!", 100000, false);
-
-                                } while (result->NextRow());
-
-                                player->ModifyMoney(-int32(KittSelectDrop));
-                            }
-                            else
-                            {
-                                ChatHandler(player->GetSession()).SendSysMessage("Nu s-au gasit rezultate.");
-                                player->PlayerTalkClass->SendCloseGossip();
-                                return true;
-                            }
-
-                            player->PlayerTalkClass->GetGossipMenu().SetMenuId(KittNpcText::KITT_DROP_SELECT);
-                            player->PlayerTalkClass->SendGossipMenu(KittNpcText::KITT_DROP_SELECT, me->GetGUID());
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                            me->Say(player->GetName() + ", ai nevoie de 1500g.", LANG_UNIVERSAL, 0);
+                            CloseGossipMenuFor(player);
                             return true;
-
                         }
+                        else
+                        {
+                            player->ModifyMoney(-int32(NuApasaPret));
+                            CloseGossipMenuFor(player);
+
+                            me->Say("Ai dat de naiba!!! Iti dau 10 secunde sa fugi.", LANG_UNIVERSAL, 0);
+                            me->SetFaction(14);
+                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC);
+                            me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                            me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+                            me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_VENDOR);
+                            me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_REPAIR);
+                            me->SetReactState(REACT_PASSIVE);
+                            me->GetMotionMaster()->MoveIdle();
+                            me->GetVictim();
+                            me->SetInCombatWith(me->SelectNearestPlayer(5.0f));
+                            me->Attack(player, 0);
+                        }
+                        return true;
+                        //break;
+                    }
+
+                    case KITT_ACTION_DB_DROP_SHOW:
+                    {
+
+                        uint32 currentTime = uint32(GameTime::GetGameTime());
+
+                        if (kitt_select_drop_cooldowns.count(player->GetGUID()) && kitt_select_drop_cooldowns[player->GetGUID()] > currentTime)
+                        {
+                            uint32 waitTime = kitt_select_drop_cooldowns[player->GetGUID()] - currentTime;
+                            ChatHandler(player->GetSession()).PSendSysMessage("Te rugam sa astepti %u secunde pentru o noua cautare.", waitTime);
+                            player->PlayerTalkClass->SendCloseGossip();
+                            return true;
+                        }
+
+                        if (!code || code[0] == '\0')
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("Trebuie sa introduci un Item ID!");
+                            player->PlayerTalkClass->SendCloseGossip();
+                            return true;
+                        }
+
+                        std::string checkCode = code;
+                        if (!std::all_of(checkCode.begin(), checkCode.end(), ::isdigit))
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("Eroare: Introdu doar cifre (0-9)!");
+                            player->PlayerTalkClass->SendCloseGossip();
+                            return true;
+                        }
+
+                        uint32 kitt_itemID = uint32(std::stoul(checkCode));
+
+                        if (kitt_itemID == 0 || kitt_itemID > 56806)
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("ID invalid!");
+                            player->PlayerTalkClass->SendCloseGossip();
+                            return true;
+                        }
+
+                        if (!player->HasEnoughMoney(KittSelectDrop))
+                        {
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
+
+                        kitt_select_drop_cooldowns[player->GetGUID()] = currentTime + 50; // secunde
+
+
+                        player->PlayerTalkClass->ClearMenus();
+
+                        QueryResult result = WorldDatabase.PQuery(
+                            "SELECT CAST(MAX(FinalChance) AS FLOAT) as MaxChance, entry, name FROM ("
+                            // 1. Drop Direct (Chance > 0)
+                            "SELECT b.Chance as FinalChance, a.entry, a.name "
+                            "FROM creature_template a "
+                            "JOIN creature_loot_template b ON a.lootid = b.Entry "
+                            "WHERE b.Item = {0} AND b.Chance > 0 "
+                            "UNION ALL "
+                            // 2. Drop Direct (GroupId - Chance este 0)
+                            "SELECT (100 / (SELECT COUNT(*) FROM creature_loot_template WHERE Entry = a.lootid AND GroupId = b.GroupId)) as FinalChance, a.entry, a.name "
+                            "FROM creature_template a "
+                            "JOIN creature_loot_template b ON a.lootid = b.Entry "
+                            "WHERE b.Item = {0} AND b.Chance = 0 AND b.GroupId > 0 "
+                            "UNION ALL "
+                            // 3. Drop prin Reference
+                            "SELECT ABS(r.Chance) * (IF(b.Chance > 0, b.Chance, (100 / (SELECT COUNT(*) FROM reference_loot_template WHERE Entry = r.Reference AND GroupId = b.GroupId)))) / 100 as FinalChance, a.entry, a.name "
+                            "FROM creature_template a "
+                            "JOIN creature_loot_template r ON a.lootid = r.Entry "
+                            "JOIN reference_loot_template b ON r.Reference = b.Entry "
+                            "WHERE b.Item = {0}"
+                            ") AS combined_loot "
+                            "GROUP BY entry, name " // Am adaugat 'name' aici pentru a elimina eroarea 1055
+                            "ORDER BY MaxChance DESC LIMIT 25;",
+                            kitt_itemID);
+
+                        std::string kitt_header = "Item ID: " + std::to_string(kitt_itemID) + "\nDropRate % | CreatureID | CreatureName";
+                        std::string kitt_header2 = "---------------------------------------------";
+                        player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_CHAT, kitt_header, KITT_SENDER_ACTION_SHOW_RESULTS, KITT_GOSSIP_ACTION_SHOW_RESULTS, "Acesta este doar un antet.", 0, false);
+                        player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_CHAT, kitt_header2, KITT_SENDER_ACTION_SHOW_RESULTS, KITT_GOSSIP_ACTION_SHOW_RESULTS, "Acesta este doar un antet.", 0, false);
+                        if (result)
+                        {
+                            do
+                            {
+                                Field* fields = result->Fetch();
+
+                                float chance = fields[0].GetFloat();
+                                uint32 entry = fields[1].GetUInt32();
+                                std::string name = fields[2].GetString();
+
+                                std::stringstream stream;
+                                stream << std::fixed << std::setprecision(1) << chance;
+                                std::string chanceStr = stream.str();
+
+                                std::string row = chanceStr + "% | " + std::to_string(entry) + " | " + name;
+
+                                player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_MONEY_BAG, row, KITT_SENDER_ACTION_SHOW_RESULTS, KITT_GOSSIP_ACTION_SHOW_RESULTS + entry, "Doresti sa te teleportezi la creatura selectata? \nServiciile de taxi nu sunt gratis!", 100000, false);
+
+                            } while (result->NextRow());
+
+                            player->ModifyMoney(-int32(KittSelectDrop));
+                        }
+                        else
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("Nu s-au gasit rezultate.");
+                            player->PlayerTalkClass->SendCloseGossip();
+                            return true;
+                        }
+
+                        player->PlayerTalkClass->GetGossipMenu().SetMenuId(KittNpcText::KITT_DROP_SELECT);
+                        player->PlayerTalkClass->SendGossipMenu(KittNpcText::KITT_DROP_SELECT, me->GetGUID());
+                        return true;
+
+                    }
 
                     default:
                         break;
                     }
 
                     CloseGossipMenuFor(player);
-                    return false;
+                    return true;
                 }
 
+                case KITT_SENDER_MENU_INSTANCE_RESET:
+                {
+                    player->PlayerTalkClass->ClearMenus();
+                    switch (action)
+                    {
+                    case KITT_ACTION_RESET_RAID10:
+                    {
+                        // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
+                        QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 0)", player->GetGUID().GetCounter());
+
+                        // Verificam daca jucatorul a scris exact cuvantul corect
+                        if (codeStr != KittResetCode)
+                        {
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Eroare:|r Cod de confirmare incorect. Trebuie sa scrii ....");
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
+                        if (!result/* || !result->GetRowCount() == 0 */)
+                        {
+                            /*                        me->Whisper("Nu ai nicio instanta (10-N) blocata (cu cooldown) pe care sa o resetezi.", LANG_UNIVERSAL, player); */
+                            std::string message = "|cffff0000!...|r Nu ai nicio instanta (10-N) blocata (cu cooldown) pe care sa o resetezi.";
+                            ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
+                        if (!player->HasEnoughMoney(MoneyRaid10))
+                        {
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+                            me->Whisper(player->GetName() + ", ai nevoie de 100g pentru a reseta aceste instante (10-N)!", LANG_UNIVERSAL, player);
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
+                        else
+                        {
+                            player->ModifyMoney(-int32(MoneyRaid10));
+                            // 10 N
+                            CharacterDatabase.PExecute("DELETE FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 0)", player->GetGUID().GetCounter());
+                            CloseGossipMenuFor(player);
+                            /*                            me->Whisper("Instance reset: 10-N (Necesita re-log), leave party/raid and re-log.", LANG_UNIVERSAL, player); */
+                            std::string message = "|cffff0000Atentie|r Instance reset: 10-N (Necesita re-log), leave party/raid and re-log.";
+                            ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                        }
+                        return true;
+                    }
+
+                    default:
+                        break;
+                    }
+                }
             }
 
             CloseGossipMenuFor(player);
-            return false;
+            return true;
         }
 
         bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
@@ -1970,7 +1969,7 @@ public:
             {
                 uint32 creatureEntry = action - KITT_GOSSIP_ACTION_SHOW_RESULTS;
 
-                // Cautam informatii despre monstru în baza de date
+                // Cautam informatii despre monstru in baza de date
                 CreatureTemplate const* cInfo = sObjectMgr->GetCreatureTemplate(creatureEntry);
                 if (!cInfo)
                 {
