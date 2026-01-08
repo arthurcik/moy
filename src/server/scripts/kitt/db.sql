@@ -9,5 +9,5 @@ INSERT INTO `npc_text` (`id`, `text0_0`) VALUES
 |n|cff66ccffFunctii disponibile:|r
 |n- Verificare rata de drop (Grup/Referinta).
 |n- Teleportare directa la locatie (doar în lume).
-|n|cffff0000Nota:|r Daca un monstru nu poate fi gasit, probabil este invocat prin quest-uri sau evenimente.');
+|n|cffff0000Nota:|r Daca un monstru nu poate fi gasit, probabil este invocat prin quest-uri sau evenimente.
 |n|cffff0000Nota:|r Daca rata de drop este 0 inseamna ca este GrupLoot');
