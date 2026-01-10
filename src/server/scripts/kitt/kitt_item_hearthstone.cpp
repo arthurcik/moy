@@ -105,7 +105,7 @@ public:
                 }
 
                 //std::string msg = "Acest obiect nu este gata inca! Timp ramas: " + std::to_string(remainingSec) + " secunde.";
-                player->GetSession()->SendNotification(msg.c_str());
+                player->GetSession()->SendNotification("%s", msg.c_str());
 
                 //player->GetSession()->SendNotification("Acest obiect nu este gata inca!");
                 return true;
