@@ -137,6 +137,25 @@ void ChatLog::Initialize()
     WriteInitStamps();
 }
 
+/*bool ChatLog::CheckMOTDLexics(std::string& msg) {
+    if (Lexics && Lexics->Check_Lexics(msg)) {
+        msg = LexicsCutterCutReplacement; // Aici se face "suprapunerea"
+        return true;
+    }
+    return false;
+}*/
+
+bool ChatLog::CheckMOTDLexics(std::string& msg)
+{
+    if (Lexics && Lexics->Check_Lexics(msg))
+    {
+        msg = LexicsCutterCutReplacement; // sau LexicsCutterCutReplacement
+        return true;
+    }
+    return false;
+}
+
+
 bool ChatLog::_ChatCommon(int ChatType, Player *player, std::string &msg)
 {
     if (LexicsCutterEnable && Lexics && cutflag[ChatType] && Lexics->Check_Lexics(msg)) ChatBadLexicsAction(player, msg);
@@ -311,6 +330,28 @@ void ChatLog::GuildMsg(Player *player, std::string &msg, bool officer, bool isMa
 
     log_str.append(msg);
 
+    log_str.append("\n");
+
+    if (screenflag[CHAT_LOG_GUILD]) printf("%s", log_str.c_str());
+    if (files[CHAT_LOG_GUILD])
+    {
+        OutTimestamp(files[CHAT_LOG_GUILD]);
+        fprintf(files[CHAT_LOG_GUILD], "%s", log_str.c_str());
+        fflush(files[CHAT_LOG_GUILD]);
+    }
+}
+
+void ChatLog::GuildMOTDLog(Guild* guild, std::string const& msg, bool isBlocked)
+{
+    CheckDateSwitch();
+
+    std::string log_str = "";
+    log_str.append("[SYSTEM]");
+    log_str.append(isBlocked ? "[BLOCKED_MOTD]" : "[SET_MOTD]");
+    log_str.append("(");
+    log_str.append(guild->GetName());
+    log_str.append(") ");
+    log_str.append(msg);
     log_str.append("\n");
 
     if (screenflag[CHAT_LOG_GUILD]) printf("%s", log_str.c_str());

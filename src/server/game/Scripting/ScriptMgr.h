@@ -772,6 +772,14 @@ class TC_GAME_API GuildScript : public ScriptObject
         // Called when the guild info is altered.
         virtual void OnInfoChanged(Guild* guild, std::string const& newInfo);
 
+        // kitt on note change
+        virtual void OnMemberNoteChanged(Guild* guild, Player* player, std::string& note, bool isPublic);
+
+        virtual void OnBankTabInfoChanged(Guild* /*guild*/, uint8 /*tabId*/, std::string& /*name*/, std::string& /*icon*/);
+
+        virtual void OnBankTabTextChanged(Guild* /*guild*/, uint8 /*tabId*/, std::string& /*text*/);
+
+
         // Called when a guild is created.
         virtual void OnCreate(Guild* guild, Player* leader, std::string const& name);
 
@@ -1054,6 +1062,12 @@ class TC_GAME_API ScriptMgr
         void OnGuildRemoveMember(Guild* guild, Player* player, bool isDisbanding, bool isKicked);
         void OnGuildMOTDChanged(Guild* guild, const std::string& newMotd);
         void OnGuildInfoChanged(Guild* guild, const std::string& newInfo);
+        // kitt
+        void OnMemberNoteChanged(Guild* guild, Player* player, std::string& note, bool isPublic);
+        void OnBankTabInfoChanged(Guild* /*guild*/, uint8 /*tabId*/, std::string& /*name*/, std::string& /*icon*/);
+        void OnBankTabTextChanged(Guild* guild, uint8 tabId, std::string& text);
+
+
         void OnGuildCreate(Guild* guild, Player* leader, const std::string& name);
         void OnGuildDisband(Guild* guild);
         void OnGuildMemberWitdrawMoney(Guild* guild, Player* player, uint32 &amount, bool isRepair);

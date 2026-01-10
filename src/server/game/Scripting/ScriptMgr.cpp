@@ -2043,6 +2043,22 @@ void ScriptMgr::OnGuildInfoChanged(Guild* guild, const std::string& newInfo)
     FOREACH_SCRIPT(GuildScript)->OnInfoChanged(guild, newInfo);
 }
 
+void ScriptMgr::OnMemberNoteChanged(Guild* guild, Player* player, std::string& note, bool isPublic)
+{
+    FOREACH_SCRIPT(GuildScript)->OnMemberNoteChanged(guild, player, note, isPublic);
+}
+
+void ScriptMgr::OnBankTabInfoChanged(Guild* guild, uint8 tabId, std::string& name, std::string& icon)
+{
+    FOREACH_SCRIPT(GuildScript)->OnBankTabInfoChanged(guild, tabId, name, icon);
+}
+
+void ScriptMgr::OnBankTabTextChanged(Guild* guild, uint8 tabId, std::string& text)
+{
+    FOREACH_SCRIPT(GuildScript)->OnBankTabTextChanged(guild, tabId, text);
+}
+
+
 void ScriptMgr::OnGuildCreate(Guild* guild, Player* leader, const std::string& name)
 {
     FOREACH_SCRIPT(GuildScript)->OnCreate(guild, leader, name);
@@ -2760,6 +2776,18 @@ void GuildScript::OnMOTDChanged(Guild* /*guild*/, std::string const& /*newMotd*/
 }
 
 void GuildScript::OnInfoChanged(Guild* /*guild*/, std::string const& /*newInfo*/)
+{
+}
+
+void GuildScript::OnMemberNoteChanged(Guild* /*guild*/, Player* /*player*/, std::string& /*note*/, bool /*isPublic*/)
+{
+}
+
+void GuildScript::OnBankTabInfoChanged(Guild* /*guild*/, uint8 /*tabId*/, std::string& /*name*/, std::string& /*icon*/)
+{
+}
+
+void GuildScript::OnBankTabTextChanged(Guild* /*guild*/, uint8 /*tabId*/, std::string& /*text*/)
 {
 }
 

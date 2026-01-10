@@ -34,8 +34,12 @@
 #include "Chat.h"
 #include "Group.h"
 #include "Guild.h"
+#include "GuildMgr.h"
+#include "GuildPackets.h"
 #include "Channel.h"
 #include "Log.h"
+#include "DatabaseEnv.h"
+
 //#include <set>
 //#include <map>
 
@@ -265,7 +269,178 @@ public:
 
 };
 
+class KittGuildFilter : public GuildScript
+{
+public:
+    KittGuildFilter() : GuildScript("KittGuildFilter") {}
+
+    void OnMOTDChanged(Guild* guild, std::string const& newMotd) override
+    {
+        if (!guild || newMotd.empty())
+            return;
+
+        std::string filteredMotd = newMotd;
+
+        if (sChatLog->CheckMOTDLexics(filteredMotd))
+        {
+            sChatLog->GuildMOTDLog(guild, newMotd, true);
+
+            const_cast<std::string&>(guild->GetMOTD()) = filteredMotd;
+
+            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_GUILD_MOTD);
+            stmt->setString(0, filteredMotd);
+            stmt->setUInt32(1, guild->GetId());
+            CharacterDatabase.Execute(stmt);
+
+            WorldPackets::Guild::GuildEvent event;
+            event.Type = GE_MOTD;          // Tipul evenimentului (0x01)
+            event.Params.push_back(filteredMotd); // Adaugam mesajul cenzurat
+            event.Guid = ObjectGuid::Empty; // Nu avem nevoie de GUID pentru MOTD
+            guild->BroadcastPacket(event.Write());
+
+            /*auto notifyAction = [](Player* player)
+                {
+                    if (player && player->GetSession())
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Sistem]|r MOTD-ul breslei a fost cenzurat.");
+                };
+            guild->BroadcastWorker(notifyAction);*/
+        }
+        else
+        {
+            sChatLog->GuildMOTDLog(guild, newMotd, false);
+        }
+    }
+
+    void OnInfoChanged(Guild* guild, std::string const& newInfo) override
+    {
+        if (!guild || newInfo.empty())
+            return;
+
+        //std::string testInfo = newInfo;
+        //TC_LOG_ERROR("kitt", "text: {}", newInfo);
+        // Elimin?m \n, \r ?i spa?iile pentru a prinde cuvintele scrise vertical sau cu spa?ii ?ntre litere
+        //testInfo.erase(std::remove(testInfo.begin(), testInfo.end(), '\n'), testInfo.end());
+        //testInfo.erase(std::remove(testInfo.begin(), testInfo.end(), '\r'), testInfo.end());
+        //testInfo.erase(std::remove(testInfo.begin(), testInfo.end(), ' '), testInfo.end());
+
+        std::string testStr = newInfo;
+        testStr.erase(std::remove_if(testStr.begin(), testStr.end(), [](unsigned char c) {
+            return std::isspace(c) || !std::isprint(c);
+            }), testStr.end());
+
+        std::string filteredInfo = testStr;
+
+        if (sChatLog->CheckMOTDLexics(filteredInfo))
+        {
+            sChatLog->GuildMOTDLog(guild, "INFO BLOCKED: " + newInfo, true);
+
+            const_cast<std::string&>(guild->GetInfo()) = filteredInfo;
+
+            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_GUILD_INFO);
+            stmt->setString(0, filteredInfo);
+            stmt->setUInt32(1, guild->GetId());
+            CharacterDatabase.Execute(stmt);
+
+            WorldPackets::Guild::GuildEvent event;
+            event.Type = GE_BANK_TEXT_CHANGED;
+            guild->BroadcastPacket(event.Write());
+
+            /*auto notifyAction = [](Player* player)
+                {
+                    if (player && player->GetSession())
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Sistem]|r Descrierea breslei a fost cenzurata.");
+                };
+            guild->BroadcastWorker(notifyAction);*/
+        }
+        else
+        {
+            sChatLog->GuildMOTDLog(guild, "INFO SET: " + newInfo, false);
+        }
+    }
+
+    void OnMemberNoteChanged(Guild* guild, Player* /*player*/, std::string& note, bool isPublic) override
+    {
+        if (!guild || note.empty())
+            return;
+
+        std::string originalNote = note;
+
+        if (sChatLog->CheckMOTDLexics(note))
+        {
+            sChatLog->GuildMOTDLog(guild, (isPublic ? "[P-Note Blocked]: " : "[O-Note Blocked]: ") + originalNote, true);
+
+            //note = "Cenzurat";
+
+            /*if (player)
+            {
+                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Sistem]|r Nota a fost cenzurata deoarece continea cuvinte interzise.");
+            }*/
+        }
+        else
+        {
+            sChatLog->GuildMOTDLog(guild, (isPublic ? "[P-Note Set]: " : "[O-Note Set]: ") + note, false);
+        }
+    }
+
+    void OnBankTabInfoChanged(Guild* guild, uint8 tabId, std::string& name, std::string& /*icon*/) override
+    {
+        if (!guild || name.empty())
+            return;
+
+        std::string originalName = name;
+
+        if (sChatLog->CheckMOTDLexics(name))
+        {
+            sChatLog->GuildMOTDLog(guild, "BANK TAB [" + std::to_string(tabId) + "] BLOCKED: " + originalName, true);
+
+            /*auto notifyAction = [](Player* player)
+                {
+                    if (player && player->GetSession())
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Sistem]|r Numele tab-ului de banca a fost cenzurat.");
+                };
+
+            guild->BroadcastWorker(notifyAction);*/
+        }
+        else
+        {
+            sChatLog->GuildMOTDLog(guild, "BANK TAB [" + std::to_string(tabId) + "] SET: " + name, false);
+        }
+    }
+
+    void OnBankTabTextChanged(Guild* guild, uint8 tabId, std::string& text) override
+    {
+        if (!guild || text.empty())
+            return;
+
+        std::string originalText = text;
+
+        std::string testStr = text;
+        testStr.erase(std::remove_if(testStr.begin(), testStr.end(), [](unsigned char c) {
+            return std::isspace(c) || !std::isprint(c);
+            }), testStr.end());
+
+        if (sChatLog->CheckMOTDLexics(testStr))
+        {
+            //TC_LOG_ERROR("log", "text info: {}", testStr);
+            sChatLog->GuildMOTDLog(guild, "BANK TEXT [" + std::to_string(tabId) + "] BLOCKED: " + originalText, true);
+            text = testStr;
+            /*auto notifyAction = [](Player* player)
+                {
+                    if (player && player->GetSession())
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Sistem]|r Numele tab-ului de banca a fost cenzurat.");
+                };
+            guild->BroadcastWorker(notifyAction);*/
+        }
+        else
+        {
+            sChatLog->GuildMOTDLog(guild, "BANK TEXT [" + std::to_string(tabId) + "] SET: " + text, false);
+        }
+    }
+};
+
+
 void AddSC_kitt_chat_logs()
 {
     new kitt_chat_logs();
+    new KittGuildFilter();
 }
