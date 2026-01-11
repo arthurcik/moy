@@ -21708,7 +21708,7 @@ void bot_ai::SendUpdateToOutOfRangeBotGroupMembers()
 
     _groupUpdateMask = GROUP_UPDATE_FLAG_NONE;
     _auraRaidUpdateMask = 0;
-    if (botPet)
+    if (botPet && botPet->GetBotPetAI()) // kitt fix
         botPet->GetBotPetAI()->ResetAuraUpdateMaskForRaid();
 }
 
