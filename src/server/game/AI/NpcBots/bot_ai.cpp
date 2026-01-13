@@ -3687,17 +3687,35 @@ bool bot_ai::IsInBotParty(Unit const* unit) const
     //Player-controlled creature case
     if (Creature const* cre = unit->ToCreature())
     {
-        ObjectGuid ownerGuid = !unit->GetOwnerGUID().IsEmpty() ? unit->GetOwnerGUID() : unit->GetCreator() ? unit->GetCreator()->GetGUID() : ObjectGuid::Empty;
-        if (!ownerGuid && unit->IsVehicle())
-            ownerGuid = unit->GetCharmerGUID();
+        // FIX START: kitt
+        if (!cre || !cre->IsInWorld())
+            return false;
+
+        if (!master)
+            return false;
+        // FIX END kitt
+
+        // Folosim 'cre' în loc de 'unit' pentru consistenta
+        ObjectGuid ownerGuid = !cre->GetOwnerGUID().IsEmpty() ? cre->GetOwnerGUID() : cre->GetCreator() ? cre->GetCreator()->GetGUID() : ObjectGuid::Empty;
+        if (ownerGuid.IsEmpty() && cre->IsVehicle()) // kitt origin: if (!ownerGuid && unit->IsVehicle())
+            ownerGuid = cre->GetCharmerGUID();
         //controlled by master
         if (ownerGuid == master->GetGUID())
             return true;
         //npcbot/npcbot's pet case
         if (cre->GetBotOwner() == master)
             return true;
-        if (!ownerGuid.IsEmpty() && master->GetBotMgr()->GetBot(ownerGuid))
-            return true;
+        // kitt start
+        if (!ownerGuid.IsEmpty() && master->GetBotMgr())
+        {
+            if (master->GetBotMgr()->GetBot(ownerGuid))
+                return true;
+        }
+        // kitt end 
+        //if (!ownerGuid.IsEmpty() && master->GetBotMgr()->GetBot(ownerGuid))
+        //    return true;
+        // vechiul codu ^^^
+
         //controlled by group member
         //pets, minions, guardians etc.
         //bot pets too

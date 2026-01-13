@@ -253,6 +253,7 @@ int32 Object::GetInt32Value(uint16 index) const
 
 uint32 Object::GetUInt32Value(uint16 index) const
 {
+    if (!m_uint32Values) return 0; // kitt
     ASSERT(index < m_valuesCount || PrintIndexError(index, false));
     return m_uint32Values[index];
 }
@@ -285,6 +286,9 @@ uint16 Object::GetUInt16Value(uint16 index, uint8 offset) const
 
 ObjectGuid Object::GetGuidValue(uint16 index) const
 {
+    if (!m_uint32Values) // kitt fix temp
+        return ObjectGuid::Empty;
+
     ASSERT(index + 1 < m_valuesCount || PrintIndexError(index, false));
     return *((ObjectGuid*)&(m_uint32Values[index]));
 }

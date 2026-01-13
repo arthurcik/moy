@@ -616,13 +616,32 @@ struct gunship_npc_AI : public ScriptedAI
 
     bool CanAIAttack(Unit const* target) const override
     {
+        // kitt
+        if (!target || !target->IsInWorld())
+            return false;
+
         if (Instance->GetBossState(DATA_ICECROWN_GUNSHIP_BATTLE) != IN_PROGRESS)
             return false;
-        //npcbot: allow to attack bots whereever they are
-        if (target->GetTypeId() == TYPEID_UNIT && target->ToCreature()->IsNPCBotOrPet())
-            return true;
+
+        //npcbot: allow to attack bots whereever they are kitt
+        //if (target->GetTypeId() == TYPEID_UNIT && target->ToCreature()->IsNPCBotOrPet())
+        //    return true;
+        //if (target->GetTypeId() == TYPEID_UNIT && target->ToCreature() && target->ToCreature()->IsNPCBotOrPet())
+        //    return true;
+        if (target->GetTypeId() == TYPEID_UNIT)
+        {
+            Creature const* cTarget = target->ToCreature();
+            if (cTarget && cTarget->IsNPCBotOrPet())
+                return true;
+        }
         //end npcbot
-        return target->HasAura(Instance->GetData(DATA_TEAM_IN_INSTANCE) == HORDE ? SPELL_ON_ORGRIMS_HAMMER_DECK : SPELL_ON_SKYBREAKER_DECK);
+
+        //return target->HasAura(Instance->GetData(DATA_TEAM_IN_INSTANCE) == HORDE ? SPELL_ON_ORGRIMS_HAMMER_DECK : SPELL_ON_SKYBREAKER_DECK);
+        // kitt
+        uint32 teamInInstance = Instance->GetData(DATA_TEAM_IN_INSTANCE);
+        uint32 deckSpellId = (teamInInstance == HORDE ? SPELL_ON_ORGRIMS_HAMMER_DECK : SPELL_ON_SKYBREAKER_DECK);
+
+        return target->HasAura(deckSpellId);
     }
 
 protected:
@@ -1952,7 +1971,7 @@ private:
 
     void CalculateDamage(SpellEffIndex /*effIndex*/)
     {
-        SetEffectValue(GetEffectValue() + _energyLeft * _energyLeft * 58);   // kitt original (* 8)
+        SetEffectValue(GetEffectValue() + _energyLeft * _energyLeft * 28);   // kitt original (* 8)
     }
 
     void Register() override
