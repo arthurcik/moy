@@ -447,6 +447,8 @@ public:
                         spawns_a.push_back(wp);
                     else if (wp->HasFlag(BotWPFlags::BOTWP_FLAG_HORDE_ONLY))
                         spawns_h.push_back(wp);
+                    else if (wp->HasFlag(BotWPFlags::BOTWP_FLAG_NEUTRAL_ONLY))
+                        spawns_n.push_back(wp);
                     else
                     {
                         spawns_a.push_back(wp);
@@ -1519,8 +1521,10 @@ void BotDataMgr::LoadWanderMap(bool reload, bool force_all_maps)
             maxLevel = std::min<uint8>(maxLevel, max_spawn_level);
             for (uint8 k = 0; k < TEAMS_COUNT; ++k)
             {
-                if ((k == 0 && !wp->HasFlag(BotWPFlags::BOTWP_FLAG_HORDE_ONLY)) ||
-                    (k == 1 && !wp->HasFlag(BotWPFlags::BOTWP_FLAG_ALLIANCE_ONLY)) ||
+                bool isNeutralOnly = wp->HasFlag(BotWPFlags::BOTWP_FLAG_NEUTRAL_ONLY);
+
+                if ((k == 0 && !wp->HasFlag(BotWPFlags::BOTWP_FLAG_HORDE_ONLY) && !isNeutralOnly) ||
+                    (k == 1 && !wp->HasFlag(BotWPFlags::BOTWP_FLAG_ALLIANCE_ONLY) && !isNeutralOnly) ||
                     (k == 2 && !wp->HasFlag(BotWPFlags::BOTWP_FLAG_ALLIANCE_OR_HORDE_ONLY)))
                 {
                     for (size_t i = minLevel; i <= maxLevel; ++i)

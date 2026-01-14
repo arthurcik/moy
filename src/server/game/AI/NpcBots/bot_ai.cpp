@@ -3695,7 +3695,7 @@ bool bot_ai::IsInBotParty(Unit const* unit) const
             return false;
         // FIX END kitt
 
-        // Folosim 'cre' în loc de 'unit' pentru consistenta
+        // Folosim 'cre' in loc de 'unit' pentru consistenta
         ObjectGuid ownerGuid = !cre->GetOwnerGUID().IsEmpty() ? cre->GetOwnerGUID() : cre->GetCreator() ? cre->GetCreator()->GetGUID() : ObjectGuid::Empty;
         if (ownerGuid.IsEmpty() && cre->IsVehicle()) // kitt origin: if (!ownerGuid && unit->IsVehicle())
             ownerGuid = cre->GetCharmerGUID();
@@ -19433,6 +19433,8 @@ WanderNode const* bot_ai::GetNextWanderNode(Position const* fromPos, uint8 lvl, 
     static auto node_viable = [](WanderNode const* wp, uint8 lvl) -> bool {
         return (lvl + 2 >= wp->GetLevels().first && lvl <= wp->GetLevels().second);
     };
+    uint8 KittbotClassLocal = _botclass;
+    bool isSpecialBot = (KittbotClassLocal >= BOT_CLASS_EX_START);
 
     uint32 faction = me->GetFaction();
     if (me->IsFFAPvP())
@@ -19447,7 +19449,10 @@ WanderNode const* bot_ai::GetNextWanderNode(Position const* fromPos, uint8 lvl, 
     {
         if (me->IsInWorld() && !me->GetMap()->IsBattlegroundOrArena())
         {
-            WanderNode::DoForAllMapWPs(_travel_node_cur->GetMapId(), [&nlinks, lvl = lvl, fac = faction, pos = fromPos](WanderNode const* wp) {
+            WanderNode::DoForAllMapWPs(_travel_node_cur->GetMapId(), [&nlinks, lvl = lvl, fac = faction, pos = fromPos, isSpecialBot](WanderNode const* wp) {
+                // FILTRARE kitt
+                if (wp->HasFlag(BotWPFlags::BOTWP_FLAG_NEUTRAL_ONLY) && !isSpecialBot)
+                    return;
                 if (pos->GetExactDist2d(wp) < MAX_WANDER_NODE_DISTANCE && IsWanderNodeAvailableForBotFaction(wp, fac, true) && node_viable(wp, lvl))
                     nlinks.push_back(wp);
             });
@@ -19458,7 +19463,10 @@ WanderNode const* bot_ai::GetNextWanderNode(Position const* fromPos, uint8 lvl, 
         //Select closest
         WanderNode const* node_new = nullptr;
         float mindist = 50000.0f; // Anywhere
-        WanderNode::DoForAllMapWPs(_travel_node_cur->GetMapId(), [&node_new, &mindist, lvl = lvl, fac = faction, pos = fromPos](WanderNode const* wp) {
+        WanderNode::DoForAllMapWPs(_travel_node_cur->GetMapId(), [&node_new, &mindist, lvl = lvl, fac = faction, pos = fromPos, isSpecialBot](WanderNode const* wp) {
+            // FILTRARE kitt
+            if (wp->HasFlag(BotWPFlags::BOTWP_FLAG_NEUTRAL_ONLY) && !isSpecialBot)
+                return;
             float dist = pos->GetExactDist2d(wp);
             if (dist < mindist && IsWanderNodeAvailableForBotFaction(wp, fac, false) && node_viable(wp, lvl))
             {
@@ -19472,6 +19480,9 @@ WanderNode const* bot_ai::GetNextWanderNode(Position const* fromPos, uint8 lvl, 
     NodeLinkList llinks;
     for (auto const& wpl : _travel_node_cur->GetLinks())
     {
+        // FILTRARE pentru link-uri de mers kitt
+        if (wpl.wp->HasFlag(BotWPFlags::BOTWP_FLAG_NEUTRAL_ONLY) && !isSpecialBot)
+            continue;
         if (IsWanderNodeAvailableForBotFaction(wpl.wp, faction, false) && node_viable(wpl.wp, lvl))
             llinks.push_back(&wpl);
     }
@@ -19484,7 +19495,11 @@ WanderNode const* bot_ai::GetNextWanderNode(Position const* fromPos, uint8 lvl, 
     }
 
     //Overleveled or died: no viable nodes in reach, find one for teleport
-    WanderNode::DoForAllWPs([&nlinks, lvl = lvl, fac = faction](WanderNode const* wp) {
+    WanderNode::DoForAllWPs([&nlinks, lvl = lvl, fac = faction, isSpecialBot](WanderNode const* wp) {
+        // FILTRARE kitt
+        if (wp->HasFlag(BotWPFlags::BOTWP_FLAG_NEUTRAL_ONLY) && !isSpecialBot)
+            return;
+
         if (IsWanderNodeAvailableForBotFaction(wp, fac, true) && wp->HasFlag(BotWPFlags::BOTWP_FLAG_SPAWN) && node_viable(wp, lvl))
             nlinks.push_back(wp);
     });
