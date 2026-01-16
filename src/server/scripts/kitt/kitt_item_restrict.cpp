@@ -80,7 +80,7 @@ public:
         return EQUIP_ERR_OK;
     }
 
-    void OnMapChanged(Player* player)
+    void OnMapChanged(Player* player) override
     {
         if (!player || !player->IsInWorld())
             return;
@@ -129,7 +129,7 @@ public:
 
         player->MoveItemFromInventory(bag, slot, true);
 
-        SQLTransaction trans = CharacterDatabase.BeginTransaction();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
         CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_ITEM);
         stmt->setUInt32(0, itemGuidLow);
