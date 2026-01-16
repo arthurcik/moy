@@ -16,7 +16,8 @@
  */
 
 // This is where scripts' loading functions should be declared:
-// void AddSC_kitt_test_script();
+
+//void AddSC_kitt_test_script();
 void AddSC_kitt_go();
 //void AddSC_kitt_vendor_go();
 void AddSC_kitt_p_start_guild();
@@ -28,6 +29,7 @@ void AddSC_kitt_npc_menu();
 void AddSC_kitt_chat_logs();
 void AddSC_kitt_spell_script_aura();
 //void AddSC_kitt_item_hearthstone();
+void AddSC_kitt_item_restrict();
 
 
 // The name of this function should match:
@@ -46,4 +48,5 @@ void AddkittScripts()
     AddSC_kitt_chat_logs();
     AddSC_kitt_spell_script_aura();
     //AddSC_kitt_item_hearthstone();
+    AddSC_kitt_item_restrict();
 }

@@ -11207,6 +11207,11 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16 &dest, Item* pItem, bool
     dest = 0;
     if (pItem)
     {
+        // --- Kitt ---
+        InventoryResult scriptRes = sScriptMgr->OnCanEquipItem(const_cast<Player*>(this), slot, dest, pItem, swap, not_loading);
+        if (scriptRes != EQUIP_ERR_OK)
+            return scriptRes;
+        // --------------------------------------------
         TC_LOG_DEBUG("entities.player.items", "Player::CanEquipItem: Player '{}' ({}), Slot: {}, Item: {}, Count: {}",
             GetName(), GetGUID().ToString(), slot, pItem->GetEntry(), pItem->GetCount());
         ItemTemplate const* pProto = pItem->GetTemplate();
@@ -12119,6 +12124,9 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
     // only for full equip instead adding to stack
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_ITEM, pItem->GetEntry());
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_EPIC_ITEM, slot, pItem->GetEntry());
+
+    // kitt
+    sScriptMgr->OnEquip(this, pItem, slot, update);
 
     return pItem;
 }

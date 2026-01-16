@@ -4368,7 +4368,7 @@ public:
             }
 
             handler->SendSysMessage(".npcbot info");
-            handler->SendSysMessage("Lists NpcBots count of each class owned by selected player. You can use this on self and your party members");
+            handler->SendSysMessage("Lists TfcB count of each class owned by selected player. You can use this on self and your party members");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -4397,8 +4397,8 @@ public:
             ), std::end(guidvec));
         }
 
-        handler->PSendSysMessage("Listing NpcBots for %s, guid %u%s:", master_name, master_guid.GetCounter(), !master ? " (offline)" : "");
-        handler->PSendSysMessage("Owned NpcBots: %u (active: %u)", uint32(guidvec.size()) + map_size, map_size);
+        handler->PSendSysMessage("Listing TfcB for %s, guid %u%s:", master_name, master_guid.GetCounter(), !master ? " (offline)" : "");
+        handler->PSendSysMessage("Owned TfcB: %u (active: %u)", uint32(guidvec.size()) + map_size, map_size);
         LocaleConstant loc = LocaleConstant(handler->GetSessionDbLocaleIndex());
         if (map)
         {
@@ -4476,7 +4476,7 @@ public:
         if (!owner->HaveBot())
         {
             handler->SendSysMessage(".npcbot command stopfully");
-            handler->SendSysMessage("Forces your npcbots to stop all activity");
+            handler->SendSysMessage("Forces your tfcB to stop all activity");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -4533,7 +4533,7 @@ public:
         if (!owner->HaveBot())
         {
             handler->SendSysMessage(".npcbot command nocast");
-            handler->SendSysMessage("Makes npcbots unable to cast ANY spells");
+            handler->SendSysMessage("Makes tfcB unable to cast ANY spells");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -4561,7 +4561,7 @@ public:
         if (!owner->HaveBot())
         {
             handler->SendSysMessage(".npcbot command follow only");
-            handler->SendSysMessage("Makes npcbots follow you and do nothing else");
+            handler->SendSysMessage("Makes tfcB follow you and do nothing else");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -4813,7 +4813,7 @@ public:
         if (!u)
         {
             handler->SendSysMessage(".npcbot remove");
-            handler->SendSysMessage("Frees selected npcbot from it's owner. Select player to remove all npcbots");
+            handler->SendSysMessage("Frees selected tfcB from it's owner. Select player to remove all tfcB");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -4827,15 +4827,15 @@ public:
 
                 if (!master->HaveBot())
                 {
-                    handler->SendSysMessage("Npcbots were successfully removed");
+                    handler->SendSysMessage("TfcB were successfully removed");
                     handler->SetSentErrorMessage(true);
                     return true;
                 }
-                handler->SendSysMessage("Some npcbots were not removed!");
+                handler->SendSysMessage("Some tfcB were not removed!");
                 handler->SetSentErrorMessage(true);
                 return false;
             }
-            handler->SendSysMessage("Npcbots are not found!");
+            handler->SendSysMessage("TfcB are not found!");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -4847,16 +4847,16 @@ public:
             master->GetBotMgr()->RemoveBot(cre->GetGUID(), BOT_REMOVE_DISMISS);
             if (master->GetBotMgr()->GetBot(cre->GetGUID()) == nullptr)
             {
-                handler->SendSysMessage("NpcBot successfully removed");
+                handler->SendSysMessage("TfcB successfully removed");
                 handler->SetSentErrorMessage(true);
                 return true;
             }
-            handler->SendSysMessage("NpcBot was NOT removed for some stupid reason!");
+            handler->SendSysMessage("TfcB was NOT removed for some stupid reason!");
             handler->SetSentErrorMessage(true);
             return false;
         }
 
-        handler->SendSysMessage("You must select player or controlled npcbot");
+        handler->SendSysMessage("You must select player or controlled tfcB");
         handler->SetSentErrorMessage(true);
         return false;
     }
@@ -4868,7 +4868,7 @@ public:
         if (!u)
         {
             handler->SendSysMessage(".npcbot revive");
-            handler->SendSysMessage("Revives selected npcbot. If player is selected, revives all selected player's npcbots");
+            handler->SendSysMessage("Revives selected tfcB. If player is selected, revives all selected player's tfcB");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -4877,7 +4877,7 @@ public:
         {
             if (!master->HaveBot())
             {
-                handler->PSendSysMessage("%s has no npcbots!", master->GetName());
+                handler->PSendSysMessage("%s has no tfcB!", master->GetName());
                 handler->SetSentErrorMessage(true);
                 return false;
             }
@@ -4924,7 +4924,7 @@ public:
         Creature* bot = cre->ToCreature();
         if (!bot || !bot->IsNPCBot() || bot->GetBotAI()->GetBotOwnerGuid() || bot->GetBotAI()->IsWanderer())
         {
-            handler->SendSysMessage("You must select uncontrolled non-wandering npcbot");
+            handler->SendSysMessage("You must select uncontrolled non-wandering tfcB");
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -4935,11 +4935,11 @@ public:
 
         if (owner->GetBotMgr()->AddBot(bot) == BOT_ADD_SUCCESS)
         {
-            handler->PSendSysMessage("%s is now your npcbot", bot->GetName());
+            handler->PSendSysMessage("%s is now your tfcB", bot->GetName());
             return true;
         }
 
-        handler->SendSysMessage("NpcBot is NOT added for some reason!");
+        handler->SendSysMessage("TfcB is NOT added for some reason!");
         handler->SetSentErrorMessage(true);
         return false;
     }
@@ -4951,7 +4951,7 @@ public:
         sMapMgr->InitializeVisibilityDistanceInfo();
         handler->SendGlobalGMSysMessage("World config settings reloaded.");
         BotMgr::ReloadConfig();
-        handler->SendGlobalGMSysMessage("NpcBot config settings reloaded.");
+        handler->SendGlobalGMSysMessage("TfcB config settings reloaded.");
         return true;
     }
 };

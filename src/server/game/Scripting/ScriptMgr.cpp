@@ -1831,6 +1831,30 @@ void ScriptMgr::OnPVPKill(Player* killer, Player* killed)
     FOREACH_SCRIPT(PlayerScript)->OnPVPKill(killer, killed);
 }
 
+// kitt
+void ScriptMgr::OnEquip(Player* player, Item* item, uint16 slot, bool update)
+{
+    FOREACH_SCRIPT(PlayerScript)->OnEquip(player, item, slot, update);
+}
+
+InventoryResult ScriptMgr::OnCanEquipItem(Player* player, uint8 slot, uint16& dest, Item* item, bool swap, bool not_loading)
+{
+    auto registry = ScriptRegistry<PlayerScript>::Instance();
+
+    if (!registry)
+        return EQUIP_ERR_OK;
+
+    for (auto const& iter : registry->GetScripts())
+    {
+        InventoryResult res = iter.second->OnCanEquipItem(player, slot, dest, item, swap, not_loading);
+
+        if (res != EQUIP_ERR_OK)
+            return res;
+    }
+
+    return EQUIP_ERR_OK;
+}
+
 void ScriptMgr::OnCreatureKill(Player* killer, Creature* killed)
 {
     FOREACH_SCRIPT(PlayerScript)->OnCreatureKill(killer, killed);
@@ -2597,6 +2621,16 @@ PlayerScript::PlayerScript(char const* name)
 
 void PlayerScript::OnPVPKill(Player* /*killer*/, Player* /*killed*/)
 {
+}
+
+// kitt
+void PlayerScript::OnEquip(Player* /*player*/, Item* /*item*/, uint16 /*slot*/, bool /*update*/)
+{
+}
+
+InventoryResult PlayerScript::OnCanEquipItem(Player* /*player*/, uint8 /*slot*/, uint16& /*dest*/, Item* /*item*/, bool /*swap*/, bool /*not_loading*/)
+{
+    return EQUIP_ERR_OK;
 }
 
 void PlayerScript::OnCreatureKill(Player* /*killer*/, Creature* /*killed*/)
