@@ -59,6 +59,8 @@ class bot_ai : public CreatureAI
         NpcBotExtras const* GetBotExtras() const { return _botExtras; }
 
         void JustDied(Unit*) override;
+        void RecoverDisabledItems(); // kitt
+
         void KilledUnit(Unit* u) override;
         void AttackStart(Unit* u) override;
         void JustEnteredCombat(Unit* u) override;

@@ -36,7 +36,7 @@ NpcBots DB Data management
 #ifdef _MSC_VER
 # pragma warning(push, 4)
 #endif
-
+std::set<uint32> BotDataMgr::_disabledItems;
 typedef std::unordered_map<ObjectGuid /*player_guid*/, NpcBotMgrData*> NpcBotMgrDataMap;
 NpcBotMgrDataMap _botMgrsData;
 
@@ -71,6 +71,7 @@ static uint32 next_wandering_bot_spawn_delay = 0;
 
 static EventProcessor botSpawnEvents;
 static std::unordered_map<ObjectGuid, EventProcessor> botBGJoinEvents;
+
 
 bool BotBankItemCompare::operator()(Item const* item1, Item const* item2) const
 {
@@ -1860,6 +1861,7 @@ ItemPerBotClassMap const& BotDataMgr::GetWanderingBotsSortedGearMap()
 
 void BotDataMgr::CreateWanderingBotsSortedGear()
 {
+    _disabledItems.clear(); // kitt
     BOT_LOG_INFO("server.loading", "Sorting wandering bot's gear...");
 
     uint32 oldMSTime = getMSTime();
@@ -1872,6 +1874,7 @@ void BotDataMgr::CreateWanderingBotsSortedGear()
         {
             uint32 id = dires->Fetch()->GetUInt32();
             disabled_item_ids.insert(id);
+            _disabledItems.insert(id);
 
         } while (dires->NextRow());
 

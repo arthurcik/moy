@@ -194,6 +194,7 @@ typedef std::array<ItemPerSlot, BOT_CLASS_END> ItemPerBotClassMap;
 class BotDataMgr
 {
     public:
+        static bool IsItemDisabled(uint32 entry) { return _disabledItems.find(entry) != _disabledItems.end(); }
         static void Update(uint32 diff);
 
         static void LoadNpcBots(bool spawn = true);
@@ -277,6 +278,7 @@ class BotDataMgr
     private:
         BotDataMgr() {}
         BotDataMgr(BotDataMgr const&);
+        static std::set<uint32> _disabledItems;
 };
 
 #endif

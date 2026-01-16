@@ -9665,6 +9665,10 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             {
                 if (Item const* pItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                 {
+                    // kitt
+                    if (BotDataMgr::IsItemDisabled(pItem->GetEntry()))
+                        continue;
+
                     bool standard = false;
                     for (uint8 j = 0; j != MAX_EQUIPMENT_ITEMS; ++j)
                     {
@@ -9706,6 +9710,10 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                     {
                         if (Item const* pItem = player->GetItemByPos(i, j))
                         {
+                            // kitt
+                            if (BotDataMgr::IsItemDisabled(pItem->GetEntry()))
+                                continue;
+
                             bool standard = false;
                             for (uint8 k = 0; k != MAX_EQUIPMENT_ITEMS; ++k)
                             {
@@ -9915,7 +9923,18 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 }
             }
 
-            if (found && _equip(sender - GOSSIP_SENDER_EQUIP, item, player->GetGUID(), false) == BotEquipResult::BOT_EQUIP_RESULT_OK){}
+            //if (found && _equip(sender - GOSSIP_SENDER_EQUIP, item, player->GetGUID(), false) == BotEquipResult::BOT_EQUIP_RESULT_OK){}
+            if (found)
+            {
+                if (BotDataMgr::IsItemDisabled(item->GetEntry()))
+                {
+                    ChatHandler(player->GetSession()).SendSysMessage("|cffff0000[Securitate]:|r Acest obiect este interzis pentru tfcB.");
+                }
+                else if (_equip(sender - GOSSIP_SENDER_EQUIP, item, player->GetGUID(), false) == BotEquipResult::BOT_EQUIP_RESULT_OK)
+                {
+                    // Echipare reusita
+                }
+            }
             return OnGossipSelect(player, creature, GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 1);
         }
         case GOSSIP_SENDER_EQUIPMENT_BANK_DEPOSIT_ITEM:
