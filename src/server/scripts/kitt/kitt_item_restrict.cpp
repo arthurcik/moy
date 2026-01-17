@@ -24,7 +24,7 @@ static inline const std::unordered_map<uint32, RestrictedConfig> MultiSecurityMa
     // { ID_ITEM, {  RANG_GM, { LISTA_MAP_ID_NEPERMIS } } }
 
     // gm item
-    { 900901,      { 9,       {  } } }, // tfc Thunderfury
+    { 900901,      { 5,       { 489, 529, 30, 566, 628, 607 } } }, // tfc Thunderfury
     { 900902,      { 9,       {  } } }, // Staff of Disintegration
     { 919347,      { 9,       {  } } }, // Claw of Chromaggus
     { 950412,      { 9,       {  } } }, // Bloodvenom Blade
