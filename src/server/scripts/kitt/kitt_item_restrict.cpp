@@ -47,7 +47,21 @@ static inline const std::unordered_map<uint32, RestrictedConfig> MultiSecurityMa
     { 900915,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Blade of Kings
     { 900916,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Winter shield
     { 900917,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Penumbra
-
+    { 900918,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // BRK-4000 // expire
+    { 900919,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Shadowmourne // expire
+    { 900920,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Cryptmaker // expire
+    { 900921,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Repeating bow // expire
+    { 900922,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Impaling Spike // expire
+    { 900923,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Seducer // expire
+    { 900924,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // High-Blade of the Silver // expire
+    { 900925,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Antonidas // expire
+    { 900926,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Kel'Thuzad's Blade // expire
+    { 900927,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Fal'inrush // expire
+    { 900928,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Royal Scepter // expire
+    { 900929,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Heaven's Fall // expire
+    { 900930,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Blade of Kings // expire
+    { 900931,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Winter shield // expire
+    { 900932,      { 0,       { 489, 529, 30, 566, 628, 607 } } } // Penumbra // expire
 };
 
 
