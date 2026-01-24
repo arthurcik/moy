@@ -42,7 +42,20 @@ Transport::Transport() : GameObject(),
 
 Transport::~Transport()
 {
-    ASSERT(_passengers.empty());
+    //ASSERT(_passengers.empty());
+    // kitt
+    if (!_passengers.empty())
+    {
+        for (PassengerSet::iterator itr = _passengers.begin(); itr != _passengers.end(); ++itr)
+        {
+            if (Unit* unit = (*itr)->ToUnit())
+            {
+                unit->SetTransport(nullptr);
+                unit->m_movementInfo.transport.Reset();
+            }
+        }
+        _passengers.clear();
+    }
     UnloadStaticPassengers();
 }
 
