@@ -54,7 +54,7 @@ public:
             // FindNearestCreature cauta prima instanta a NPC-ului in raza specificata
             if (player->FindNearestCreature(npcId, distance, true))
             {
-                player->GetSession()->SendNotification("Exista deja un NPC activ in apropiere (80yd)!");
+                player->GetSession()->SendNotification("There is already an active NPC nearby (80yd)!");
                 player->SendEquipError(EQUIP_ERR_CLIENT_LOCKED_OUT, item, nullptr);
                 return true;
             }
@@ -62,7 +62,7 @@ public:
             // Verificare fantoma
             if (player->isDead())
             {
-                player->GetSession()->SendNotification("Nu poti folosi acest item daca esti fantoma");
+                player->GetSession()->SendNotification("You cannot use this item while you are a ghost!");
                 // error
                 player->SendEquipError(EQUIP_ERR_CLIENT_LOCKED_OUT, item, nullptr);
                 return true; // Returnam true pentru a opri executia si a nu consuma item-ul
@@ -70,7 +70,7 @@ public:
             // 1. Verificare Combat
             if (player->IsInCombat())
             {
-                player->GetSession()->SendNotification("Nu poti folosi acest item in timpul luptei!");
+                player->GetSession()->SendNotification("You cannot use this item while in combat!");
                 // error
                 player->SendEquipError(EQUIP_ERR_CLIENT_LOCKED_OUT, item, nullptr);
                 return true;
@@ -79,7 +79,7 @@ public:
             // 2. Verificare Zbor (Flying)
             if (player->IsFlying() || player->IsInFlight())
             {
-                player->GetSession()->SendNotification("Nu poti folosi acest item in timp ce zbori!");
+                player->GetSession()->SendNotification("You cannot use this item while flying!");
                 // error
                 player->SendEquipError(EQUIP_ERR_CLIENT_LOCKED_OUT, item, nullptr);
                 return true;
@@ -88,7 +88,7 @@ public:
             // 3. Verificare Mount (Calare)
             if (player->IsMounted())
             {
-                player->GetSession()->SendNotification("Trebuie sa descaleci inainte de a folosi acest item!");
+                player->GetSession()->SendNotification("You must dismount before using this item!");
                 // error
                 player->SendEquipError(EQUIP_ERR_CLIENT_LOCKED_OUT, item, nullptr);
                 return true;
@@ -97,7 +97,7 @@ public:
             // 4. Verificare sub/pe apa (Optional, dar recomandat pentru spawn de NPC)
             if (player->IsInWater() || player->IsUnderWater())
             {
-                player->GetSession()->SendNotification("Nu poti folosi acest item in/pe apa!");
+                player->GetSession()->SendNotification("You cannot use this item in or on water!");
                 // error
                 player->SendEquipError(EQUIP_ERR_CLIENT_LOCKED_OUT, item, nullptr);
                 return true;
@@ -116,17 +116,17 @@ public:
                 if (oreRamase > 0)
                 {
                     // Format: "2 minute si 15 secunde"
-                    msg = "Acest item va fi gata in " + std::to_string(oreRamase) + (oreRamase == 1 ? " ora si " : " ore si ") + std::to_string(minutes) + (minutes == 1 ? " minut si " : " minute si ") + std::to_string(seconds) + " secunde.";
+                    msg = "This item will be ready in " + std::to_string(oreRamase) + (oreRamase == 1 ? " hour and " : " hours and ") + std::to_string(minutes) + (minutes == 1 ? " minute and " : " minutes and ") + std::to_string(seconds) + " seconds.";
                 }
                 else if (minutes > 0)
                 {
                     // Format: "2 minute si 15 secunde"
-                    msg = "Acest item va fi gata in " + std::to_string(minutes) + (minutes == 1 ? " minut si " : " minute si ") + std::to_string(seconds) + " secunde.";
+                    msg = "This item will be ready in " + std::to_string(minutes) + (minutes == 1 ? " minute and " : " minutes and ") + std::to_string(seconds) + " seconds.";
                 }
                 else
                 {
                     // Format: "45 secunde"
-                    msg = "Acest item va fi gata in " + std::to_string(seconds) + " secunde.";
+                    msg = "This item will be ready in " + std::to_string(seconds) + " seconds.";
                 }
 
                 //std::string msg = "Acest obiect nu este gata inca! Timp ramas: " + std::to_string(remainingSec) + " secunde.";
@@ -142,7 +142,7 @@ public:
                 // random spell, efect winter
                 //uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittItemWinterTransformSpells);
                 //csummon->CastSpell(csummon, randomSpell, true);
-                player->GetSession()->SendNotification("NPC invocat pentru 3 minute!");
+                player->GetSession()->SendNotification("NPC summoned for 3 minutes!");
                 return false; //Returnam false pentru a permite animatia de cast daca exista
             }
         }

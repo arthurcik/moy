@@ -73,9 +73,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in sac.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your bags.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -91,9 +91,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in mail.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your mail.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -112,11 +112,11 @@ class kitt_first_lvl80 : public PlayerScript
                             // verificare daca mai este in lume
                             if (!player || !player->IsInWorld())
                                 return;
-                            std::string message = "|cffff0000!... Ai atins nivelul ";
+                            std::string message = "|cffff0000!... Congratulations! You are now level ";
                             message += std::to_string(newLevel);
-                            message += "!|r Ai fost recompensat cu ";
+                            message += "!|r You have been rewarded with ";
                             message += std::to_string(lvl21Config);
-                            message += " galbeni.";
+                            message += " gold.";
                             ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                         }, 3s);
                 }
@@ -135,9 +135,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in sac.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your bags.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -153,9 +153,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in mail.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your mail.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -174,11 +174,11 @@ class kitt_first_lvl80 : public PlayerScript
                             // verificare daca mai este in lume
                             if (!player || !player->IsInWorld())
                                 return;
-                            std::string message = "|cffff0000!... Ai atins nivelul ";
+                            std::string message = "|cffff0000!... Congratulations! You are now level ";
                             message += std::to_string(newLevel);
-                            message += "!|r Ai fost recompensat cu ";
+                            message += "!|r You have been rewarded with ";
                             message += std::to_string(lvl30Config);
-                            message += " galbeni.";
+                            message += " gold.";
                             ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                         }, 3s);
                 }
@@ -197,9 +197,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in sac.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your bags.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -215,9 +215,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in mail.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your mail.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -236,11 +236,11 @@ class kitt_first_lvl80 : public PlayerScript
                             // verificare daca mai este in lume
                             if (!player || !player->IsInWorld())
                                 return;
-                            std::string message = "|cffff0000!... Ai atins nivelul ";
+                            std::string message = "|cffff0000!... Congratulations! You are now level ";
                             message += std::to_string(newLevel);
-                            message += "!|r Ai fost recompensat cu ";
+                            message += "!|r You have been rewarded with ";
                             message += std::to_string(lvl40Config);
-                            message += " galbeni.";
+                            message += " gold.";
                             ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                         }, 3s);
                 }
@@ -259,9 +259,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in sac.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your bags.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -277,9 +277,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in mail.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your mail.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -298,11 +298,11 @@ class kitt_first_lvl80 : public PlayerScript
                             // verificare daca mai este in lume
                             if (!player || !player->IsInWorld())
                                 return;
-                            std::string message = "|cffff0000!... Ai atins nivelul ";
+                            std::string message = "|cffff0000!... Congratulations! You are now level ";
                             message += std::to_string(newLevel);
-                            message += "!|r Ai fost recompensat cu ";
+                            message += "!|r You have been rewarded with ";
                             message += std::to_string(lvl50Config);
-                            message += " galbeni.";
+                            message += " gold.";
                             ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                         }, 3s);
                 }
@@ -321,9 +321,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in sac.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your bags.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -339,9 +339,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in mail.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your mail.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -360,11 +360,11 @@ class kitt_first_lvl80 : public PlayerScript
                             // verificare daca mai este in lume
                             if (!player || !player->IsInWorld())
                                 return;
-                            std::string message = "|cffff0000!... Ai atins nivelul ";
+                            std::string message = "|cffff0000!... Congratulations! You are now level ";
                             message += std::to_string(newLevel);
-                            message += "!|r Ai fost recompensat cu ";
+                            message += "!|r You have been rewarded with ";
                             message += std::to_string(lvl60Config);
-                            message += " galbeni.";
+                            message += " gold.";
                             ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                         }, 3s);
                 }
@@ -383,9 +383,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in sac.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your bags.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -401,9 +401,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in mail.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your mail.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -422,11 +422,11 @@ class kitt_first_lvl80 : public PlayerScript
                             // verificare daca mai este in lume
                             if (!player || !player->IsInWorld())
                                 return;
-                            std::string message = "|cffff0000!... Ai atins nivelul ";
+                            std::string message = "|cffff0000!... Congratulations! You are now level ";
                             message += std::to_string(newLevel);
-                            message += "!|r Ai fost recompensat cu ";
+                            message += "!|r You have been rewarded with ";
                             message += std::to_string(lvl70Config);
-                            message += " galbeni.";
+                            message += " gold.";
                             ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                         }, 3s);
                 }
@@ -445,9 +445,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in sac.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your bags.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -463,9 +463,9 @@ class kitt_first_lvl80 : public PlayerScript
                                 // verificare daca mai este in lume
                                 if (!player || !player->IsInWorld())
                                     return;
-                                std::string message = "|cffff0000!... Ai atins nivelul ";
+                                std::string message = "|cffff0000!... Congratulations! You are now level ";
                                 message += std::to_string(newLevel);
-                                message += "!|r Ai primit un cadou! |cffff0000Verifica in mail.|r";
+                                message += "!|r You have received a gift! |cffff0000Check your mail.|r";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                             }, 3s);
                     }
@@ -485,11 +485,11 @@ class kitt_first_lvl80 : public PlayerScript
                             if (!player || !player->IsInWorld())
                                 return;
 
-                            std::string message = "|cffff0000!... Ai atins nivelul ";
+                            std::string message = "|cffff0000!... Congratulations! You are now level ";
                             message += std::to_string(newLevel);
-                            message += "!|r Ai fost recompensat cu ";
+                            message += "!|r You have been rewarded with ";
                             message += std::to_string(lvl80Config);
-                            message += " galbeni.";
+                            message += " gold.";
                             ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
                         }, 3s);
                 }

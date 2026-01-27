@@ -85,7 +85,7 @@ public:
             if (player->GetSession()->GetSecurity() < config.minSecurity ||
                 config.mapWhitelist.find(player->GetMapId()) != config.mapWhitelist.end())
             {
-                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Securitate]:|r Obiectul |cffffffff[%s]|r nu poate fi echipat in aceasta zona!", item->GetTemplate()->Name1.c_str());
+                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Security]:|r The item |cffffffff[%s]|r cannot be equipped in this zone!", item->GetTemplate()->Name1.c_str());
 
                 return EQUIP_ERR_CANT_EQUIP_EVER;
             }
@@ -121,7 +121,7 @@ public:
                     {
                         player->RemoveItem(item->GetBagSlot(), item->GetSlot(), true);
                         player->StoreItem(dest, item, true);
-                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Securitate]:|r Obiectul |cffffffff[%s]|r a fost mutat in rucsac (nepermis aici).", item->GetTemplate()->Name1.c_str());
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Security]:|r The item |cffffffff[%s]|r has been moved to your backpack (not allowed here).", item->GetTemplate()->Name1.c_str());
                     }
                     else
                     {
@@ -152,7 +152,7 @@ public:
         item->SetOwnerGUID(ObjectGuid::Empty);
         item->SetState(ITEM_NEW, player);
 
-        MailDraft draft("Securitate: Obiect Mutat", "Obiectul a fost mutat la posta.\nAi patruns echipat intr-o zona nepermisa.");
+        MailDraft draft("Security: Item Moved", "The item has been moved to your mailbox.\nYou entered a restricted zone while it was equipped.");
         draft.AddItem(item);
 
         draft.SendMailTo(trans, player, MailSender(MAIL_CREATURE, 34337));
@@ -161,7 +161,7 @@ public:
         item->SetOwnerGUID(player->GetGUID());
         item->SetState(ITEM_UNCHANGED, player);
 
-        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Securitate]:|r Obiectul |cffffffff[%s]|r a fost mutat la posta (inventar plin).", item->GetTemplate()->Name1.c_str());
+        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Security]:|r The item |cffffffff[%s]|r has been moved to your mailbox (inventory full).", item->GetTemplate()->Name1.c_str());
     }
 };
 

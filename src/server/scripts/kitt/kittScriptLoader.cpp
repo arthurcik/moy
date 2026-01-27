@@ -30,6 +30,7 @@ void AddSC_kitt_chat_logs();
 void AddSC_kitt_spell_script_aura();
 //void AddSC_kitt_item_hearthstone();
 void AddSC_kitt_item_restrict();
+void AddSC_kitt_play_time_reward();
 
 
 // The name of this function should match:
@@ -49,4 +50,5 @@ void AddkittScripts()
     AddSC_kitt_spell_script_aura();
     //AddSC_kitt_item_hearthstone();
     AddSC_kitt_item_restrict();
+    AddSC_kitt_play_time_reward();
 }
