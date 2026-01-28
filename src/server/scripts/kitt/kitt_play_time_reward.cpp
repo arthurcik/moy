@@ -13,36 +13,36 @@
 #include "WorldSession.h"
 #include "GameTime.h"
 
-
-static struct PlaytimeReward {
-    uint32 requiredMinutes;
-    uint32 itemId;
-    uint32 itemCount;
-    std::string message;
-};
-
-static const std::vector<PlaytimeReward> rewardConfig = {
-    {60, 10361, 1, "(played for more than 1 hours)"}, // companion Brown Snake
-};
-
-static struct PeriodicReward {
-    uint32 intervalMinutes;
-    uint32 itemId;
-    uint32 itemCount;
-    std::string message;
-};
-
-static const std::vector<PeriodicReward> periodicConfig = {
-    {119,  29434, 1, "Periodic [2h ingame]"}, // badge of justice
-    {120,  47241, 1, "Periodic [2h ingame]"}, // embleme of triumph
-    {121,  49426, 1, "Periodic [2h ingame]"}, // embleme of frost
-    {300,  49908, 1, "Periodic [5h ingame]"}, // primordial saronite
-    {300,  43102, 1, "Periodic [5h ingame]"}, // frozen orb
-};
-
-namespace {
+namespace
+{
     static std::map<ObjectGuid, time_t> playtimeCooldownMap;
     static uint32 playtimeCooldownTime = 300; // in secunde anti-flood
+
+    struct PlaytimeReward {
+        uint32 requiredMinutes;
+        uint32 itemId;
+        uint32 itemCount;
+        std::string message;
+    };
+
+    static const std::vector<PlaytimeReward> rewardConfig = {
+        {60, 10361, 1, "(played for more than 1 hours)"}, // companion Brown Snake
+    };
+
+    struct PeriodicReward {
+        uint32 intervalMinutes;
+        uint32 itemId;
+        uint32 itemCount;
+        std::string message;
+    };
+
+    static const std::vector<PeriodicReward> periodicConfig = {
+        {119,  29434, 1, "Periodic [2h ingame]"}, // badge of justice
+        {120,  47241, 1, "Periodic [2h ingame]"}, // embleme of triumph
+        {121,  49426, 1, "Periodic [2h ingame]"}, // embleme of frost
+        {300,  49908, 1, "Periodic [5h ingame]"}, // primordial saronite
+        {300,  43102, 1, "Periodic [5h ingame]"}, // frozen orb
+    };
 }
 
 
