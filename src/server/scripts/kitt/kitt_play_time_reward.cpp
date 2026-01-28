@@ -37,7 +37,6 @@ namespace
     };
 
     static const std::vector<PeriodicReward> periodicConfig = {
-        {119,  29434, 1, "Periodic [2h ingame]"}, // badge of justice
         {120,  47241, 1, "Periodic [2h ingame]"}, // embleme of triumph
         {121,  49426, 1, "Periodic [2h ingame]"}, // embleme of frost
         {300,  49908, 1, "Periodic [5h ingame]"}, // primordial saronite
