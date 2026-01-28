@@ -26,7 +26,7 @@ private:
     };
 
     const std::vector<PlaytimeReward> rewardConfig = {
-        {1440, 49426, 20, "(played for more than 24 hours)"}
+        {10, 10361, 1, "(played for more than 10 hours)"}, // companion Brown Snake
     };
 
     struct PeriodicReward {
@@ -37,7 +37,10 @@ private:
     };
 
     const std::vector<PeriodicReward> periodicConfig = {
-        {60, 49426, 1, "Periodic [under development]"}
+        {119,  29434, 1, "Periodic [2h ingame]"}, // badge of justice
+        {120,  47241, 1, "Periodic [2h ingame]"}, // embleme of triumph
+        {121,  49426, 1, "Periodic [2h ingame]"}, // embleme of frost
+//        {240, 43016, 1, "Periodic [4h ingame]"}, // dalaran cooking award
     };
 
 public:
