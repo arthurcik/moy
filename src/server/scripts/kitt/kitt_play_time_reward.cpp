@@ -27,6 +27,9 @@ namespace
 
     static const std::vector<PlaytimeReward> rewardConfig = {
         {60, 10361, 1, "(played for more than 1 hours)"}, // companion Brown Snake
+        {28800, 23193, 1, "(played for more than 20 days)"}, // Naxxramas Deathcharger Reins
+        {43200, 25596, 1, "(played for more than 30 days)"}, // Peep's Whistle
+        {57600, 33809, 1, "(played for more than 40 days)"}, // Amani War Bear
     };
 
     struct PeriodicReward {
@@ -37,10 +40,14 @@ namespace
     };
 
     static const std::vector<PeriodicReward> periodicConfig = {
-        {120,  47241, 1, "Periodic [2h ingame]"}, // embleme of triumph
-        {121,  49426, 1, "Periodic [2h ingame]"}, // embleme of frost
+        {122,  45624, 1, "Periodic [2h ingame]"}, // Emblem of Conquest
+        {120,  47241, 1, "Periodic [2h ingame]"}, // Embleme of Triumph
+        {121,  49426, 1, "Periodic [2h ingame]"}, // Embleme of Frost
+        {123,  40752, 1, "Periodic [2h ingame]"}, // Emblem of Heroism
+        {124,  40753, 1, "Periodic [2h ingame]"}, // Emblem of Valor
         {300,  49908, 1, "Periodic [5h ingame]"}, // primordial saronite
         {300,  43102, 1, "Periodic [5h ingame]"}, // frozen orb
+        {300,  44990, 3, "Periodic [5h ingame]"}, // Champion's Seal
     };
 }
 
