@@ -29,6 +29,7 @@ static inline const std::unordered_map<uint32, RestrictedConfig> MultiSecurityMa
     { 919347,      { 9,       {  } } }, // Claw of Chromaggus
     { 950412,      { 9,       {  } } }, // Bloodvenom Blade
     { 954806,      { 5,       {  } } }, // TFC Frostscythe of Lord Ahune
+    { 17,          { 9,       {  } } }, // Martin Fury
 
 
     // player item
