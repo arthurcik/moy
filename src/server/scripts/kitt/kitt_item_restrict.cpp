@@ -7,64 +7,64 @@
 #include "Chat.h"
 #include "Mail.h"
 #include "CharacterDatabase.h"
-//#include <unordered_set>
 
 
+namespace
+{
+    struct RestrictedConfig {
+        uint8 minSecurity;
+        std::unordered_set<uint32> mapWhitelist;
+    };
 
-struct RestrictedConfig {
-    uint8 minSecurity;
-    std::unordered_set<uint32> mapWhitelist;
-};
+    // Mapam ID-ul itemului la configuratia sa specifica
+    static inline const std::unordered_map<uint32, RestrictedConfig> MultiSecurityMap = {
+        // rangGM = 0 permis pt toti. rang < NR = nepermis
+        // mapID este in lista = nepermis
+        // nepermis = mapID ori gm_rang
+        // { ID_ITEM, {  RANG_GM, { LISTA_MAP_ID_NEPERMIS } } }
 
-// Mapam ID-ul itemului la configuratia sa specifica
-static inline const std::unordered_map<uint32, RestrictedConfig> MultiSecurityMap = {
-    // rangGM = 0 permis pt toti. rang < NR = nepermis
-    // mapID este in lista = nepermis
-    // nepermis = mapID ori gm_rang
-    // { ID_ITEM, {  RANG_GM, { LISTA_MAP_ID_NEPERMIS } } }
-
-    // gm item
-    { 900901,      { 5,       { 489, 529, 30, 566, 628, 607 } } }, // tfc Thunderfury
-    { 900902,      { 9,       {  } } }, // Staff of Disintegration
-    { 919347,      { 9,       {  } } }, // Claw of Chromaggus
-    { 950412,      { 9,       {  } } }, // Bloodvenom Blade
-    { 954806,      { 5,       {  } } }, // TFC Frostscythe of Lord Ahune
-    { 17,          { 9,       {  } } }, // Martin Fury
+        // gm item
+        { 900901,      { 5,       { 489, 529, 30, 566, 628, 607 } } }, // tfc Thunderfury
+        { 900902,      { 9,       {  } } }, // Staff of Disintegration
+        { 919347,      { 9,       {  } } }, // Claw of Chromaggus
+        { 950412,      { 9,       {  } } }, // Bloodvenom Blade
+        { 954806,      { 5,       {  } } }, // TFC Frostscythe of Lord Ahune
+        { 17,          { 9,       {  } } }, // Martin Fury
 
 
-    // player item
-    { 900903,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // BRK-4000
-    { 900904,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Shadowmourne
-    { 900905,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Cryptmaker
-    { 900906,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Repeating bow
-    { 900907,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Impaling Spike
-    { 900908,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Seducer
-    { 900909,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // High-Blade of the Silver
-    { 900910,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Antonidas
-    { 900911,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Kel'Thuzad's Blade
-    { 900912,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Fal'inrush
-    { 900913,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Royal Scepter
-    { 900914,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Heaven's Fall
-    { 900915,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Blade of Kings
-    { 900916,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Winter shield
-    { 900917,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Penumbra
-    { 900918,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // BRK-4000 // expire
-    { 900919,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Shadowmourne // expire
-    { 900920,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Cryptmaker // expire
-    { 900921,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Repeating bow // expire
-    { 900922,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Impaling Spike // expire
-    { 900923,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Seducer // expire
-    { 900924,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // High-Blade of the Silver // expire
-    { 900925,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Antonidas // expire
-    { 900926,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Kel'Thuzad's Blade // expire
-    { 900927,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Fal'inrush // expire
-    { 900928,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Royal Scepter // expire
-    { 900929,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Heaven's Fall // expire
-    { 900930,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Blade of Kings // expire
-    { 900931,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Winter shield // expire
-    { 900932,      { 0,       { 489, 529, 30, 566, 628, 607 } } } // Penumbra // expire
-};
-
+        // player item
+        { 900903,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // BRK-4000
+        { 900904,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Shadowmourne
+        { 900905,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Cryptmaker
+        { 900906,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Repeating bow
+        { 900907,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Impaling Spike
+        { 900908,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Seducer
+        { 900909,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // High-Blade of the Silver
+        { 900910,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Antonidas
+        { 900911,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Kel'Thuzad's Blade
+        { 900912,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Fal'inrush
+        { 900913,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Royal Scepter
+        { 900914,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Heaven's Fall
+        { 900915,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Blade of Kings
+        { 900916,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Winter shield
+        { 900917,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Penumbra
+        { 900918,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // BRK-4000 // expire
+        { 900919,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Shadowmourne // expire
+        { 900920,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Cryptmaker // expire
+        { 900921,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Repeating bow // expire
+        { 900922,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Impaling Spike // expire
+        { 900923,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Seducer // expire
+        { 900924,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // High-Blade of the Silver // expire
+        { 900925,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Antonidas // expire
+        { 900926,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Kel'Thuzad's Blade // expire
+        { 900927,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Fal'inrush // expire
+        { 900928,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Royal Scepter // expire
+        { 900929,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Heaven's Fall // expire
+        { 900930,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Blade of Kings // expire
+        { 900931,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Winter shield // expire
+        { 900932,      { 0,       { 489, 529, 30, 566, 628, 607 } } } // Penumbra // expire
+    };
+}
 
 class kitt_item_restrict : public PlayerScript
 {

@@ -485,7 +485,7 @@ void bot_ai::CheckOwnerExpiry()
         return;
 
     ObjectGuid ownerGuid = ObjectGuid::Create<HighGuid::Player>(_botData->owner);
-    time_t timeNow = time(0);
+    time_t timeNow = time(nullptr);
     time_t expireTime = time_t(BotMgr::GetOwnershipExpireTime());
     time_t baseTimeStamp;
 
@@ -494,8 +494,10 @@ void bot_ai::CheckOwnerExpiry()
         uint32 accId = sCharacterCache->GetCharacterAccountIdByGuid(ownerGuid);
         QueryResult result = accId ? CharacterDatabase.PQuery("SELECT MAX(logout_time) FROM characters WHERE account = {}", accId) : nullptr;
 
-        Field* fields = result ? result->Fetch() : nullptr;
-        time_t lastLoginTime = fields ? time_t(fields[0].GetUInt32()) : timeNow;
+        //Field* fields = result ? result->Fetch() : nullptr;
+        Field* fields = (result && result->GetRowCount() > 0) ? result->Fetch() : nullptr; // kitt fix
+        //time_t lastLoginTime = fields ? time_t(fields[0].GetUInt32()) : timeNow;
+        time_t lastLoginTime = (fields && !fields[0].IsNull()) ? time_t(fields[0].GetUInt32()) : timeNow; // kitt fix
         baseTimeStamp = lastLoginTime;
     }
     else //if (BotMgr::GetOwnershipExpireMode() == BOT_OWNERSHIP_EXPIRE_HIRE)
