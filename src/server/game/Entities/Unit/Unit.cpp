@@ -12564,8 +12564,17 @@ bool Unit::IsInRaidWith(Unit const* unit) const
     if (this == unit)
         return true;
 
+    // kitt
+    if (!unit)
+        return false;
+    // ---------
+
     Unit const* u1 = GetCharmerOrOwnerOrSelf();
     Unit const* u2 = unit->GetCharmerOrOwnerOrSelf();
+    // kitt
+    if (!u1 || !u2)
+        return false;
+    // ----------
     if (u1 == u2)
         return true;
 
@@ -12578,7 +12587,13 @@ bool Unit::IsInRaidWith(Unit const* unit) const
     Player const* pla = u1->IsPlayer() ? u1->ToPlayer() : u2->IsPlayer() ? u2->ToPlayer() : nullptr;
     Creature const* bot = u1->IsNPCBot() ? u1->ToCreature() : u2->IsNPCBot() ? u2->ToCreature() : nullptr;
     if (pla && bot)
+    {
+        // kitt fix
+        if (!pla->GetBotMgr())
+            return false;
+        // ---------
         return (pla->GetGroup() && pla->GetGroup() == bot->GetBotGroup()) ? true : !!pla->GetBotMgr()->GetBot(bot->GetGUID());
+    }
     if (u1->IsNPCBot() && u2->IsNPCBot() && u1->ToCreature()->GetBotGroup())
         return  u1->ToCreature()->GetBotGroup() == u2->ToCreature()->GetBotGroup();
     if (u1->IsNPCBot() && u2->IsNPCBot() && u1->IsFFAPvP() && u2->IsFFAPvP())
