@@ -94,6 +94,7 @@ struct boss_festergut : public BossAI
     void Reset() override
     {
         _Reset();
+        scheduler.CancelAll();
         events.ScheduleEvent(EVENT_BERSERK, 5min);
         events.ScheduleEvent(EVENT_INHALE_BLIGHT, 25s, 30s);
         events.ScheduleEvent(EVENT_GAS_SPORE, 20s, 25s);

@@ -488,6 +488,7 @@ struct boss_the_lich_king : public BossAI
     void Reset() override
     {
         _Reset();
+        scheduler.CancelAll();
         me->SetImmuneToPC(true);
         me->SetReactState(REACT_PASSIVE);
         events.SetPhase(PHASE_INTRO);

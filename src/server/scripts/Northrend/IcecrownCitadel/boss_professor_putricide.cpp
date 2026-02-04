@@ -238,6 +238,7 @@ struct boss_professor_putricide : public BossAI
         instance->SetData(DATA_NAUSEA_ACHIEVEMENT, uint32(true));
 
         events.Reset();
+        scheduler.CancelAll();
         summons.DespawnAll();
         SetPhase(PHASE_COMBAT_1);
         _experimentState = EXPERIMENT_STATE_OOZE;

@@ -1416,6 +1416,13 @@ public:
                         }*/
                         case KITT_ACTION_RESET_RAID10:
                         {
+                            if (player->GetGroup())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[Sistem]|r You must leave your group or raid before resetting your instances.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
                             Difficulty diff = RAID_DIFFICULTY_10MAN_NORMAL;
                             bool instanceReset = false;
 
@@ -1454,6 +1461,13 @@ public:
                         }
                         case KITT_ACTION_RESET_RAID25:
                         {
+                            if (player->GetGroup())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[Sistem]|r You must leave your group or raid before resetting your instances.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
                             Difficulty diff = RAID_DIFFICULTY_25MAN_NORMAL;
                             bool instanceReset = false;
 
@@ -1492,6 +1506,13 @@ public:
                         }
                         case KITT_ACTION_RESET_RAID10H:
                         {
+                            if (player->GetGroup())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[Sistem]|r You must leave your group or raid before resetting your instances.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
                             Difficulty diff = RAID_DIFFICULTY_10MAN_HEROIC;
                             bool instanceReset = false;
 
@@ -1530,6 +1551,13 @@ public:
                         }
                         case KITT_ACTION_RESET_RAID25H:
                         {
+                            if (player->GetGroup())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[Sistem]|r You must leave your group or raid before resetting your instances.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
                             Difficulty diff = RAID_DIFFICULTY_25MAN_HEROIC;
                             bool instanceReset = false;
 
@@ -1568,6 +1596,13 @@ public:
                         }
                         case KITT_ACTION_RESET_DUNGEON:
                         {
+                            if (player->GetGroup())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[Sistem]|r You must leave your group or raid before resetting your instances.");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
                             Difficulty diff = DUNGEON_DIFFICULTY_HEROIC;
                             bool instanceReset = false;
 

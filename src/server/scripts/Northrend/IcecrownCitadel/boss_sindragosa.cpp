@@ -242,6 +242,7 @@ struct boss_sindragosa : public BossAI
     void Reset() override
     {
         BossAI::Reset();
+        scheduler.CancelAll();
         DoCastSelf(SPELL_TANK_MARKER, true);
         events.ScheduleEvent(EVENT_BERSERK, 10min);
         events.ScheduleEvent(EVENT_CLEAVE, 10s, EVENT_GROUP_LAND_PHASE);

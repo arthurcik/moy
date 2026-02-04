@@ -234,6 +234,7 @@ struct boss_blood_council_controller : public BossAI
     void Reset() override
     {
         _Reset();
+        scheduler.CancelAll();
         Initialize();
         me->SummonCreatureGroup(SUMMON_PRINCES_GROUP);
 
@@ -444,6 +445,7 @@ struct BloodPrincesBossAI : public BossAI
     void Reset() override
     {
         events.Reset();
+        scheduler.CancelAll();
         summons.DespawnAll();
         me->SetCombatPulseDelay(0);
 

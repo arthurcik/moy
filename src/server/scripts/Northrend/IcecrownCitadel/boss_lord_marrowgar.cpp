@@ -143,6 +143,7 @@ struct boss_lord_marrowgar : public BossAI
     void Reset() override
     {
         _Reset();
+        scheduler.CancelAll();
         me->SetSpeedRate(MOVE_RUN, _baseSpeed);
         me->RemoveAurasDueToSpell(SPELL_BONE_STORM);
         me->RemoveAurasDueToSpell(SPELL_BERSERK);
