@@ -107,7 +107,13 @@ enum KittSender
     KITT_SENDER_MENU_FUN_ZONE           = 2,   // comun pentru meniu fun zone
     KITT_SENDER_MENU_INSTANCE_RESET     = 3,   // comun pentru meniu instance reset
     KITT_SENDER_TELEPORT_TO             = 4,   // comun pentru Teleport To
-    KITT_SENDER_ACTION_SHOW_RESULTS     = 5    // meniu complex sql
+    KITT_SENDER_ACTION_SHOW_RESULTS     = 5,    // meniu complex sql
+    KITT_SENDER_MENU_TFC                = 6,    // meniu complex sql
+    KITT_SENDER_TFC_APPLY_ENCHANT_MDPS  = 7,
+    KITT_SENDER_TFC_APPLY_ENCHANT_TANK  = 8,
+    KITT_SENDER_TFC_APPLY_ENCHANT_CDPS  = 9,
+    KITT_SENDER_TFC_APPLY_ENCHANT_HEAL  = 10,
+    KITT_SENDER_TFC_APPLY_ENCHANT_RDPS  = 11
 };
 
 enum KittAutoSender
@@ -162,8 +168,12 @@ enum KittAction
     KITT_ACTION_DB_DROP_SHOW            = 125,   // Afiseaza rata de drop
 
 
-
-
+    KITT_ACTION_TFC_ENCHANT_MDPS         = 288,
+    KITT_ACTION_TFC_ENCHANT_TANK        = 289,
+    KITT_ACTION_TFC_ENCHANT_CDPS        = 290,
+    KITT_ACTION_TFC_ENCHANT_HEAL        = 291,
+    KITT_ACTION_TFC_ENCHANT_RDPS        = 292,
+    KITT_ACTION_TFC                     = 293,
     KITT_ACTION_AH_OPEN                 = 294,   // AH open
     KITT_ACTION_BANK_OPEN               = 295,   // bank open
     KITT_ACTION_GV_OPEN                 = 296,   // GV bank
@@ -209,6 +219,18 @@ static const std::array<MainMenuOption, 9> KittMainMenu = { {
     { GOSSIP_ICON_CHAT,      "Check Mailbox",                 KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MAIL_OPEN },
     { GOSSIP_ICON_VENDOR,    "Browse Vendor",                 KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_VENDOR_OPEN }
 } };
+
+static const std::array<MainMenuOption, 1> KittMainMenuTFC = { {
+    { GOSSIP_ICON_CHAT,      "TFC Zone Menu", KITT_SENDER_MENU_TFC,     KITT_ACTION_TFC },
+} };
+static const std::array<MainMenuOptionConfirm, 5> KittZoneTFC = { {
+    { GOSSIP_ICON_TALK, "Hidden Enchant [DPS Melee]\nDPS Melee +150 Str/Sta, +3k Armor\nDPS Melee +120 Hit/Crit, +100 Exp",   KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_MDPS, "Sigur?", 0, false},
+    { GOSSIP_ICON_TALK, "Hidden Enchant [TANK]\nTank +250 Sta, +150 Str, +6k Armor\nTank +120 Dodge/Parry, +100 Def Rat\nTank Shield +250 Sta, +100 Block, +8k Armor",        KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_TANK, "Sigur?", 0, false},
+    { GOSSIP_ICON_TALK, "Hidden Enchant [CASTER DPS]\nDPS Spell: +150 Sta/Int, +250 SP\nDPS Spell: +120 Hit/Crit, + 2k Armor",  KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_CDPS, "Sigur?", 0, false},
+    { GOSSIP_ICON_TALK, "Hidden Enchant [HEALER]\nHeal: +150 Sta/Int/Spi\nHeal: +250 SP, +120 Crit, 2k Armor\nHeal: +60 MP5",      KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_HEAL, "Sigur?", 0, false},
+    { GOSSIP_ICON_TALK, "Hidden Enchant [RANGE DPS]\nRange DPS: +150 Sta/Int, +300 Rap\nRange DPS: +150 Agi/Hit, +2500 Armor",   KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_RDPS, "Sigur?", 0, false},
+} };
+
 
 static const std::array<MainMenuOption, 8> KittTeleportTo = { {
 //    { GOSSIP_ICON_CHAT, "Teleport to: Custom Zone",  KITT_SENDER_MENU_DIRECT_SELECT, KITT_ACTION_TELE_ZONE },
@@ -833,6 +855,17 @@ public:
                     AddGossipItemFor(player, option.icon, option.name, option.sender, option.action);
                 }
 
+                uint32 kPlSec = player->GetSession()->GetSecurity();
+                uint32 kPlAccId = player->GetSession()->GetAccountId();
+                if (kPlSec > 0 || kPlAccId == 3)
+                {
+                    for (auto const& option : KittMainMenuTFC)
+                    {
+                        AddGossipItemFor(player, option.icon, option.name, option.sender, option.action);
+                    }
+
+                }
+
                 SendGossipMenuFor(player, KittNpcText::KITT_NPC_HELLO, me->GetGUID());
                 return true;
             }
@@ -1095,12 +1128,472 @@ public:
 
             switch (sender)
             {
+                case KITT_SENDER_MENU_TFC:
+                {
+                    player->PlayerTalkClass->ClearMenus();
+                    switch (action)
+                    {
+                        case KITT_ACTION_TFC:
+                        {
+                            uint32 kPlSec = player->GetSession()->GetSecurity();
+                            uint32 kPlAccId = player->GetSession()->GetAccountId();
+                            if (kPlSec > 0 || kPlAccId == 3)
+                            {
+                                for (auto const& option : KittZoneTFC)
+                                {
+                                    AddGossipItemFor(player, option.icon, option.name, option.sender, option.action, option.ctext, option.money, option.confirm);
+                                }
+                            }
+                            else
+                            {
+                                //AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<< Back", KITT_SENDER_MAIN_MENU_SELECT, KITT_ACTION_BACK_MAIN_MENU);
+                                std::string message = "|cffff0000!...|r Access 0.";
+                                ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                            }
+                            break;
+                        }
+
+                        case KITT_ACTION_TFC_ENCHANT_MDPS:
+                        {
+                            ClearGossipMenuFor(player);
+
+                            bool found = false;
+                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                            for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+                            {
+                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                {
+                                    ItemTemplate const* proto = item->GetTemplate();
+                                    // Filtr?m: Arme (2) sau Armuri (4)
+                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    {
+                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        {
+                                            std::string itemName = proto->Name1;
+                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_MDPS, item->GetGUID().GetCounter());
+                                            found = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!found)
+                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nu ai iteme valide in rucsac!", sender, action);
+
+                            //SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, me->GetGUID());
+                            break;
+                        }
+
+                        case KITT_ACTION_TFC_ENCHANT_TANK:
+                        {
+                            ClearGossipMenuFor(player);
+
+                            bool found = false;
+                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                            for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+                            {
+                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                {
+                                    ItemTemplate const* proto = item->GetTemplate();
+                                    // Filtr?m: Arme (2) sau Armuri (4)
+                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    {
+                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        {
+                                            std::string itemName = proto->Name1;
+                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_TANK, item->GetGUID().GetCounter());
+                                            found = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!found)
+                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nu ai iteme valide in rucsac!", sender, action);
+
+                            //SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, me->GetGUID());
+                            break;
+                        }
+
+                        case KITT_ACTION_TFC_ENCHANT_CDPS:
+                        {
+                            ClearGossipMenuFor(player);
+
+                            bool found = false;
+                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                            for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+                            {
+                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                {
+                                    ItemTemplate const* proto = item->GetTemplate();
+                                    // Filtr?m: Arme (2) sau Armuri (4)
+                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    {
+                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        {
+                                            std::string itemName = proto->Name1;
+                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_CDPS, item->GetGUID().GetCounter());
+                                            found = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!found)
+                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nu ai iteme valide in rucsac!", sender, action);
+
+                            //SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, me->GetGUID());
+                            break;
+                        }
+
+                        case KITT_ACTION_TFC_ENCHANT_HEAL:
+                        {
+                            ClearGossipMenuFor(player);
+
+                            bool found = false;
+                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                            for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+                            {
+                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                {
+                                    ItemTemplate const* proto = item->GetTemplate();
+                                    // Filtr?m: Arme (2) sau Armuri (4)
+                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    {
+                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        {
+                                            std::string itemName = proto->Name1;
+                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_HEAL, item->GetGUID().GetCounter());
+                                            found = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!found)
+                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nu ai iteme valide in rucsac!", sender, action);
+
+                            //SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, me->GetGUID());
+                            break;
+                        }
+
+                        case KITT_ACTION_TFC_ENCHANT_RDPS:
+                        {
+                            ClearGossipMenuFor(player);
+
+                            bool found = false;
+                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                            for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+                            {
+                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                {
+                                    ItemTemplate const* proto = item->GetTemplate();
+                                    // Filtr?m: Arme (2) sau Armuri (4)
+                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    {
+                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        {
+                                            std::string itemName = proto->Name1;
+                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_RDPS, item->GetGUID().GetCounter());
+                                            found = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!found)
+                                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nu ai iteme valide in rucsac!", sender, action);
+
+                            //SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, me->GetGUID());
+                            break;
+                        }
+
+
+                        default:
+                            break;
+                    }
+                    // Adaugam butonul de inapoi care sa trimita spre Main Menu
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<< Back", KITT_SENDER_MENU_DIRECT_SELECT, KITT_ACTION_BACK_MAIN_MENU);
+                    SendGossipMenuFor(player, KittNpcText::KITT_NPC_HELLO, me->GetGUID());
+                    return true; // Returnam true pentru a confirma afisarea meniului
+                }
+
+                // kitt enchant sender
+                case KITT_SENDER_TFC_APPLY_ENCHANT_MDPS:
+                {
+                    ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
+                    Item* item = player->GetItemByGuid(itemGuid);
+
+                    if (player->IsInCombat())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Esti in combat|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+
+                    }
+
+                    if (!item || item->GetOwnerGUID() != player->GetGUID())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Itemul nu mai este in posesia ta!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item->GetBagSlot() != INVENTORY_SLOT_BAG_0)
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Itemul trebuie sa ramana in rucsacul principal!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item)
+                    {
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 5012, 0, 0);
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 5013, 0, 0);
+
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
+
+                        item->SetState(ITEM_CHANGED, player);
+
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
+
+                    }
+
+                    CloseGossipMenuFor(player);
+                    break;
+                }
+
+                case KITT_SENDER_TFC_APPLY_ENCHANT_TANK:
+                {
+                    ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
+                    Item* item = player->GetItemByGuid(itemGuid);
+
+                    if (player->IsInCombat())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Esti in combat|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+
+                    }
+
+                    if (!item || item->GetOwnerGUID() != player->GetGUID())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Itemul nu mai este in posesia ta!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item->GetBagSlot() != INVENTORY_SLOT_BAG_0)
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Itemul trebuie sa ramana in rucsacul principal!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item)
+                    {
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 5014, 0, 0);
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 5015, 0, 0);
+                        if (item->GetTemplate()->InventoryType == INVTYPE_SHIELD)
+                            item->SetEnchantment(PROP_ENCHANTMENT_SLOT_2, 5016, 0, 0);
+
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, true);
+
+                        item->SetState(ITEM_CHANGED, player);
+
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
+
+                    }
+
+                    CloseGossipMenuFor(player);
+                    break;
+                }
+
+                case KITT_SENDER_TFC_APPLY_ENCHANT_CDPS:
+                {
+                    ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
+                    Item* item = player->GetItemByGuid(itemGuid);
+
+                    if (player->IsInCombat())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Esti in combat|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+
+                    }
+
+                    if (!item || item->GetOwnerGUID() != player->GetGUID())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Itemul nu mai este in posesia ta!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item->GetBagSlot() != INVENTORY_SLOT_BAG_0)
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Itemul trebuie sa ramana in rucsacul principal!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item)
+                    {
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 5017, 0, 0);
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 5018, 0, 0);
+
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
+
+                        item->SetState(ITEM_CHANGED, player);
+
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
+
+                    }
+
+                    CloseGossipMenuFor(player);
+                    break;
+                }
+
+                case KITT_SENDER_TFC_APPLY_ENCHANT_HEAL:
+                {
+                    ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
+                    Item* item = player->GetItemByGuid(itemGuid);
+
+                    if (player->IsInCombat())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Esti in combat|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+
+                    }
+
+                    if (!item || item->GetOwnerGUID() != player->GetGUID())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Itemul nu mai este in posesia ta!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item->GetBagSlot() != INVENTORY_SLOT_BAG_0)
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Itemul trebuie sa ramana in rucsacul principal!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item)
+                    {
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 5019, 0, 0);
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 5020, 0, 0);
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_2, 5021, 0, 0);
+
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, true);
+
+                        item->SetState(ITEM_CHANGED, player);
+
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
+
+                    }
+
+                    CloseGossipMenuFor(player);
+                    break;
+                }
+
+                case KITT_SENDER_TFC_APPLY_ENCHANT_RDPS:
+                {
+                    ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
+                    Item* item = player->GetItemByGuid(itemGuid);
+
+                    if (player->IsInCombat())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Esti in combat|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+
+                    }
+
+                    if (!item || item->GetOwnerGUID() != player->GetGUID())
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Itemul nu mai este in posesia ta!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item->GetBagSlot() != INVENTORY_SLOT_BAG_0)
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Itemul trebuie sa ramana in rucsacul principal!|r");
+
+                        CloseGossipMenuFor(player);
+                        return true;
+                    }
+
+                    if (item)
+                    {
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 5022, 0, 0);
+                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 5023, 0, 0);
+
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
+                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
+
+                        item->SetState(ITEM_CHANGED, player);
+
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
+
+                    }
+
+                    CloseGossipMenuFor(player);
+                    break;
+                }
+
+
                 // 2. Logica pentru deschiderea sub-meniurilor Principale
                 case KITT_SENDER_OPEN_SUBMENU:
                 {
                     player->PlayerTalkClass->ClearMenus();
                     switch (action)
                     {
+                        case KITT_ACTION_TFC:
+                        {
+                            // daca jucatorul este pe harta 0, 1, 530, 571 va aparea si menu 
+                            if (player->GetSession()->GetSecurity() > 0)
+                            {
+                                for (auto const& option : KittZoneTFC)
+                                {
+                                    AddGossipItemFor(player, option.icon, option.name, option.sender, option.action, option.ctext, option.money, option.confirm);
+                                }
+                            }
+                            else
+                            {
+                                //AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<< Back", KITT_SENDER_MAIN_MENU_SELECT, KITT_ACTION_BACK_MAIN_MENU);
+                                std::string message = "|cffff0000!...|r Access 0.";
+                                ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+                            }
+                            break;
+                        }
 
                         case KITT_ACTION_TELEPORT_TO:
                         {
