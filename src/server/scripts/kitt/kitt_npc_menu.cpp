@@ -1362,7 +1362,9 @@ public:
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
 
+                        item->SetBinding(true);
                         item->SetState(ITEM_CHANGED, player);
+                        item->SendUpdateToPlayer(player);
 
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
 
@@ -1413,7 +1415,9 @@ public:
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, true);
 
+                        item->SetBinding(true);
                         item->SetState(ITEM_CHANGED, player);
+                        item->SendUpdateToPlayer(player);
 
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
 
@@ -1461,7 +1465,9 @@ public:
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
 
+                        item->SetBinding(true);
                         item->SetState(ITEM_CHANGED, player);
+                        item->SendUpdateToPlayer(player);
 
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
 
@@ -1511,7 +1517,9 @@ public:
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, true);
 
+                        item->SetBinding(true);
                         item->SetState(ITEM_CHANGED, player);
+                        item->SendUpdateToPlayer(player);
 
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
 
@@ -1559,7 +1567,9 @@ public:
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
                         player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
 
+                        item->SetBinding(true);
                         item->SetState(ITEM_CHANGED, player);
+                        item->SendUpdateToPlayer(player);
 
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Upgrade finalizat cu succes pentru:|r %s!", item->GetTemplate()->Name1.c_str());
 
