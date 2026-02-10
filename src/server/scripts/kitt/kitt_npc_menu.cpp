@@ -167,7 +167,8 @@ enum KittAction
     KITT_ACTION_TFC_BOT_FIX             = 124,   // Reparare bot
     KITT_ACTION_DB_DROP_SHOW            = 125,   // Afiseaza rata de drop
 
-    KITT_ACTION_TFC_ENCHANT_MENU        = 287,
+    KITT_ACTION_TFC_ENCHANT_MENU        = 286,
+    KITT_ACTION_TFC_ENCHANT_DISMISS     = 287,
     KITT_ACTION_TFC_ENCHANT_MDPS        = 288,
     KITT_ACTION_TFC_ENCHANT_TANK        = 289,
     KITT_ACTION_TFC_ENCHANT_CDPS        = 290,
@@ -227,7 +228,8 @@ static const std::array<MainMenuOptionConfirm, 2> KittZoneTFC = { {
     { GOSSIP_ICON_TALK, "Enchant",   KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_MENU, "", 0, false},
     { GOSSIP_ICON_TALK, "<<< Back",   KITT_SENDER_MENU_DIRECT_SELECT,  KITT_ACTION_BACK_MAIN_MENU, "", 0, false}
 } };
-static const std::array<MainMenuOptionConfirm, 6> KittZoneTfcEnchant = { {
+static const std::array<MainMenuOptionConfirm, 7> KittZoneTfcEnchant = { {
+    { GOSSIP_ICON_TALK, "Dismiss All Hide Enchant",   KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_DISMISS, "Sigur?", 0, false},
     { GOSSIP_ICON_TALK, "Hidden Enchant [DPS Melee]\nDPS Melee +150 Str, +3k Armor\nDPS Melee +120 Hit/Crit, +100 Exp",   KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_MDPS, "Sigur?", 0, false},
     { GOSSIP_ICON_TALK, "Hidden Enchant [TANK]\nTank +150 Str, +6k Armor\nTank +120 Dodge/Parry, +100 Def Rat\nTank Shield +100 Block, +8k Armor",        KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_TANK, "Sigur?", 0, false},
     { GOSSIP_ICON_TALK, "Hidden Enchant [CASTER DPS]\nDPS Spell: +250 SP\nDPS Spell: +120 Hit/Crit, + 2k Armor",  KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_CDPS, "Sigur?", 0, false},
@@ -1154,6 +1156,55 @@ public:
                                 AddGossipItemFor(player, option.icon, option.name, option.sender, option.action, option.ctext, option.money, option.confirm);
                             }
                             break;
+                        }
+
+                        case KITT_ACTION_TFC_ENCHANT_DISMISS:
+                        {
+                            bool found = false;
+
+                            // Parcurgem toate sloturile de echipament (0-18)
+                            for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+                            {
+                                Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
+                                if (!item)
+                                    continue;
+
+                                // Verific?m dac? are orice enchant în slotul 0 sau 1 (sau slotul t?u custom)
+                                if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) != 0)
+                                {
+                                    // ?tergem enchant-urile din sloturile folosite
+                                    item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 0, 0, 0);
+                                    item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 0, 0, 0);
+                                    item->SetEnchantment(PROP_ENCHANTMENT_SLOT_2, 0, 0, 0);
+                                    item->SetEnchantment(PROP_ENCHANTMENT_SLOT_3, 0, 0, 0);
+
+                                    // For??m serverul s? recalculeze statisticile player-ului (HP, AP, etc.)
+                                    //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, false);
+                                    //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, false);
+                                    //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, false);
+                                    //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_3, false);
+
+                                    // Re-aplic?m starea "f?r? enchant" pentru a cur??a bonusurile
+                                    player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
+                                    player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
+                                    player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, true);
+                                    player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_3, true);
+
+                                    item->SetState(ITEM_CHANGED, player);
+                                    item->SendUpdateToPlayer(player);
+
+                                    found = true;
+                                }
+                            }
+
+                            if (found)
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Toate enchant-urile au fost eliminate de pe itemele echipate!|r");
+                            else
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Nu ai iteme echipate care sa aiba enchant-uri active.|r");
+
+                            CloseGossipMenuFor(player);
+                            //break;
+                            return true;
                         }
 
                         case KITT_ACTION_TFC_ENCHANT_MDPS:
