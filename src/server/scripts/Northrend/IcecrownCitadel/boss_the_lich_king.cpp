@@ -31,6 +31,7 @@
 #include "TemporarySummon.h"
 #include "Vehicle.h"
 #include "Weather.h"
+#include "Log.h"
 
 enum LichKingTexts
 {
@@ -860,6 +861,68 @@ struct boss_the_lich_king : public BossAI
         // during Remorseless Winter phases The Lich King is channeling a spell, but we must continue casting other spells
         if (me->HasUnitState(UNIT_STATE_CASTING) && !(events.IsInPhase(PHASE_TRANSITION) || events.IsInPhase(PHASE_OUTRO) || events.IsInPhase(PHASE_FROSTMOURNE)))
             return;
+
+        // --- ANTI-FALL PROTECTION START ---
+        if (!events.IsInPhase(PHASE_FROSTMOURNE) && !events.IsInPhase(PHASE_INTRO) && !events.IsInPhase(PHASE_OUTRO))
+        {
+            if (me->IsInCombat() && me->GetPositionZ() < 839.0f) // Verific?m dac? LK a c?zut sub platform?
+            {
+                float const centerX = 505.28f;
+                float const centerY = -2124.19f;
+                float const centerZ = 840.90f;
+
+                // Îl aducem pe LK înapoi instant
+                me->NearTeleportTo(centerX, centerY, centerZ, me->GetOrientation());
+                me->GetMotionMaster()->Clear();
+
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (victim->GetPositionZ() < 839.0f)
+                    {
+                        victim->NearTeleportTo(centerX + 2.0f, centerY + 2.0f, centerZ, victim->GetOrientation());
+                        if (victim->GetTypeId() == TYPEID_UNIT) // Dac? este creatur?/bot
+                            victim->GetMotionMaster()->Clear();
+                    }
+
+                    me->GetMotionMaster()->MoveChase(victim);
+                }
+
+                //TC_LOG_ERROR("scripts", "Lich King Anti-Fall: Boss and Tank recovered from under platform.");
+            }
+        }
+        // --- ANTI-FALL PROTECTION END ---
+
+        // --- ANTI-DRIFT & SPECTATOR PROTECTION START ---
+        Map* map = me->GetMap();
+        if (map->IsRaid()) // Verific?m doar dac? suntem în raid
+        {
+            Map::PlayerList const& players = map->GetPlayers();
+            for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+            {
+                Player* player = itr->GetSource();
+                if (!player) continue;
+
+                // Coordonate Centru Platform?
+                float const centerX = 505.28f;
+                float const centerY = -2124.19f;
+                float const centerZ = 840.90f;
+
+                // Verific?m dac? juc?torul este mort ?i a c?zut mult sub platform? (Z < 450)
+                // sau dac? plute?te la distan?? uria?? (Raza platformei e ~60-70m)
+                if (!player->IsAlive() && (player->GetPositionZ() < 450.0f || player->GetDistance(centerX, centerY, centerZ) > 100.0f))
+                {
+                    // Îl teleport?m pe marginea platformei ca s? nu mai pluteasc? la infinit
+                    // Îl punem într-un punct sigur pe margine (ex: centerX + 40m)
+                    player->NearTeleportTo(centerX + 40.0f, centerY, centerZ + 2.0f, player->GetOrientation());
+
+                    // Oprim orice mi?care rezidual?
+                    player->StopMoving();
+
+                    //TC_LOG_ERROR("scripts", "Player {} was drifting in ghost mode. Teleported to platform edge.", player->GetName().c_str());
+                }
+            }
+        }
+        // --- ANTI-DRIFT & SPECTATOR PROTECTION END ---
 
         while (uint32 eventId = events.ExecuteEvent())
         {

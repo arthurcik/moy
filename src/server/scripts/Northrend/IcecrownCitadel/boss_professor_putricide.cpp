@@ -586,7 +586,7 @@ struct boss_professor_putricide : public BossAI
                 case EVENT_FESTERGUT_GOO:
                     DoCastAOE(SPELL_MALLEABLE_GOO_SUMMON, CastSpellExtraArgs(true).AddSpellMod(SPELLVALUE_MAX_TARGETS, 1));
                     if (Is25ManRaid())
-                        events.ScheduleEvent(EVENT_FESTERGUT_GOO, 10s, 15s, 0, PHASE_FESTERGUT);
+                        events.ScheduleEvent(EVENT_FESTERGUT_GOO, 30s, 35s, 0, PHASE_FESTERGUT); //kitt origi 10s 15s
                     else
                         events.ScheduleEvent(EVENT_FESTERGUT_GOO, 30s, 35s, 0, PHASE_FESTERGUT);
                     break;
