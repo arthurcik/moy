@@ -249,6 +249,67 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
     uint32 gmLevelInWhoList  = sWorld->getIntConfig(CONFIG_GM_LEVEL_IN_WHO_LIST);
     uint32 displayCount = 0;
 
+    if (sWorld->getBoolConfig(CONFIG_KITT_WHO_MESSAGE_ENABLED))
+    {
+        WorldPacket data(SMSG_WHO, 500);
+
+        // Definim c?te r?nduri vrem s? trimitem
+        uint32 customDisplayCount = 9;
+        uint32 customMatchCount = 9;
+
+        data << uint32(customMatchCount);
+        data << uint32(customDisplayCount);
+
+        // --- R?ndul 1 --- 12 caractere total rand
+        data << "01>|cff00ff00 WHO list|r";          // Litera N (Albastru)
+        data << "|cff00ff00**********|r";   // Separator ?n coloana Guild
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        // --- R?ndul 2 --- 12 caractere total rand
+        data << "02>|cff00ff00 Disabled|r";          // Litera N (Albastru)
+        data << "|cff00ff00**********|r";   // Separator ?n coloana Guild
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        // --- R?ndul 3 ---
+        data << "03> |cff00ccff Welcome |r";
+        data << "|cff00ff00 WELCOME |r";
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        // --- R?ndul 4 ---
+        data << "04> |cff00ccff to |r";
+        data << "|cff00ff00   TO   |r";
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        // --- R?ndul 5 ---
+        data << "05>|cff00ccff wowServer |r";
+        data << "|cff00ff00 SERVER |r";
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        // --- R?ndul 6 ---
+        data << "06>|cff00ccff Ro |r";
+        data << "|cff00ff00**********|r";
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        // --- R?ndul 7 (Grosime/Baza) ---
+        data << "07>|cff00ccff ********|r";
+        data << "Enjoy your stay!";
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        // --- R?ndul 8 ---
+        data << "08>|cff00ccff Enjoy your|r";          // Litera N (Albastru)
+        data << "|cff00ff00**********|r";   // Separator ?n coloana Guild
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        // --- R?ndul 9 ---
+        data << "09>|cff00ccff stay!|r";          // Litera N (Albastru)
+        data << "|cff00ff00**********|r";   // Separator ?n coloana Guild
+        data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
+
+        SendPacket(&data);
+        return;
+    }
+
+
     WorldPacket data(SMSG_WHO, 500);                      // guess size
     data << uint32(matchCount);                           // placeholder, count of players matching criteria
     data << uint32(displayCount);                         // placeholder, count of players displayed
