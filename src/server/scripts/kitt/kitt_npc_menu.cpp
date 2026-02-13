@@ -1169,7 +1169,7 @@ public:
                                 if (!item)
                                     continue;
 
-                                // Verific?m dac? are orice enchant în slotul 0 sau 1 (sau slotul t?u custom)
+                                // Verific?m dac? are orice enchant ?n slotul 0 sau 1 (sau slotul t?u custom)
                                 if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) != 0)
                                 {
                                     // ?tergem enchant-urile din sloturile folosite
