@@ -1,3 +1,10 @@
+##################
+# Kitt WHO custom
+##################
+# static text
+# default = 0 (arata lista reala)
+Kitt.WHO.msg.enable = 1
+
 ########################################
 # Kitt Auto Complete Quests
 ########################################

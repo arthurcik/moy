@@ -261,13 +261,13 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         data << uint32(customDisplayCount);
 
         // --- R?ndul 1 --- 12 caractere total rand
-        data << "01>|cff00ff00 WHO list|r";          // Litera N (Albastru)
-        data << "|cff00ff00**********|r";   // Separator ?n coloana Guild
+        data << "01>|cff00ff00 WHO list|r";
+        data << "|cff00ff00**********|r";
         data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
 
         // --- R?ndul 2 --- 12 caractere total rand
-        data << "02>|cff00ff00 Disabled|r";          // Litera N (Albastru)
-        data << "|cff00ff00**********|r";   // Separator ?n coloana Guild
+        data << "02>|cff00ff00 Disabled|r";
+        data << "|cff00ff00**********|r";
         data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
 
         // --- R?ndul 3 ---
@@ -296,13 +296,13 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
 
         // --- R?ndul 8 ---
-        data << "08>|cff00ccff Enjoy your|r";          // Litera N (Albastru)
-        data << "|cff00ff00**********|r";   // Separator ?n coloana Guild
+        data << "08>|cff00ccff Enjoy your|r";
+        data << "|cff00ff00**********|r";
         data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
 
         // --- R?ndul 9 ---
-        data << "09>|cff00ccff stay!|r";          // Litera N (Albastru)
-        data << "|cff00ff00**********|r";   // Separator ?n coloana Guild
+        data << "09>|cff00ccff stay!|r";
+        data << "|cff00ff00**********|r";
         data << uint32(80); data << uint32(2); data << uint32(1); data << uint8(0); data << uint32(876);
 
         SendPacket(&data);

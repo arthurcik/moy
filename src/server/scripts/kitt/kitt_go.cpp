@@ -103,7 +103,7 @@ public:
                 case 501027: if (player->GetLevel() >= 70) {
                     player->TeleportTo(0, -8291.1f, 1404.3f, 4.72375f, 0.0f);
                 } break;		//Valiance Keep to Stormwind
-                case 501020: player->TeleportTo(0, -4854.04f, -1004.33f, 453.76f, 0.0f); break;	//Portal Zone
+                case 501020: player->TeleportTo(1, -11813.0f, -4749.61f, 6.18968f, 4.81013f); break;	//Portal Zone
                     /*            case 501020:
                                     if (player->GetLevel() >= 1 )
                                     {
@@ -115,6 +115,7 @@ public:
                                         else if (player->GetTeam() == HORDE)
                                         {
                                              //isle tanaris //portal zone
+                                             // spell 63726(can attack) 39397(imune all)
                                             player->TeleportTo(1, -11813.0, -4749.61, 6.18968, 4.81013f);
                                         }
                                     }
