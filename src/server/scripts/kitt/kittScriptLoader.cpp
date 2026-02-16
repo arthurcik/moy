@@ -32,6 +32,7 @@ void AddSC_kitt_spell_script_aura();
 void AddSC_kitt_item_restrict();
 void AddSC_kitt_play_time_reward();
 void AddSC_kitt_instance_mod_heroic();
+void AddSC_auto_join_world();
 
 
 // The name of this function should match:
@@ -53,4 +54,5 @@ void AddkittScripts()
     AddSC_kitt_item_restrict();
     AddSC_kitt_play_time_reward();
     AddSC_kitt_instance_mod_heroic();
+    AddSC_auto_join_world();
 }
