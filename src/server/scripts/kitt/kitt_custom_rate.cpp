@@ -116,7 +116,7 @@ public:
         };
     }
 
-    static bool HandleSetXPRateCommand(ChatHandler* handler, char const* args)
+    static bool HandleSetXPRateCommand(ChatHandler* handler, std::string_view args)
     {
         if (sKittCustomRateEnabled == 0)
         {
@@ -128,7 +128,7 @@ public:
         if (!player)
             return false;
 
-        if (!*args)
+        if (args.empty())
         {
             uint32 currentRate = CustomXPRates[player->GetGUID()];
 
@@ -159,7 +159,7 @@ public:
             }
         }
 
-        uint32 newRate = (uint32)atoi(args);
+        uint32 newRate = (uint32)atoi(input.c_str());
 
         if (newRate > 20)
         {
