@@ -1,3 +1,8 @@
+# Kitt Custom Rate System
+# enable = 1
+# Default: 0 (Disabled)
+Kitt.Custom.Rate = 0
+
 ##################
 # Kitt WHO custom
 ##################

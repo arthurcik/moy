@@ -63,14 +63,14 @@ public:
                 // 1. Verific?m RAM
                 bool isVeteran = (ActiveHeroicInstances.find(instanceId) != ActiveHeroicInstances.end());
 
-                // 2. Dac? a fost CRASH (nu e în RAM), verific?m DB
+                // 2. Dac? a fost CRASH (nu e ?n RAM), verific?m DB
                 if (!isVeteran)
                 {
                     QueryResult result = CharacterDatabase.PQuery("SELECT isVeteran FROM instance_veteran_status WHERE id = {}", instanceId);
                     if (result)
                     {
                         isVeteran = true;
-                        ActiveHeroicInstances.insert(instanceId); // Îl punem înapoi în RAM
+                        ActiveHeroicInstances.insert(instanceId); // ?l punem ?napoi ?n RAM
                         ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Mod restaurat dupa restart server.");
                     }
                 }
@@ -80,12 +80,12 @@ public:
                 {
                     if (group->IsLeader(player->GetGUID()) && HeroicSelection[player->GetGUID()] && !isVeteran)
                     {
-                        // Verific?m dac? instan?a exist? în tabelul `instance` (s? nu d?m eroare de FK)
-                        // TrinityCore salveaz? de obicei instan?a în DB imediat ce juc?torul intr?.
+                        // Verific?m dac? instan?a exist? ?n tabelul `instance` (s? nu d?m eroare de FK)
+                        // TrinityCore salveaz? de obicei instan?a ?n DB imediat ce juc?torul intr?.
                         isVeteran = true;
                         ActiveHeroicInstances.insert(instanceId);
 
-                        // Folosim REPLACE INTO: dac? exist? deja, îl actualizeaz?; dac? nu, îl insereaz?.
+                        // Folosim REPLACE INTO: dac? exist? deja, ?l actualizeaz?; dac? nu, ?l insereaz?.
                         CharacterDatabase.PExecute("REPLACE INTO instance_veteran_status (id, isVeteran) VALUES ({}, 1)", instanceId);
 
                         ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Instanta a fost sigilata permanent pe modul Veteran!");
@@ -95,7 +95,7 @@ public:
                 if (isVeteran)
                 {
                     CheckAndApplyVeteran(player);
-                    ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Modul Heroic a fost aplicat cu succes!");
+                    ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Modul a fost aplicat cu succes!");
                 }
             }, 2s);
     }
@@ -133,6 +133,7 @@ public:
 
                 }
             }
+
             if (killed->isElite())
             {
                 if (!killer || !killer->IsInWorld() || killer->GetMapId() != MAP_BWL)
@@ -160,7 +161,7 @@ public:
                 if (ActiveHeroicInstances.find(instance->GetInstanceId()) != ActiveHeroicInstances.end())
                 {
                     std::list<Creature*> creatureList;
-                    // Scan?m o raz? mare (100 yarzi) în jurul juc?torului
+                    // Scan?m o raz? mare (100 yarzi) ?n jurul juc?torului
                     player->GetCreatureListWithEntryInGrid(creatureList, 0, 150.0f);
 
                     for (Creature* creature : creatureList)
@@ -227,7 +228,7 @@ public:
     std::vector<ChatCommandBuilder> GetCommands() const override
     {
         return {
-            { "bwlheroic", HandleBWLHeroicCommand, rbac::RBAC_PERM_COMMAND_RELOAD, Console::No }
+            { "bwlveteran", HandleBWLHeroicCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No }
         };
     }
 
@@ -245,7 +246,7 @@ public:
 
         if (!player->GetGroup() || !player->GetGroup()->IsLeader(player->GetGUID()))
         {
-            handler->SendSysMessage("Doar liderul poate seta modul Heroic!");
+            handler->SendSysMessage("Doar liderul poate seta modul Veteran!");
             return true;
         }
 
@@ -262,7 +263,7 @@ public:
         if (HeroicSelection[player->GetGUID()])
             handler->SendSysMessage("|cffff0000[VETERAN]|r MOD ACTIVAT pentru urmatoarea intrare.");
         else
-            handler->SendSysMessage("|cff00ff00[NORMAL]|r MOD DEZACTIVAT.");
+            handler->SendSysMessage("|cff00ff00[NORMAL]|r MOD Veteran DEZACTIVAT.");
 
         return true;
     }
@@ -329,10 +330,10 @@ public:
 
                 uint32 entry = item->GetEntry();
 
-                // Verific?m dac? item-ul este în lista alb?
+                // Verific?m dac? item-ul este ?n lista alb?
                 if (VeteranEligibleItems.find(entry) != VeteranEligibleItems.end())
                 {
-                    // Verific?m dac? are deja enchant-ul în Slotul 7 (PROP_0) ca marker
+                    // Verific?m dac? are deja enchant-ul ?n Slotul 7 (PROP_0) ca marker
                     if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
                     {
                         std::string itemName = item->GetTemplate()->Name1;
