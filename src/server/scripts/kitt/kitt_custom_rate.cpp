@@ -76,7 +76,6 @@ public:
         }
     }
 
-private:
     static void Notify(Player* player)
     {
         if (!player || !player->IsInWorld() || !player->GetSession())
@@ -95,7 +94,9 @@ private:
         {
             handler.PSendSysMessage("|cffffffffYour current |cff00ff00Custom Rate is: x%u|r.|r", (uint32)currentRate);
         }
-        handler.PSendSysMessage("|cffffffffYou can change this anytime using |cff00ccff.zxprate|r.");
+        handler.PSendSysMessage("|cffffffffYou can change this anytime using |cff00ccff.zxprate <value>|r.");
+        handler.PSendSysMessage("|cff00ccffReset:|r |cffffffff.zxprate 0 (to use server settings)|r");
+
 
         return;
     }
@@ -116,7 +117,7 @@ public:
         };
     }
 
-    static bool HandleSetXPRateCommand(ChatHandler* handler, std::string_view args)
+    static bool HandleSetXPRateCommand(ChatHandler* handler, Tail args)
     {
         if (sKittCustomRateEnabled == 0)
         {
@@ -128,28 +129,14 @@ public:
         if (!player)
             return false;
 
+        std::string_view argsStr = args;
         if (args.empty())
         {
-            uint32 currentRate = CustomXPRates[player->GetGUID()];
-
-            handler->SendSysMessage("|cff00ccff--- [ XP Rate Settings ] ---|r");
-
-            if (currentRate == 0)
-            {
-                handler->PSendSysMessage("|cffffffffCurrently using |cff00ff00Server Rates|r |cffffffff(Kill: x%u, Quest: x%u).|r",
-                    (uint32)sWorld->getRate(RATE_XP_KILL), (uint32)sWorld->getRate(RATE_XP_QUEST));
-            }
-            else
-            {
-                handler->PSendSysMessage("|cffffffffCurrently using |cff00ff00Custom Rate: x%u|r |cffffffff(Uniform).|r", (uint32)currentRate);
-            }
-
-            handler->SendSysMessage("|cff00ccffUsage:|r |cffffffff.zxprate <value> (Ex: .zxprate 5)|r");
-            handler->SendSysMessage("|cff00ccffReset:|r |cffffffff.zxprate 0 (to use server settings)|r");
+            kitt_custom_rate::Notify(player);
             return true;
         }
 
-        std::string input(args);
+        std::string input(argsStr);
         for (char const& c : input)
         {
             if (!isdigit(c))
