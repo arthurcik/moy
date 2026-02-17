@@ -112,7 +112,7 @@ public:
     {
         return
         {
-            { "zxprate", HandleSetXPRateCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No }
+            {"zxprate", HandleSetXPRateCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No}
         };
     }
 
