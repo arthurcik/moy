@@ -148,9 +148,9 @@ public:
 
         uint32 newRate = (uint32)atoi(input.c_str());
 
-        if (newRate > 20)
+        if (newRate > 15)
         {
-            handler->SendSysMessage("|cffff0000Error:|r |cffffffffMaximum allowed rate is 20.|r");
+            handler->SendSysMessage("|cffff0000Error:|r |cffffffffMaximum allowed rate is 15.|r");
             return true;
         }
 
