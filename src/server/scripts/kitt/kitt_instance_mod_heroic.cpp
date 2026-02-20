@@ -228,7 +228,7 @@ public:
     std::vector<ChatCommandBuilder> GetCommands() const override
     {
         return {
-            { "bwlveteran", HandleBWLHeroicCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No }
+            { "zbwlveteran", HandleBWLHeroicCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No }
         };
     }
 
