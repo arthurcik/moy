@@ -10,6 +10,7 @@
 #include <set>
 #include <map>
 #include "DBCStores.h"
+#include "SpellAuraEffects.h"
 
 #include "Containers.h"
 #include "CreatureTextMgr.h"
@@ -71,7 +72,7 @@ public:
                     {
                         isVeteran = true;
                         ActiveHeroicInstances.insert(instanceId); // ?l punem ?napoi ?n RAM
-                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Mod restaurat dupa restart server.");
+                        //ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Mod restaurat dupa restart server.");
                     }
                 }
 
@@ -161,7 +162,6 @@ public:
                 if (ActiveHeroicInstances.find(instance->GetInstanceId()) != ActiveHeroicInstances.end())
                 {
                     std::list<Creature*> creatureList;
-                    // Scan?m o raz? mare (100 yarzi) ?n jurul juc?torului
                     player->GetCreatureListWithEntryInGrid(creatureList, 0, 150.0f);
 
                     for (Creature* creature : creatureList)
@@ -169,7 +169,6 @@ public:
                         if (!creature || creature->isDead() || creature->GetLevel() >= 80 || creature->IsPet())
                             continue;
                         if (!creature->IsPet() && creature->GetLevel() < 80 && !creature->HasAura(VISUAL_AURA_MARKER))
-                        //if (!creature->IsPet() && creature->GetLevel() < 80 && !creature->HasAura(VISUAL_AURA_MARKER))
                         {
                             creature->SetLevel(creature->GetLevel() + 20);
 
@@ -177,17 +176,26 @@ public:
                             creature->SetMaxHealth(newHealth);
                             creature->SetHealth(newHealth);
 
-                            float minDmg = creature->GetWeaponDamageRange(BASE_ATTACK, MINDAMAGE) * 10.0f;
-                            float maxDmg = creature->GetWeaponDamageRange(BASE_ATTACK, MAXDAMAGE) * 10.0f;
+                            float minDmg = creature->GetWeaponDamageRange(BASE_ATTACK, MINDAMAGE) * 5.0f;
+                            float maxDmg = creature->GetWeaponDamageRange(BASE_ATTACK, MAXDAMAGE) * 5.0f;
                             creature->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, minDmg);
                             creature->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, maxDmg);
 
-                            creature->SetAttackPower(16000);
-                            creature->SetStatFlatModifier(UNIT_MOD_ATTACK_POWER, BASE_VALUE, 10000.0f);
-                            creature->SetAttackPowerMultiplier(2.2f); // +20% bonus Damage din AP
+                            creature->SetAttackPower(15000);
 
-                            uint32 newArmor = creature->GetArmor() * 50.0f;
+                            uint32 newArmor = creature->GetArmor() * 10.0f;
                             creature->SetArmor(newArmor);
+
+                            // 9344 spell cu valoare fixa
+                            if (Aura* aura = creature->AddAura(9344, creature))
+                            {
+                                //aura->SetDuration(-1);
+                                //aura->SetMaxDuration(-1);
+                                if (AuraEffect* eff = aura->GetEffect(0))
+                                {
+                                    eff->SetAmount(8000);
+                                }
+                            }
 
                             for (uint8 i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
                                 creature->SetResistance(SpellSchools(i), 550);
@@ -201,10 +209,9 @@ public:
                             creature->UpdateUnitMod(UNIT_MOD_ATTACK_POWER);
                             creature->UpdateUnitMod(UNIT_MOD_ARMOR);
                             creature->UpdateDamagePhysical(BASE_ATTACK);
-                            creature->UpdateArmor(); // Recalculeaz? armura pe baza noului nivel (80)
+                            creature->UpdateArmor();
                             creature->UpdateAllResistances();
 
-                            creature->CastSpell(creature, 26662, true);
 
                             // 5. Aura Vizuala
                             creature->AddAura(VISUAL_AURA_MARKER, creature);
