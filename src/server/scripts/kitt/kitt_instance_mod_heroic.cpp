@@ -176,8 +176,8 @@ public:
                             creature->SetMaxHealth(newHealth);
                             creature->SetHealth(newHealth);
 
-                            float minDmg = creature->GetWeaponDamageRange(BASE_ATTACK, MINDAMAGE) * 5.0f;
-                            float maxDmg = creature->GetWeaponDamageRange(BASE_ATTACK, MAXDAMAGE) * 5.0f;
+                            float minDmg = creature->GetWeaponDamageRange(BASE_ATTACK, MINDAMAGE) * 10.0f;
+                            float maxDmg = creature->GetWeaponDamageRange(BASE_ATTACK, MAXDAMAGE) * 10.0f;
                             creature->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, minDmg);
                             creature->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, maxDmg);
 
@@ -193,7 +193,7 @@ public:
                                 //aura->SetMaxDuration(-1);
                                 if (AuraEffect* eff = aura->GetEffect(0))
                                 {
-                                    eff->SetAmount(8000);
+                                    eff->SetAmount(11000);
                                 }
                             }
 

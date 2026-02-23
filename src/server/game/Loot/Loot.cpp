@@ -26,6 +26,7 @@
 #include "Player.h"
 #include "Random.h"
 #include "World.h"
+#include "ScriptMgr.h"
 
  //
  // --------- LootItem ---------
@@ -196,13 +197,14 @@ void Loot::AddItem(LootStoreItem const& item)
 }
 
 // Calls processor of corresponding LootTemplate (which handles everything including references)
-bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bool personal, bool noEmptyError, uint16 lootMode /*= LOOT_MODE_DEFAULT*/)
+bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bool personal, bool noEmptyError, uint16 lootMode /*= LOOT_MODE_DEFAULT*/, ObjectGuid sGuidLoot /*= ObjectGuid::Empty*/)
 {
     // Must be provided
     if (!lootOwner)
         return false;
 
     lootOwnerGUID = lootOwner->GetGUID();
+    sourceGuid = sGuidLoot;
 
     LootTemplate const* tab = store.GetLootFor(lootId);
 
@@ -238,7 +240,14 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
     }
     // ... for personal loot
     else
+    {
         FillNotNormalLootFor(lootOwner, true);
+    }
+
+    if (lootOwner)
+    {
+        sScriptMgr->OnAfterLootFill(lootOwner, this);
+    }
 
     return true;
 }

@@ -1855,6 +1855,12 @@ InventoryResult ScriptMgr::OnCanEquipItem(Player* player, uint8 slot, uint16& de
     return EQUIP_ERR_OK;
 }
 
+void ScriptMgr::OnAfterLootFill(Player* player, Loot* loot)
+{
+    FOREACH_SCRIPT(PlayerScript)->OnAfterLootFill(player, loot);
+}
+
+
 void ScriptMgr::OnCreatureKill(Player* killer, Creature* killed)
 {
     FOREACH_SCRIPT(PlayerScript)->OnCreatureKill(killer, killed);
@@ -2631,6 +2637,10 @@ void PlayerScript::OnEquip(Player* /*player*/, Item* /*item*/, uint16 /*slot*/, 
 InventoryResult PlayerScript::OnCanEquipItem(Player* /*player*/, uint8 /*slot*/, uint16& /*dest*/, Item* /*item*/, bool /*swap*/, bool /*not_loading*/)
 {
     return EQUIP_ERR_OK;
+}
+
+void PlayerScript::OnAfterLootFill(Player* /*player*/, Loot* /*loot*/)
+{
 }
 
 void PlayerScript::OnCreatureKill(Player* /*killer*/, Creature* /*killed*/)

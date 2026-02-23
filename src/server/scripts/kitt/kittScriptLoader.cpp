@@ -34,6 +34,7 @@ void AddSC_kitt_play_time_reward();
 void AddSC_kitt_instance_mod_heroic();
 void AddSC_auto_join_world();
 void AddSC_kitt_custom_rate();
+void AddSC_kitt_custom_loot_mapid();
 
 
 // The name of this function should match:
@@ -57,4 +58,5 @@ void AddkittScripts()
     AddSC_kitt_instance_mod_heroic();
     AddSC_auto_join_world();
     AddSC_kitt_custom_rate();
+    AddSC_kitt_custom_loot_mapid();
 }

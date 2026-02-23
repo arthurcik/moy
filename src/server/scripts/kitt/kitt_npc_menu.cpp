@@ -560,7 +560,6 @@ static void BeginDelayedTeleportOFF1(Player* player, TeleportLocation const& loc
     }, 4410ms);  // teleport delay
 }
 
-
 class kitt_npc_menu : public CreatureScript
 {
 public:

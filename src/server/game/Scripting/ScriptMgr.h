@@ -72,6 +72,7 @@ struct Condition;
 struct CreatureTemplate;
 struct CreatureData;
 struct ItemTemplate;
+struct Loot; // kitt
 struct MapEntry;
 struct Position;
 
@@ -636,6 +637,8 @@ class TC_GAME_API PlayerScript : public ScriptObject
 
         virtual InventoryResult OnCanEquipItem(Player* player, uint8 slot, uint16& dest, Item* item, bool swap, bool not_loading);
 
+        virtual void OnAfterLootFill(Player* player, Loot* loot);
+
         // Called when a player kills a creature
         virtual void OnCreatureKill(Player* killer, Creature* killed);
 
@@ -1021,6 +1024,7 @@ class TC_GAME_API ScriptMgr
     public: /* PlayerScript */
 
         void OnPVPKill(Player* killer, Player* killed);
+        void OnAfterLootFill(Player* player, Loot* loot); // kitt
         void OnEquip(Player* player, Item* item, uint16 slot, bool update); // kitt
         InventoryResult OnCanEquipItem(Player* player, uint8 slot, uint16& dest, Item* item, bool swap, bool not_loading); // kitt
         void OnCreatureKill(Player* killer, Creature* killed);
