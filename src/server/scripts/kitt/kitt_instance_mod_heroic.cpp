@@ -17,6 +17,7 @@
 #include "GossipDef.h"
 #include "ScriptedGossip.h"
 #include "World.h"
+#include "LootMgr.h"
 
 using namespace Trinity::ChatCommands;
 
@@ -99,6 +100,60 @@ public:
                     ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Modul a fost aplicat cu succes!");
                 }
             }, 2s);
+    }
+
+    void AddKittCustomItem(Loot* loot, uint32 itemID, uint8 count = 1, float dropChance = 100.0f, bool ffa = false)
+    {
+        uint32 reference = 0;
+        bool needsQuest = false;
+        uint16 lootMode = 1;
+        uint8 groupId = 0;
+
+        LootStoreItem newItem(itemID, reference, dropChance, needsQuest, lootMode, groupId, count, count);
+        loot->AddItem(newItem);
+
+        if (ffa && !loot->items.empty())
+        {
+            LootItem& lastItem = loot->items.back();
+            lastItem.freeforall = true;
+        }
+    }
+
+    void KittAddLoot(Player* /*player*/, Loot* loot) /*override*/
+    {
+        //loot->items.clear(); // sterge loot vechi
+        AddKittCustomItem(loot, 49426, 10, 100.0f, false); // Embleme FFA
+        AddKittCustomItem(loot, 31193, 1, 100.0f, false);
+        AddKittCustomItem(loot, 45085, 1, 50.0f, false); // 1 bucata, 50% sansa
+        loot->gold += 500000; // adauga 50g la loot
+    }
+
+
+    void OnAfterLootFill(Player* player, Loot* loot) override
+    {
+        if (!player || !player->GetSession() || !loot)
+            return;
+
+        Creature* creature = player->GetMap()->GetCreature(loot->sourceGuid);
+        if (!creature)
+            return;
+
+        Map* map = creature->GetMap();
+        if (map->GetId() != MAP_BWL)
+            return;
+
+        InstanceMap* instance = (InstanceMap*)map;
+
+        if (ActiveHeroicInstances.find(instance->GetInstanceId()) != ActiveHeroicInstances.end())
+        {
+            if (creature->IsDungeonBoss())
+            {
+
+                KittAddLoot(player, loot);
+
+                ChatHandler(player->GetSession()).PSendSysMessage("|cffffd700[TEST Loot Heroic]|r Ai primit un item Veteran!");
+            }
+        }
     }
 
     void OnCreatureKill(Player* killer, Creature* killed) override
