@@ -3,6 +3,12 @@
 # Default: 0 (Disabled)
 Kitt.Custom.Rate = 0
 
+# kitt play time reward
+# periodic reward system
+# enable = 1
+# Default: 0
+Kitt.Play.Time.Reward = 0
+
 ##################
 # Kitt WHO custom
 ##################

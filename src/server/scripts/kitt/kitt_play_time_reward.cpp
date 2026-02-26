@@ -49,6 +49,8 @@ namespace
         {300,  43102, 1, "Periodic [5h ingame]"}, // frozen orb
         {300,  44990, 3, "Periodic [5h ingame]"}, // Champion's Seal
     };
+
+    static uint32 sPlayTimeReward = 0;
 }
 
 
@@ -59,6 +61,9 @@ public:
 
     void OnLogin(Player* player, bool /*firstLogin*/) override
     {
+        if (sPlayTimeReward == 0)
+            return;
+
         if (!player || !player->IsInWorld() || !player->GetSession())
             return;
 
@@ -86,6 +91,9 @@ public:
 
     void OnSave(Player* player) override
     {
+        if (sPlayTimeReward == 0)
+            return;
+
         if (!player || !player->IsInWorld() || !player->GetSession() || !player->IsAlive() || player->GetSession()->isLogingOut())
             return;
 
@@ -226,6 +234,12 @@ public:
 
     static bool HandlePlaytimeCommand(ChatHandler* handler)
     {
+        if (sPlayTimeReward == 0)
+        {
+            handler->SendSysMessage("|cffff0000Error:|r This system is currently disabled in server config.");
+            return true;
+        }
+
         Player* player = handler->GetSession()->GetPlayer();
         if (!player) return false;
 
@@ -307,9 +321,21 @@ public:
     }
 };
 
+class kitt_play_time_reward_config : public WorldScript
+{
+public:
+    kitt_play_time_reward_config() : WorldScript("kitt_play_time_reward_config") {}
+
+    void OnConfigLoad(bool /*reload*/) override
+    {
+        sPlayTimeReward = sConfigMgr->GetIntDefault("Kitt.Play.Time.Reward", 0);
+    }
+};
+
 
 void AddSC_kitt_play_time_reward()
 {
+    new kitt_play_time_reward_config();
     new kitt_play_time_reward();
     new kitt_zplaytime_command_script();
 }
