@@ -9,6 +9,23 @@ Kitt.Custom.Rate = 0
 # Default: 0
 Kitt.Play.Time.Reward = 0
 
+###################################
+##### Kitt Instance Req start #####
+###################################
+# kitt instance request
+# enable = 1
+# Default: 0
+# kitt instance req iLvL min
+# set min ilvl to entry instance
+# Defaul: 0 (disable)
+
+# ICC
+Kitt.ICC.Instance.Requirement = 1
+Kitt.ICC.Instance.MinItemLevel = 232
+# RS
+Kitt.RS.Instance.Requirement = 1
+##### Instance Req end #####
+
 ##################
 # Kitt WHO custom
 ##################
