@@ -62,18 +62,30 @@ public:
             switch (diff)
             {
             case RAID_DIFFICULTY_10MAN_NORMAL:
-                if (!player->HasAchieved(3917) || !player->HasAchieved(3916))
+              {
+                if (!player->HasAchieved(3917) && !player->HasAchieved(3916))
                 {
                     hasAccess = false;
-                    msg = "Access Denied: You must complete BOTH Trial of the Crusader 10 and 25-player to enter Icecrown Citadel!";
+                    msg = "|cffff0000Access Denied:|r You must complete BOTH Trial of the Crusader 10 and 25-player to enter Icecrown Citadel!";
+                }
+                else if (!player->HasAchieved(3917))
+                {
+                    hasAccess = false;
+                    msg = "|cffff0000Access Denied:|r You completed ToC 25, but you are still missing Trial of the Crusader 10-player!";
+                }
+                else if (!player->HasAchieved(3916))
+                {
+                    hasAccess = false;
+                    msg = "|cffff0000Access Denied:|r You completed ToC 10, but you are still missing Trial of the Crusader 25-player!";
                 }
                 break;
+              }
 
             case RAID_DIFFICULTY_10MAN_HEROIC:
                 if (!player->HasAchieved(4530))
                 {
                     hasAccess = false;
-                    msg = "Access Denied: You must defeat The Lich King on 10-player Normal to enter Heroic mode!";
+                    msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 10-player Normal to enter Heroic mode!";
                 }
                 break;
 
@@ -81,7 +93,7 @@ public:
                 if (!player->HasAchieved(4583))
                 {
                     hasAccess = false;
-                    msg = "Access Denied: You must defeat The Lich King on 10-player Heroic to enter 25-player Normal!";
+                    msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 10-player Heroic to enter 25-player Normal!";
                 }
                 break;
 
@@ -89,7 +101,7 @@ public:
                 if (!player->HasAchieved(4597))
                 {
                     hasAccess = false;
-                    msg = "Access Denied: You must defeat The Lich King on 25-player Normal to enter Heroic mode!";
+                    msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 25-player Normal to enter Heroic mode!";
                 }
                 break;
 
@@ -104,9 +116,9 @@ public:
                 {
                     hasAccess = false;
                     if (avgILvl == 0)
-                        msg = "Access Denied: You must have at least " + std::to_string(IccReqEquippedCount) + " items equipped to enter!";
+                        msg = "|cffff0000Access Denied:|r You must have at least " + std::to_string(IccReqEquippedCount) + " items equipped to enter!";
                     else
-                        msg = "Access Denied: Your Average Item Level (" + std::to_string(avgILvl) + ") is below the required " + std::to_string(sKittIccMinItemLevel) + "!";
+                        msg = "|cffff0000Access Denied:|r Your Average Item Level (" + std::to_string(avgILvl) + ") is below the required " + std::to_string(sKittIccMinItemLevel) + "!";
                 }
             }
 
@@ -114,17 +126,25 @@ public:
             if (!hasAccess)
             {
                 ObjectGuid playerGuid = player->GetGUID();
+                std::string messageToSend = msg;
 
-                player->m_Events.AddEventAtOffset([playerGuid, msg]()
+                player->m_Events.AddEventAtOffset([playerGuid]()
                     {
                         Player* p = ObjectAccessor::FindPlayer(playerGuid);
-                        if (p)
+                        if (p && p->GetSession())
                         {
-                            ChatHandler(p->GetSession()).PSendSysMessage(msg.c_str());
-
                             p->TeleportTo(571, 5865.62f, 2107.66f, 635.98f, 3.55f);
                         }
                     }, 5s);
+
+                player->m_Events.AddEventAtOffset([playerGuid, messageToSend]()
+                    {
+                        Player* p = ObjectAccessor::FindPlayer(playerGuid);
+                        if (p && p->GetSession())
+                        {
+                            ChatHandler(p->GetSession()).PSendSysMessage(messageToSend.c_str());
+                        }
+                    }, 10s);
             }
         }
 
@@ -147,7 +167,7 @@ public:
                 if (!player->HasAchieved(4530))
                 {
                     hasAccess = false;
-                    msg = "Access Denied: You must defeat The Lich King on 10-player Normal to enter Ruby Sanctum!";
+                    msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 10-player Normal to enter Ruby Sanctum!";
                 }
                 break;
 
@@ -155,7 +175,7 @@ public:
                 if (!player->HasAchieved(4597))
                 {
                     hasAccess = false;
-                    msg = "Access Denied: You must defeat The Lich King on 25-player Normal to enter Ruby Sanctum 25!";
+                    msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 25-player Normal to enter Ruby Sanctum 25!";
                 }
                 break;
 
@@ -163,7 +183,7 @@ public:
                 if (!player->HasAchieved(4817))
                 {
                     hasAccess = false;
-                    msg = "Access Denied: You must defeat Halion on 10-player Normal to enter Heroic mode!";
+                    msg = "|cffff0000Access Denied:|r You must defeat Halion on 10-player Normal to enter Heroic mode!";
                 }
                 break;
 
@@ -171,7 +191,7 @@ public:
                 if (!player->HasAchieved(4815))
                 {
                     hasAccess = false;
-                    msg = "Access Denied: You must defeat Halion on 25-player Normal to enter Heroic mode!";
+                    msg = "|cffff0000Access Denied:|r You must defeat Halion on 25-player Normal to enter Heroic mode!";
                 }
                 break;
             }
@@ -179,15 +199,25 @@ public:
             if (!hasAccess)
             {
                 ObjectGuid playerGuid = player->GetGUID();
-                player->m_Events.AddEventAtOffset([playerGuid, msg]()
+                std::string messageToSend = msg;
+
+                player->m_Events.AddEventAtOffset([playerGuid]()
                     {
                         Player* p = ObjectAccessor::FindPlayer(playerGuid);
-                        if (p)
+                        if (p && p->GetSession())
                         {
-                            ChatHandler(p->GetSession()).PSendSysMessage(msg.c_str());
                             p->TeleportTo(571, 3585.71f, 218.125f, -120.054f, 5.28f);
                         }
                     }, 5s);
+
+                player->m_Events.AddEventAtOffset([playerGuid, messageToSend]()
+                    {
+                        Player* p = ObjectAccessor::FindPlayer(playerGuid);
+                        if (p && p->GetSession())
+                        {
+                            ChatHandler(p->GetSession()).PSendSysMessage(messageToSend.c_str());
+                        }
+                    }, 10s);
             }
         }
     }
