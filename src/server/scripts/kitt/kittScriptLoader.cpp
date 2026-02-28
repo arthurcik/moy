@@ -36,6 +36,7 @@ void AddSC_auto_join_world();
 void AddSC_kitt_custom_rate();
 void AddSC_kitt_custom_loot_mapid();
 void AddSC_kitt_instance_requirement();
+void AddSC_kitt_custom_sanctuary();
 
 
 // The name of this function should match:
@@ -61,4 +62,5 @@ void AddkittScripts()
     AddSC_kitt_custom_rate();
     AddSC_kitt_custom_loot_mapid();
     AddSC_kitt_instance_requirement();
+    AddSC_kitt_custom_sanctuary();
 }
