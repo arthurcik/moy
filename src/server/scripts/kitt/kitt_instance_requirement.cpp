@@ -90,20 +90,33 @@ public:
                 break;
 
             case RAID_DIFFICULTY_25MAN_NORMAL:
-                if (!player->HasAchieved(4583))
+                if (!player->HasAchieved(4530))
                 {
                     hasAccess = false;
-                    msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 10-player Heroic to enter 25-player Normal!";
+                    msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 10-player Normal to enter 25-player Normal!";
                 }
                 break;
 
             case RAID_DIFFICULTY_25MAN_HEROIC:
-                if (!player->HasAchieved(4597))
+              {
+                if (!player->HasAchieved(4597) && !player->HasAchieved(4583))
+                {
+                    hasAccess = false;
+                    msg = "|cffff0000Access Denied:|r You must defeat BOTH The Lich King 25 Normal and 10 Heroic player to enter 25-player Heroic mode!";
+                }
+                else if (!player->HasAchieved(4597))
                 {
                     hasAccess = false;
                     msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 25-player Normal to enter Heroic mode!";
                 }
+                else if (!player->HasAchieved(4583))
+                {
+                    hasAccess = false;
+                    msg = "|cffff0000Access Denied:|r You must defeat The Lich King on 10-player Heroic to enter Heroic mode!";
+
+                }
                 break;
+              }
 
             default:
                 break;
