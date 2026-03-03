@@ -221,9 +221,9 @@ public:
 
                     for (Creature* creature : creatureList)
                     {
-                        if (!creature || creature->isDead() || creature->GetLevel() >= 80 || creature->IsPet())
+                        if (!creature || creature->isDead() || creature->GetLevel() >= 80 || creature->IsPet() || creature->IsNPCBot())
                             continue;
-                        if (!creature->IsPet() && creature->GetLevel() < 80 && !creature->HasAura(VISUAL_AURA_MARKER))
+                        if (!creature->IsPet() && !creature->IsNPCBot() && creature->GetLevel() < 80 && !creature->HasAura(VISUAL_AURA_MARKER))
                         {
                             creature->SetLevel(creature->GetLevel() + 20);
 
