@@ -128,7 +128,7 @@ public:
 
     void KittAddLootElite(Player* /*player*/, Loot* loot) /*override*/
     {
-        ObjectGuid sourceGuid = loot->sourceGuid;
+        //ObjectGuid sourceGuid = loot->sourceGuid;
 
         // loot comun
         //loot->items.clear(); // sterge loot vechi
