@@ -115,12 +115,24 @@ public:
 
     void KittAddLoot(Player* /*player*/, Loot* loot) /*override*/
     {
-        //loot->items.clear(); // sterge loot vechi
-        AddKittCustomItem(loot, 49426, 10, 100.0f, false); // Embleme FFA
-        AddKittCustomItem(loot, 31193, 1, 100.0f, false);
-        AddKittCustomItem(loot, 45085, 1, 50.0f, false); // 1 bucata, 50% sansa
-        loot->gold += 500000; // adauga 50g la loot
+        ObjectGuid sourceGuid = loot->sourceGuid;
+        if (sourceGuid.GetEntry() == 13020)   // Vaelastrasz the Corrupt
+        {
+            //loot->items.clear(); // sterge loot vechi
+            AddKittCustomItem(loot, 31193, 1, 100.0f, false);
+            AddKittCustomItem(loot, 45085, 1, 50.0f, false); // 1 bucata, 50% sansa
+            loot->gold += 500000; // adauga 50g la loot
+            //ChatHandler(player->GetSession()).PSendSysMessage("|cffffd700[TEST Loot Heroic]|r Ai primit un item Veteran!");
+        }
     }
+
+    void KittAddLootElite(Player* /*player*/, Loot* loot) /*override*/
+    {
+        // loot comun
+        //loot->items.clear(); // sterge loot vechi
+        loot->gold += 100000; // adauga 50g la loot
+    }
+
 
 
     void OnAfterLootFill(Player* player, Loot* loot) override
@@ -142,55 +154,34 @@ public:
         {
             if (creature->IsDungeonBoss())
             {
-
-                KittAddLoot(player, loot);
-
-                ChatHandler(player->GetSession()).PSendSysMessage("|cffffd700[TEST Loot Heroic]|r Ai primit un item Veteran!");
-            }
-        }
-    }
-
-    void OnCreatureKill(Player* killer, Creature* killed) override
-    {
-        Map* map = killed->GetMap();
-        if (map->GetId() != MAP_BWL)
-            return;
-
-        InstanceMap* instance = (InstanceMap*)map;
-
-        if (ActiveHeroicInstances.find(instance->GetInstanceId()) != ActiveHeroicInstances.end())
-        {
-            if (killed->IsDungeonBoss())
-            {
-                uint32 extraGold = 500000;
-
-                if (Group* group = killer->GetGroup())
+                if (Group* group = player->GetGroup())
                 {
                     for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
                     {
                         if (Player* member = itr->GetSource())
                         {
-                            if (member->IsAtGroupRewardDistance(killed))
+                            if (member->IsAtGroupRewardDistance(player))
                             {
                                 member->AddItem(49426, 5);
-                                member->ModifyMoney(extraGold);
+                                //member->ModifyMoney(extraGold);
 
                                 //ChatHandler(member->GetSession()).PSendSysMessage("|cffffd700[Loot Heroic]|r Ai primit un item Veteran!");
                             }
                         }
                     }
-                    //CheckAndApplyVeteran(killer);
                 }
+
+                KittAddLoot(player, loot);
             }
 
-            //if (killed->isElite())
-            //{
-            //    if (!killer || !killer->IsInWorld() || killer->GetMapId() != MAP_BWL)
-            //        return;
-            //}
-
+            if (creature->isElite())
+            {
+                KittAddLootElite(player, loot);
+            }
         }
     }
+
+
 
     void OnSpellCast(Player* player, Spell* /*spell*/, bool /*skipCheck*/) override
     {
@@ -481,10 +472,10 @@ public:
     }
 };
 
-class kitt_instance_mod_heroic_startup : public WorldScript
+class kitt_bwl_veteran_startup : public WorldScript
 {
 public:
-    kitt_instance_mod_heroic_startup() : WorldScript("kitt_instance_mod_heroic_startup") {}
+    kitt_bwl_veteran_startup() : WorldScript("kitt_bwl_veteran_startup") {}
 
     void OnStartup() override
     {
@@ -505,7 +496,7 @@ public:
             count++;
         } while (result->NextRow());
 
-        TC_LOG_INFO("server.loading", ">> KITT [VETERAN] Restaurate {} instante din baza de date.", count);
+        TC_LOG_INFO("server.loading", ">> KITT [BWL Veteran] Restaurate {} instante din baza de date.", count);
     }
 };
 
@@ -516,7 +507,7 @@ public:
 
 void AddSC_kitt_instance_mod_heroic()
 {
-    new kitt_instance_mod_heroic_startup();
+    new kitt_bwl_veteran_startup();
     new kitt_bwl_heroic_core();
     new kitt_bwl_commandscript();
     new npc_veteran_upgrader();
