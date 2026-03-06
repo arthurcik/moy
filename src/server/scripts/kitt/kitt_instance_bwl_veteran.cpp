@@ -128,12 +128,15 @@ public:
 
     void KittAddLootElite(Player* /*player*/, Loot* loot) /*override*/
     {
+        ObjectGuid sourceGuid = loot->sourceGuid;
+
         // loot comun
         //loot->items.clear(); // sterge loot vechi
+        //AddKittCustomItem(loot, 49426, 5, 100.0f, true);   // emblem of frost
+
         loot->gold += 100000; // adauga 50g la loot
+        //player->SendLoot(sourceGuid, LOOT_CORPSE);
     }
-
-
 
     void OnAfterLootFill(Player* player, Loot* loot) override
     {
@@ -180,8 +183,6 @@ public:
             }
         }
     }
-
-
 
     void OnSpellCast(Player* player, Spell* /*spell*/, bool /*skipCheck*/) override
     {
@@ -505,7 +506,7 @@ public:
 
 
 
-void AddSC_kitt_instance_mod_heroic()
+void AddSC_kitt_instance_bwl_veteran()
 {
     new kitt_bwl_veteran_startup();
     new kitt_bwl_heroic_core();

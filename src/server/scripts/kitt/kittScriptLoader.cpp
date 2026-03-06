@@ -31,7 +31,7 @@ void AddSC_kitt_spell_script_aura();
 //void AddSC_kitt_item_hearthstone();
 void AddSC_kitt_item_restrict();
 void AddSC_kitt_play_time_reward();
-void AddSC_kitt_instance_mod_heroic();
+void AddSC_kitt_instance_bwl_veteran();
 void AddSC_auto_join_world();
 void AddSC_kitt_custom_rate();
 void AddSC_kitt_custom_loot_mapid();
@@ -57,7 +57,7 @@ void AddkittScripts()
     //AddSC_kitt_item_hearthstone();
     AddSC_kitt_item_restrict();
     AddSC_kitt_play_time_reward();
-    AddSC_kitt_instance_mod_heroic();
+    AddSC_kitt_instance_bwl_veteran();
     AddSC_auto_join_world();
     AddSC_kitt_custom_rate();
     AddSC_kitt_custom_loot_mapid();
