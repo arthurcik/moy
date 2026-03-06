@@ -183,17 +183,11 @@ public:
                 }
             }
 
-            if (killed->isElite())
-            {
-                if (!killer || !killer->IsInWorld() || killer->GetMapId() != MAP_BWL)
-                    return;
-
-                killer->m_Events.AddEventAtOffset([this, killer]()
-                    {
-                        //CheckAndApplyVeteran(killer);
-                    }, 1s);
-
-            }
+            //if (killed->isElite())
+            //{
+            //    if (!killer || !killer->IsInWorld() || killer->GetMapId() != MAP_BWL)
+            //        return;
+            //}
 
         }
     }
