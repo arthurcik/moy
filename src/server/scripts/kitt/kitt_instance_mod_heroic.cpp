@@ -11,6 +11,8 @@
 #include <map>
 #include "DBCStores.h"
 #include "SpellAuraEffects.h"
+#include "GameTime.h"
+#include "Log.h"
 
 #include "Containers.h"
 #include "CreatureTextMgr.h"
@@ -28,6 +30,7 @@ namespace
 
     static std::map<ObjectGuid, bool> HeroicSelection;
     static std::set<uint32> ActiveHeroicInstances;
+    static std::map<uint32, uint32> InstanceScanTimers;
 
 
     static const std::set<uint32> VeteranEligibleItems = {
@@ -54,8 +57,11 @@ public:
         if (mapId != MAP_BWL)
             return;
 
-        player->m_Events.AddEventAtOffset([player, this]()
+        ObjectGuid guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid, this]()
             {
+                Player* player = ObjectAccessor::FindPlayer(guid);
+
                 if (!player || !player->IsInWorld() || player->GetMapId() != MAP_BWL)
                     return;
 
@@ -64,18 +70,6 @@ public:
 
                 // 1. Verific?m RAM
                 bool isVeteran = (ActiveHeroicInstances.find(instanceId) != ActiveHeroicInstances.end());
-
-                // 2. Dac? a fost CRASH (nu e ?n RAM), verific?m DB
-                if (!isVeteran)
-                {
-                    QueryResult result = CharacterDatabase.PQuery("SELECT isVeteran FROM instance_veteran_status WHERE id = {}", instanceId);
-                    if (result)
-                    {
-                        isVeteran = true;
-                        ActiveHeroicInstances.insert(instanceId); // ?l punem ?napoi ?n RAM
-                        //ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Mod restaurat dupa restart server.");
-                    }
-                }
 
                 // 3. Activare ini?ial? (doar dac? liderul are comanda ?i instan?a e curat?)
                 if (Group* group = player->GetGroup())
@@ -186,7 +180,6 @@ public:
                         }
                     }
                     //CheckAndApplyVeteran(killer);
-
                 }
             }
 
@@ -197,11 +190,32 @@ public:
 
                 killer->m_Events.AddEventAtOffset([this, killer]()
                     {
-                        CheckAndApplyVeteran(killer);
+                        //CheckAndApplyVeteran(killer);
                     }, 1s);
 
             }
 
+        }
+    }
+
+    void OnSpellCast(Player* player, Spell* /*spell*/, bool /*skipCheck*/) override
+    {
+        Map* map = player->GetMap();
+        if (map->GetId() != MAP_BWL)
+            return;
+
+        InstanceMap* instance = (InstanceMap*)map;
+        uint32 instanceId = instance->GetInstanceId();
+        if (ActiveHeroicInstances.find(instance->GetInstanceId()) == ActiveHeroicInstances.end())
+            return;
+
+        uint32 now = GameTime::GetGameTimeMS();
+
+        if (player->IsInCombat() && (now - InstanceScanTimers[instanceId] > 10000))
+        {
+            InstanceScanTimers[instanceId] = now;
+            CheckAndApplyVeteran(player);
+            //ChatHandler(player->GetSession()).PSendSysMessage("|cffffd700[TEST] spell cast mod apply");
         }
     }
 
@@ -221,8 +235,9 @@ public:
 
                     for (Creature* creature : creatureList)
                     {
-                        if (!creature || creature->isDead() || creature->GetLevel() >= 80 || creature->IsPet() || creature->IsNPCBot())
+                        if (!creature || creature->isDead() || creature->IsPet() || creature->IsNPCBot())
                             continue;
+
                         if (!creature->IsPet() && !creature->IsNPCBot() && creature->GetLevel() < 80 && !creature->HasAura(VISUAL_AURA_MARKER))
                         {
                             creature->SetLevel(creature->GetLevel() + 20);
@@ -240,17 +255,6 @@ public:
 
                             uint32 newArmor = creature->GetArmor() * 10.0f;
                             creature->SetArmor(newArmor);
-
-                            // 9344 spell cu valoare fixa
-                            if (Aura* aura = creature->AddAura(9344, creature))
-                            {
-                                //aura->SetDuration(-1);
-                                //aura->SetMaxDuration(-1);
-                                if (AuraEffect* eff = aura->GetEffect(0))
-                                {
-                                    eff->SetAmount(11000);
-                                }
-                            }
 
                             for (uint8 i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
                                 creature->SetResistance(SpellSchools(i), 550);
@@ -272,6 +276,14 @@ public:
                             creature->AddAura(VISUAL_AURA_MARKER, creature);
                             //ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Rescan");
 
+                        }
+
+                        if (!creature->HasAura(9344) && !creature->IsPet() && !creature->IsNPCBot())
+                        {
+                            // 9344 spell cu valoare fixa
+                            if (Aura* aura = creature->AddAura(9344, creature))
+                                if (AuraEffect* eff = aura->GetEffect(0))
+                                    eff->SetAmount(11000);
                         }
                     }
                     // Notific?m liderul/juc?torul
@@ -475,12 +487,42 @@ public:
     }
 };
 
+class kitt_instance_mod_heroic_startup : public WorldScript
+{
+public:
+    kitt_instance_mod_heroic_startup() : WorldScript("kitt_instance_mod_heroic_startup") {}
+
+    void OnStartup() override
+    {
+        ActiveHeroicInstances.clear();
+
+        QueryResult result = CharacterDatabase.Query("SELECT id FROM instance_veteran_status WHERE isVeteran = 1");
+
+        if (!result)
+            return;
+
+        uint32 count = 0;
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 instanceId = fields[0].GetUInt32();
+
+            ActiveHeroicInstances.insert(instanceId);
+            count++;
+        } while (result->NextRow());
+
+        TC_LOG_INFO("server.loading", ">> KITT [VETERAN] Restaurate {} instante din baza de date.", count);
+    }
+};
+
+
 
 
 
 
 void AddSC_kitt_instance_mod_heroic()
 {
+    new kitt_instance_mod_heroic_startup();
     new kitt_bwl_heroic_core();
     new kitt_bwl_commandscript();
     new npc_veteran_upgrader();

@@ -87,8 +87,11 @@ public:
         handler.PSendSysMessage("|cff00ccff--- [ XP Rate Status ] ---|r");
         if (currentRate == 0)
         {
-            handler.PSendSysMessage("|cffffffffYou are using |cff00ff00Server Rates|r |cffffffff(Kill: x%u, Quest: x%u).|r",
-                (uint32)sWorld->getRate(RATE_XP_KILL), (uint32)sWorld->getRate(RATE_XP_QUEST));
+            handler.PSendSysMessage("|cffffffffYou are using |cff00ff00Server Rates|r |cffffffff(Xp: x%u).|r",
+                (uint32)sWorld->getRate(RATE_XP_KILL));
+
+            //handler.PSendSysMessage("|cffffffffYou are using |cff00ff00Server Rates|r |cffffffff(Kill: x%u, Quest: x%u).|r",
+            //    (uint32)sWorld->getRate(RATE_XP_KILL), (uint32)sWorld->getRate(RATE_XP_QUEST));
         }
         else
         {
@@ -175,11 +178,13 @@ public:
         if (newRate == 0)
         {
             float sRateKill = sWorld->getRate(RATE_XP_KILL);
-            float sRateQuest = sWorld->getRate(RATE_XP_QUEST);
+            //float sRateQuest = sWorld->getRate(RATE_XP_QUEST);
 
             handler->PSendSysMessage("|cff00ccffXP Rate reset.|r |cffffffffUsing server settings:|r");
-            handler->PSendSysMessage("- Kill XP: x%u", (uint32)sRateKill);
-            handler->PSendSysMessage("- Quest XP: x%u", (uint32)sRateQuest);
+            handler->PSendSysMessage("- XP: x%u", (uint32)sRateKill);
+
+            //handler->PSendSysMessage("- Kill XP: x%u", (uint32)sRateKill);
+            //handler->PSendSysMessage("- Quest XP: x%u", (uint32)sRateQuest);
         }
         else
         {

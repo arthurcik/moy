@@ -224,8 +224,9 @@ static const std::array<MainMenuOption, 9> KittMainMenu = { {
 static const std::array<MainMenuOption, 1> KittMainMenuTFC = { {
     { GOSSIP_ICON_CHAT,      "TFC Zone Menu", KITT_SENDER_MENU_TFC,     KITT_ACTION_TFC }
 } };
-static const std::array<MainMenuOptionConfirm, 2> KittZoneTFC = { {
+static const std::array<MainMenuOptionConfirm, 3> KittZoneTFC = { {
     { GOSSIP_ICON_TALK, "Enchant",   KITT_SENDER_MENU_TFC,  KITT_ACTION_TFC_ENCHANT_MENU, "", 0, false},
+    { GOSSIP_ICON_CHAT, "Check Item Drop Location (" + sKittSelectDrop + " g)",    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_DB_DROP_SHOW, "Enter Item ID \nYou will only be charged if results are found.", KittSelectDrop, true},
     { GOSSIP_ICON_TALK, "<<< Back",   KITT_SENDER_MENU_DIRECT_SELECT,  KITT_ACTION_BACK_MAIN_MENU, "", 0, false}
 } };
 static const std::array<MainMenuOptionConfirm, 7> KittZoneTfcEnchant = { {
@@ -251,7 +252,7 @@ static const std::array<MainMenuOption, 8> KittTeleportTo = { {
     { GOSSIP_ICON_CHAT, "Raid Teleports",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_RAID }
 } };
 // Meniu Fun Zone
-static const std::array<MainMenuOptionConfirm, 8> KittFunZone = { {
+static const std::array<MainMenuOptionConfirm, 7> KittFunZone = { {
     { GOSSIP_ICON_TALK, "Fun Zone (Teleports)",                                    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TELE_FUN_ZONE },
     { GOSSIP_ICON_TAXI, "Fly baby! Fly...",                                        KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_FLY_BABY_FLY },
     { GOSSIP_ICON_BATTLE, "Do Not Press!!! (" + sNuApasaPret + " g)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Are you sure?", NuApasaPret, true},
@@ -259,7 +260,7 @@ static const std::array<MainMenuOptionConfirm, 8> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Clear All Auras & Buffs (" + sResetAllAura + " g)",       KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_RESET_ALL_BUFF, "Clear all spell buffs & auras", ResetAllAura, false},
     { GOSSIP_ICON_CHAT, "Reset All Spell Cooldowns (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all spell cooldowns", ResetAllSpellCd, false},
     { GOSSIP_ICON_CHAT, "Fix b0t (" + sKittBotFix + " g)",                         KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TFC_BOT_FIX, "1. Select the problematic B0t and click 'Accept'. \n2. After repair: use normal cast/fly mount abilities.", KittBotFix, false},
-    { GOSSIP_ICON_CHAT, "Check Item Drop Location (" + sKittSelectDrop + " g)",    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_DB_DROP_SHOW, "Enter Item ID \nYou will only be charged if results are found.", KittSelectDrop, true}
+ //   { GOSSIP_ICON_CHAT, "Check Item Drop Location (" + sKittSelectDrop + " g)",    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_DB_DROP_SHOW, "Enter Item ID \nYou will only be charged if results are found.", KittSelectDrop, true}
 } };
 
 // Meniu Instance Reset Cooldown cu confirmare.
