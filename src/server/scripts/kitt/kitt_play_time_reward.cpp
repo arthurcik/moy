@@ -17,19 +17,28 @@ namespace
 {
     static std::map<ObjectGuid, time_t> playtimeCooldownMap;
     static uint32 playtimeCooldownTime = 300; // in secunde anti-flood
+    struct KittPlayTimeRewardData {
+        uint32 lastRewardLevel;
+        uint32 lastPeriodicTime;
+    };
+    static std::unordered_map<ObjectGuid, KittPlayTimeRewardData> KittPlayTimeRewardDataCache;
 
     struct PlaytimeReward {
+        uint32 bitID;
         uint32 requiredMinutes;
         uint32 itemId;
         uint32 itemCount;
         std::string message;
     };
 
+    // prima valoare BitMask maxim 32 (limita db)
+    // ordinea de afisare (sortare dupa minute manual)
+    // BitMask este: ultimul x 2 (8x2=16) urmatorul cod nou
     static const std::vector<PlaytimeReward> rewardConfig = {
-        {60, 10361, 1, "(played for more than 1 hours)"}, // companion Brown Snake
-        {28800, 23193, 1, "(played for more than 20 days)"}, // Naxxramas Deathcharger Reins
-        {43200, 25596, 1, "(played for more than 30 days)"}, // Peep's Whistle
-        {57600, 33809, 1, "(played for more than 40 days)"}, // Amani War Bear
+        {1, 60, 10361, 1, "(played for more than 1 hours)"}, // companion Brown Snake
+        {2, 28800, 23193, 1, "(played for more than 20 days)"}, // Naxxramas Deathcharger Reins
+        {4, 43200, 25596, 1, "(played for more than 30 days)"}, // Peep's Whistle
+        {8, 57600, 33809, 1, "(played for more than 40 days)"}, // Amani War Bear
     };
 
     struct PeriodicReward {
@@ -45,9 +54,9 @@ namespace
         {121,  49426, 1, "Periodic [2h ingame]"}, // Embleme of Frost
         {123,  40752, 1, "Periodic [2h ingame]"}, // Emblem of Heroism
         {124,  40753, 1, "Periodic [2h ingame]"}, // Emblem of Valor
-        {300,  49908, 1, "Periodic [5h ingame]"}, // primordial saronite
-        {300,  43102, 1, "Periodic [5h ingame]"}, // frozen orb
-        {300,  44990, 3, "Periodic [5h ingame]"}, // Champion's Seal
+//        {300,  49908, 1, "Periodic [5h ingame]"}, // primordial saronite
+//        {300,  43102, 1, "Periodic [5h ingame]"}, // frozen orb
+//        {300,  44990, 3, "Periodic [5h ingame]"}, // Champion's Seal
     };
 
     static uint32 sPlayTimeReward = 0;
@@ -103,6 +112,59 @@ public:
 private:
 
     void CheckRewards(Player* player)
+    {
+        if (!player) return;
+
+        ObjectGuid guid = player->GetGUID();
+        uint32 totalPlaytimeMinutes = player->GetTotalPlayedTime() / 60;
+        KittPlayTimeRewardData& data = KittPlayTimeRewardDataCache[guid];
+
+        bool updated = false;
+
+        for (const auto& reward : rewardConfig)
+        {
+            if (totalPlaytimeMinutes >= reward.requiredMinutes && !(data.lastRewardLevel & reward.bitID))
+            {
+                GiveReward(player, reward.itemId, reward.itemCount, reward.message);
+
+                data.lastRewardLevel |= reward.bitID;
+                updated = true;
+            }
+        }
+
+        bool periodicAwarded = false;
+        for (const auto& pReward : periodicConfig)
+        {
+            uint32 timesToReward = totalPlaytimeMinutes / pReward.intervalMinutes;
+            uint32 timesAlreadyRewarded = data.lastPeriodicTime / pReward.intervalMinutes;
+
+            if (timesToReward > timesAlreadyRewarded)
+            {
+                GiveReward(player, pReward.itemId, pReward.itemCount, pReward.message);
+                periodicAwarded = true;
+            }
+        }
+
+        if (periodicAwarded)
+        {
+            data.lastPeriodicTime = totalPlaytimeMinutes;
+            updated = true;
+        }
+
+        if (updated)
+        {
+            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+
+            trans->PAppend("REPLACE INTO character_kitt_playtime_rewards (player_guid, player_name, last_reward_level, last_periodic_reward_time) VALUES ({}, '{}', {}, {})",
+                guid.GetCounter(), player->GetName().c_str(), data.lastRewardLevel, data.lastPeriodicTime);
+
+            player->SaveInventoryAndGoldToDB(trans); 
+
+            CharacterDatabase.AsyncCommitTransaction(trans);
+        }
+    }
+
+    void CheckRewardsOFF(Player* player)
     {
         if (!player)
             return;
@@ -263,13 +325,10 @@ public:
         uint32 hours = (totalPlaytimeMinutes % 1440) / 60;   // Restul de minute transformat in ore
         uint32 minutes = totalPlaytimeMinutes % 60;          // Restul de minute
 
-        QueryResult result = CharacterDatabase.PQuery("SELECT last_reward_level, last_periodic_reward_time FROM character_kitt_playtime_rewards WHERE player_guid = {}", player->GetGUID().GetCounter());
-        if (result)
-        {
-            Field* fields = result->Fetch();
-            currentRewardLevel = fields[0].GetUInt32();
-            lastPeriodicTime = fields[1].GetUInt32();
-        }
+        KittPlayTimeRewardData& data = KittPlayTimeRewardDataCache[player->GetGUID()];
+        currentRewardLevel = data.lastRewardLevel;
+        lastPeriodicTime = data.lastPeriodicTime;
+
 
         std::ostringstream ss;
         ss << "|cff00ff00[Playtime Info]|r Total played time: |cffffffff";
@@ -279,27 +338,50 @@ public:
         if (hours > 0 || days > 0)
             ss << hours << " hours and ";
 
-        ss << minutes << " minutes|r.";
+        ss << minutes << " minutes|r";
 
         handler->PSendSysMessage("%s", ss.str().c_str());
         //handler->PSendSysMessage("|cff00ff00[Playtime Info]|r Total played time: |cffffffff%u days, %u hours and %u minutes|r.", days, hours, minutes);
 
-        if (currentRewardLevel < rewardConfig.size())
-        {
-            handler->PSendSysMessage("|cff00ff00Next unique reward:|r");
-            const auto& next = rewardConfig[currentRewardLevel];
-            ItemTemplate const* it = sObjectMgr->GetItemTemplate(next.itemId);
-            std::string itemName = it ? it->Name1 : "Item";
+        const PlaytimeReward* nextReward = nullptr;
 
-            if (totalPlaytimeMinutes >= next.requiredMinutes)
-                handler->PSendSysMessage("|cff00ccff- %s:|r |cffffffffWill be awarded at next save!|r", itemName.c_str());
-            else
+        for (const auto& reward : rewardConfig)
+        {
+            if (!(data.lastRewardLevel & reward.bitID))
             {
-                uint32 diff = next.requiredMinutes - totalPlaytimeMinutes;
-                handler->PSendSysMessage("|cff00ccff- %s:|r left |cffffffff%u hours and %u min|r %s",
-                    itemName.c_str(), diff / 60, diff % 60, next.message.c_str());
+                nextReward = &reward;
+                break;
             }
         }
+
+        if (nextReward)
+        {
+            handler->PSendSysMessage("|cff00ff00Next unique reward:|r");
+            ItemTemplate const* it = sObjectMgr->GetItemTemplate(nextReward->itemId);
+            std::string itemName = it ? it->Name1 : "Item";
+
+            if (totalPlaytimeMinutes >= nextReward->requiredMinutes)
+            {
+                handler->PSendSysMessage("|cff00ccff- %s:|r |cffffffffWait for next autosave!|r", itemName.c_str());
+            }
+            else
+            {
+                uint32 diff = nextReward->requiredMinutes - totalPlaytimeMinutes;
+                uint32 h = diff / 60;
+                uint32 m = diff % 60;
+
+                std::ostringstream timeStr;
+                if (h > 0) timeStr << h << " hours ";
+                if (m > 0 || h == 0) timeStr << m << " min";
+
+                //handler->PSendSysMessage("|cff00ccff- %s:|r left |cffffffff%u hours and %u min|r %s",
+                //    itemName.c_str(), diff / 60, diff % 60, nextReward->message.c_str());
+                handler->PSendSysMessage("|cff00ccff- %s:|r left |cffffffff%s|r %s",
+                    itemName.c_str(), timeStr.str().c_str(), nextReward->message.c_str());
+            }
+        }
+
+
 
         handler->PSendSysMessage("|cff00ff00Periodic rewards:|r");
         for (const auto& p : periodicConfig)
@@ -313,8 +395,18 @@ public:
             {
                 uint32 nextT = ((lastPeriodicTime / p.intervalMinutes) + 1) * p.intervalMinutes;
                 uint32 diff = (nextT > totalPlaytimeMinutes) ? (nextT - totalPlaytimeMinutes) : 0;
-                handler->PSendSysMessage("|cff00ccff- %s:|r left |cffffffff%u hours and %u min|r.",
-                    itemName.c_str(), diff / 60, diff % 60);
+
+                uint32 h = diff / 60;
+                uint32 m = diff % 60;
+
+                std::ostringstream timeStr;
+                if (h > 0) timeStr << h << " hours ";
+                if (m > 0 || h == 0) timeStr << m << " min";
+
+                handler->PSendSysMessage("|cff00ccff- %s:|r left |cffffffff%s|r",
+                    itemName.c_str(), timeStr.str().c_str());
+                //handler->PSendSysMessage("|cff00ccff- %s:|r left |cffffffff%u hours and %u min|r.",
+                //    itemName.c_str(), diff / 60, diff % 60);
             }
         }
         return true;
@@ -332,10 +424,39 @@ public:
     }
 };
 
+class kitt_play_time_reward_startup : public WorldScript
+{
+public:
+    kitt_play_time_reward_startup() : WorldScript("kitt_play_time_reward_startup") {}
+
+    void OnStartup() override
+    {
+        KittPlayTimeRewardDataCache.clear();
+
+        QueryResult result = CharacterDatabase.Query("SELECT player_guid, last_reward_level, last_periodic_reward_time FROM character_kitt_playtime_rewards");
+
+        uint32 count = 0;
+        if (result)
+        {
+            do
+            {
+                Field* fields = result->Fetch();
+                ObjectGuid guid = ObjectGuid::Create<HighGuid::Player>(fields[0].GetUInt32());
+                KittPlayTimeRewardDataCache[guid] = { fields[1].GetUInt32(), fields[2].GetUInt32() };
+                count++;
+            } while (result->NextRow());
+        }
+        TC_LOG_INFO("server.loading", ">> KITT [Play Time Reward] Loaded {} players from DB.", count);
+    }
+
+};
+
+
 
 void AddSC_kitt_play_time_reward()
 {
     new kitt_play_time_reward_config();
+    new kitt_play_time_reward_startup();
     new kitt_play_time_reward();
     new kitt_zplaytime_command_script();
 }

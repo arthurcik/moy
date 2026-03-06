@@ -497,7 +497,7 @@ public:
             count++;
         } while (result->NextRow());
 
-        TC_LOG_INFO("server.loading", ">> KITT [BWL Veteran] Restaurate {} instante din baza de date.", count);
+        TC_LOG_INFO("server.loading", ">> KITT [BWL Veteran] Loaded {} instance Veteran.", count);
     }
 };
 

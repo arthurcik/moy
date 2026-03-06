@@ -5,6 +5,8 @@
 #include "Chat.h"
 #include "GameTime.h"
 #include "Config.h"
+#include "Log.h"
+
 //#include "Containers.h"
 //#include <sstream>
 //#include <string>
@@ -31,16 +33,14 @@ public:
         if (sKittCustomRateEnabled == 0)
             return;
 
-        QueryResult result = CharacterDatabase.PQuery("SELECT xp_rate FROM character_kitt_custom_rate WHERE player_guid = {}", player->GetGUID().GetCounter());
+        if (player->GetLevel() == 80)
+            return;
 
-        if (result)
+        ObjectGuid playerGuid = player->GetGUID();
+
+        if (CustomXPRates.find(playerGuid) == CustomXPRates.end())
         {
-            Field* fields = result->Fetch();
-            CustomXPRates[player->GetGUID()] = fields[0].GetUInt32();
-        }
-        else
-        {
-            CustomXPRates[player->GetGUID()] = 0;
+            CustomXPRates[playerGuid] = 0;
         }
 
         player->m_Events.AddEventAtOffset([player]()
@@ -54,7 +54,7 @@ public:
 
     void OnLogout(Player* player) override
     {
-        CustomXPRates.erase(player->GetGUID());
+        //CustomXPRates.erase(player->GetGUID());
         zKittCustomRateMap.erase(player->GetGUID());
     }
 
@@ -105,7 +105,6 @@ public:
     }
 
 };
-
 
 class kitt_custom_rate_command : public CommandScript
 {
@@ -206,9 +205,45 @@ public:
     }
 };
 
+class kitt_custom_rate_startup : public WorldScript
+{
+public:
+    kitt_custom_rate_startup() : WorldScript("kitt_custom_rate_startup") {}
+
+    void OnStartup() override
+    {
+        CustomXPRates.clear();
+
+        //QueryResult result = CharacterDatabase.PQuery("SELECT player_guid, xp_rate FROM character_kitt_custom_rate WHERE xp_rate > 0");
+        QueryResult result = CharacterDatabase.PQuery(
+            "SELECT c.guid, k.xp_rate "
+            "FROM character_kitt_custom_rate k "
+            "JOIN characters c ON k.player_guid = c.guid "
+            "WHERE k.xp_rate > 0 AND c.level < 80");
+
+        if (!result)
+            return;
+
+        uint32 count = 0;
+        do
+        {
+            Field* fields = result->Fetch();
+            ObjectGuid guid = ObjectGuid::Create<HighGuid::Player>(fields[0].GetUInt32());
+            uint32 newRate = fields[1].GetUInt32();
+
+            CustomXPRates[guid] = newRate;
+            count++;
+        } while (result->NextRow());
+
+        TC_LOG_INFO("server.loading", ">> KITT [Custom Xp Rate] Loaded {} with custom rate.", count);
+    }
+};
+
+
 void AddSC_kitt_custom_rate()
 {
     new kitt_custom_rate_config();
+    new kitt_custom_rate_startup();
     new kitt_custom_rate();
     new kitt_custom_rate_command();
 }

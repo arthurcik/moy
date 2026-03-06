@@ -89,7 +89,8 @@ public:
 };
 
 
-void AddSC_kitt_custom_loot_mapid()
+/*void AddSC_kitt_custom_loot_mapid()
 {
     new kitt_custom_loot_mapid();
 }
+*/
