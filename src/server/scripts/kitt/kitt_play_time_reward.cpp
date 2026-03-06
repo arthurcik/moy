@@ -319,14 +319,14 @@ public:
         // ----------------------------------------------
 
         uint32 totalPlaytimeMinutes = player->GetTotalPlayedTime() / 60;
-        uint32 currentRewardLevel = 0;
+        //uint32 currentRewardLevel = 0;
         uint32 lastPeriodicTime = 0;
         uint32 days = totalPlaytimeMinutes / 1440;            // 1440 minute = 24 ore = 1 zi
         uint32 hours = (totalPlaytimeMinutes % 1440) / 60;   // Restul de minute transformat in ore
         uint32 minutes = totalPlaytimeMinutes % 60;          // Restul de minute
 
         KittPlayTimeRewardData& data = KittPlayTimeRewardDataCache[player->GetGUID()];
-        currentRewardLevel = data.lastRewardLevel;
+        //currentRewardLevel = data.lastRewardLevel;
         lastPeriodicTime = data.lastPeriodicTime;
 
 
