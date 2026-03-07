@@ -19,7 +19,7 @@
 
 //void AddSC_kitt_test_script();
 void AddSC_kitt_go();
-//void AddSC_kitt_vendor_go();/
+//void AddSC_kitt_vendor_go();
 void AddSC_kitt_p_start_guild();
 void AddSC_kitt_first_lvl80();
 void AddSC_kitt_quest_complet();
