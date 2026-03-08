@@ -116,6 +116,24 @@ private:
         if (!player) return;
 
         ObjectGuid guid = player->GetGUID();
+
+        if (KittPlayTimeRewardDataCache.find(guid) == KittPlayTimeRewardDataCache.end())
+        {
+            QueryResult result = CharacterDatabase.PQuery("SELECT last_reward_level, last_periodic_reward_time FROM character_kitt_playtime_rewards WHERE player_guid = {}", guid.GetCounter());
+
+            if (result)
+            {
+                Field* fields = result->Fetch();
+                KittPlayTimeRewardData& data = KittPlayTimeRewardDataCache[guid];
+                data.lastRewardLevel = fields[0].GetUInt32();
+                data.lastPeriodicTime = fields[1].GetUInt32();
+            }
+            else
+            {
+                KittPlayTimeRewardDataCache[guid] = { 0, 0 };
+            }
+        }
+
         uint32 totalPlaytimeMinutes = player->GetTotalPlayedTime() / 60;
         KittPlayTimeRewardData& data = KittPlayTimeRewardDataCache[guid];
 
@@ -155,7 +173,11 @@ private:
         {
             CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
-            trans->PAppend("REPLACE INTO character_kitt_playtime_rewards (player_guid, player_name, last_reward_level, last_periodic_reward_time) VALUES ({}, '{}', {}, {})",
+            trans->PAppend("INSERT INTO character_kitt_playtime_rewards (player_guid, player_name, last_reward_level, last_periodic_reward_time) "
+                "VALUES ({}, '{}', {}, {}) ON DUPLICATE KEY UPDATE "
+                "last_reward_level = VALUES(last_reward_level), "
+                "last_periodic_reward_time = VALUES(last_periodic_reward_time), "
+                "player_name = VALUES(player_name)",
                 guid.GetCounter(), player->GetName().c_str(), data.lastRewardLevel, data.lastPeriodicTime);
 
             player->SaveInventoryAndGoldToDB(trans); 
@@ -433,7 +455,12 @@ public:
     {
         KittPlayTimeRewardDataCache.clear();
 
-        QueryResult result = CharacterDatabase.Query("SELECT player_guid, last_reward_level, last_periodic_reward_time FROM character_kitt_playtime_rewards");
+        //QueryResult result = CharacterDatabase.Query("SELECT player_guid, last_reward_level, last_periodic_reward_time FROM character_kitt_playtime_rewards");
+        QueryResult result = CharacterDatabase.PQuery(
+            "SELECT k.player_guid, k.last_reward_level, k.last_periodic_reward_time "
+            "FROM character_kitt_playtime_rewards k "
+            "JOIN characters c ON k.player_guid = c.guid "
+            "WHERE c.logout_time > (UNIX_TIMESTAMP() - (10 * 24 * 60 * 60))");
 
         uint32 count = 0;
         if (result)
@@ -446,9 +473,9 @@ public:
                 count++;
             } while (result->NextRow());
         }
-        TC_LOG_INFO("server.loading", ">> KITT [Play Time Reward] Loaded {} players from DB.", count);
+        //TC_LOG_INFO("server.loading", ">> KITT [Play Time Reward] Loaded {} players from DB.", count);
+        TC_LOG_INFO("server.loading", ">> KITT [Play Time Reward] Preloaded {} active players (last 10 days).", count);
     }
-
 };
 
 

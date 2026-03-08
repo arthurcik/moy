@@ -402,7 +402,7 @@ public:
             "FROM character_kitt_custom_rate k "
             "JOIN characters c ON k.player_guid = c.guid "
             "WHERE ((k.xp_rate > 0 AND c.level < 80) OR k.rep_rate > 0) "
-            "AND c.logout_time > (UNIX_TIMESTAMP() - (20 * 24 * 60 * 60))");
+            "AND c.logout_time > (UNIX_TIMESTAMP() - (10 * 24 * 60 * 60))");
 
         if (!result)
             return;
@@ -434,7 +434,7 @@ public:
 
         } while (result->NextRow());
 
-        TC_LOG_INFO("server.loading", ">> KITT [Custom Rate] Loaded: {} players with Custom XP and {} with Custom Rep.", countXp, countRep);
+        TC_LOG_INFO("server.loading", ">> KITT [Custom Rate] Loaded: {} players with Custom XP and {} with Custom Rep (last 10 days).", countXp, countRep);
     }
 };
 
