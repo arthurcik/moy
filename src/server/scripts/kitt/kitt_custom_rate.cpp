@@ -136,12 +136,12 @@ public:
         {
             if (currentXpRate == 0)
             {
-                handler.PSendSysMessage("|cffffffffXP:|r |cff00ff00Server (x%u)|r << >> |cffffffffChange anytime: |cff00ccff.zxprate <1-15>|r", (uint32)sWorld->getRate(RATE_XP_KILL));
+                handler.PSendSysMessage("|cffffffffXP:|r |cff00ff00x%u (Server)|r << >> |cffffffffChange anytime: |cff00ccff.zxprate <1-15>|r", (uint32)sWorld->getRate(RATE_XP_KILL));
                 //handler.PSendSysMessage("|cffffffffYou can change this anytime using: |cff00ccff.zxprate <1-15>|r");
             }
             else
             {
-                handler.PSendSysMessage("|cffffffffXP:|r |cff00ccffCustom (x%u)|r << >> |cffffffffTo reset use: |cff00ccff.zxprate 0|r", currentXpRate);
+                handler.PSendSysMessage("|cffffffffXP:|r |cff00ccffx%u|r (custom) << >> |cffffffffTo reset use: |cff00ccff.zxprate 0|r", currentXpRate);
                 //handler.PSendSysMessage("|cffffffffReset: |cff00ccff.zxprate 0|r");
             }
         }
@@ -150,12 +150,12 @@ public:
         {
             if (currentRepRate == 0)
             {
-                handler.PSendSysMessage("|cffffffffRep:|r |cff00ff00Server (x%u)|r << >> |cffffffffChange anytime: |cff00ccff.zreprate <1-3>|r", (uint32)sWorld->getRate(RATE_REPUTATION_GAIN));
+                handler.PSendSysMessage("|cffffffffRep:|r |cff00ff00x%u (Server)|r << >> |cffffffffChange anytime: |cff00ccff.zreprate <1-3>|r", (uint32)sWorld->getRate(RATE_REPUTATION_GAIN));
                 //handler.PSendSysMessage("|cffffffffYou can change this anytime using: |cff00ccff.zreprate <1-3>|r");
             }
             else
             {
-                handler.PSendSysMessage("|cffffffffRep:|r |cff00ccffCustom (x%u)|r << >> |cffffffffTo reset use: |cff00ccff.zreprate 0|r", currentRepRate);
+                handler.PSendSysMessage("|cffffffffRep:|r |cff00ccffx%u|r (custom) << >> |cffffffffTo reset use: |cff00ccff.zreprate 0|r", currentRepRate);
                 //handler.PSendSysMessage("|cffffffffReset: |cff00ccff.zreprate 0|r");
             }
         }
