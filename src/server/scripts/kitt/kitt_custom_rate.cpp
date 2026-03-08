@@ -16,11 +16,14 @@ using namespace Trinity::ChatCommands;
 
 namespace
 {
-    static uint32 sKittCustomRateEnabled = 0;
-    static std::unordered_map<ObjectGuid, uint32> CustomXPRates;
+    static uint32 sKittCustomRateXpEnabled = 0;
+    static uint32 sKittCustomRateRepEnabled = 0;
 
-    static std::map<ObjectGuid, time_t> zKittCustomRateMap;
-    static uint32 zKittCustomRateCommandCD = 300; // in secunde anti-flood
+    static std::unordered_map<ObjectGuid, uint32> CustomXPRates;
+    static std::unordered_map<ObjectGuid, uint32> CustomRepRates;
+
+    static std::map<ObjectGuid, time_t> zKittCustomRateMap; // anti-flood map guid
+    static uint32 zKittCustomRateCommandCD = 300; // in secunde anti-flood time wait
 }
 
 class kitt_custom_rate : public PlayerScript
@@ -30,10 +33,7 @@ public:
 
     void OnLogin(Player* player, bool /*firstLogin*/) override
     {
-        if (sKittCustomRateEnabled == 0)
-            return;
-
-        if (player->GetLevel() == 80)
+        if (sKittCustomRateXpEnabled == 0 && sKittCustomRateRepEnabled == 0)
             return;
 
         ObjectGuid playerGuid = player->GetGUID();
@@ -41,6 +41,11 @@ public:
         if (CustomXPRates.find(playerGuid) == CustomXPRates.end())
         {
             CustomXPRates[playerGuid] = 0;
+        }
+
+        if (CustomRepRates.find(playerGuid) == CustomRepRates.end())
+        {
+            CustomRepRates[playerGuid] = 0;
         }
 
         player->m_Events.AddEventAtOffset([player]()
@@ -60,7 +65,7 @@ public:
 
     void OnGiveXP(Player* player, uint32& amount, Unit* victim) override
     {
-        if (sKittCustomRateEnabled == 0)
+        if (sKittCustomRateXpEnabled == 0)
             return;
 
         auto it = CustomXPRates.find(player->GetGUID());
@@ -76,29 +81,88 @@ public:
         }
     }
 
-    static void Notify(Player* player)
+    void OnReputationChange(Player* player, uint32 /*factionId*/, int32& standing, bool /*incremental*/) override
+    {
+        if (sKittCustomRateRepEnabled == 0)
+            return;
+
+        auto it = CustomRepRates.find(player->GetGUID());
+        if (it == CustomRepRates.end() || it->second == 0)
+            return;
+
+        if (standing > 0)
+        {
+            uint32 customRate = it->second;
+            float serverRate = sWorld->getRate(RATE_REPUTATION_GAIN);
+
+            if (serverRate > 0.0f)
+            {
+                standing = int32((standing / serverRate) * customRate);
+            }
+        }
+    }
+
+    static void Notify(Player* player, bool forceXp = false, bool forceRep = false)
     {
         if (!player || !player->IsInWorld() || !player->GetSession())
             return;
 
-        uint32 currentRate = CustomXPRates[player->GetGUID()];
+        bool canShowXp = (sKittCustomRateXpEnabled > 0 && player->GetLevel() < 80);
+        bool canShowRep = (sKittCustomRateRepEnabled > 0);
+        bool showXp = false;
+        bool showRep = false;
+        if (forceXp) {
+            showXp = (sKittCustomRateXpEnabled > 0);
+        }
+        else if (forceRep) {
+            showRep = (sKittCustomRateRepEnabled > 0);
+        }
+        else {
+            showXp = canShowXp;
+            showRep = canShowRep;
+        }
+
+        if (!showXp && !showRep)
+            return;
+
+        uint32 currentXpRate = CustomXPRates[player->GetGUID()];
+        uint32 currentRepRate = CustomRepRates[player->GetGUID()];
+
         ChatHandler handler(player->GetSession());
 
-        handler.PSendSysMessage("|cff00ccff--- [ XP Rate Status ] ---|r");
-        if (currentRate == 0)
-        {
-            handler.PSendSysMessage("|cffffffffYou are using |cff00ff00Server Rates|r |cffffffff(Xp: x%u).|r",
-                (uint32)sWorld->getRate(RATE_XP_KILL));
+        handler.PSendSysMessage("|cff00ccff--- [ Rate Status ] ---|r");
 
-            //handler.PSendSysMessage("|cffffffffYou are using |cff00ff00Server Rates|r |cffffffff(Kill: x%u, Quest: x%u).|r",
-            //    (uint32)sWorld->getRate(RATE_XP_KILL), (uint32)sWorld->getRate(RATE_XP_QUEST));
-        }
-        else
+        if (showXp)
         {
-            handler.PSendSysMessage("|cffffffffYour current |cff00ff00Custom Rate is: x%u|r.|r", (uint32)currentRate);
+            if (currentXpRate == 0)
+            {
+                handler.PSendSysMessage("|cffffffffXP:|r |cff00ff00Server (x%u)|r << >> |cffffffffChange anytime: |cff00ccff.zxprate <1-15>|r", (uint32)sWorld->getRate(RATE_XP_KILL));
+                //handler.PSendSysMessage("|cffffffffYou can change this anytime using: |cff00ccff.zxprate <1-15>|r");
+            }
+            else
+            {
+                handler.PSendSysMessage("|cffffffffXP:|r |cff00ccffCustom (x%u)|r << >> |cffffffffTo reset use: |cff00ccff.zxprate 0|r", currentXpRate);
+                //handler.PSendSysMessage("|cffffffffReset: |cff00ccff.zxprate 0|r");
+            }
         }
-        handler.PSendSysMessage("|cffffffffYou can change this anytime using |cff00ccff.zxprate <value>|r.");
-        handler.PSendSysMessage("|cff00ccffReset:|r |cffffffff.zxprate 0 (to use server settings)|r");
+
+        if (showRep)
+        {
+            if (currentRepRate == 0)
+            {
+                handler.PSendSysMessage("|cffffffffRep:|r |cff00ff00Server (x%u)|r << >> |cffffffffChange anytime: |cff00ccff.zreprate <1-3>|r", (uint32)sWorld->getRate(RATE_REPUTATION_GAIN));
+                //handler.PSendSysMessage("|cffffffffYou can change this anytime using: |cff00ccff.zreprate <1-3>|r");
+            }
+            else
+            {
+                handler.PSendSysMessage("|cffffffffRep:|r |cff00ccffCustom (x%u)|r << >> |cffffffffTo reset use: |cff00ccff.zreprate 0|r", currentRepRate);
+                //handler.PSendSysMessage("|cffffffffReset: |cff00ccff.zreprate 0|r");
+            }
+        }
+
+        //handler.PSendSysMessage("|cff444444------------------------------|r");
+        //handler.PSendSysMessage("|cffffffffYou can change this anytime using: |cff00ccff.zxprate <1-15>|r |cffffffffor|r |cff00ccff.zreprate <1-3>|r");
+        //handler.PSendSysMessage("|cffffffffReset: |cff00ccff.zxprate 0|r |cffffffffsau|r |cff00ccff.zreprate 0|r");
 
 
         return;
@@ -115,13 +179,15 @@ public:
     {
         return
         {
-            {"zxprate", HandleSetXPRateCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No}
+            {"zxprate", HandleSetXPRateCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No},
+            {"zreprate", HandleSetRepRateCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No}
+
         };
     }
 
     static bool HandleSetXPRateCommand(ChatHandler* handler, Tail args)
     {
-        if (sKittCustomRateEnabled == 0)
+        if (sKittCustomRateXpEnabled == 0)
         {
             handler->SendSysMessage("|cffff0000Error:|r This system is currently disabled in server config.");
             return true;
@@ -134,7 +200,7 @@ public:
         std::string_view argsStr = args;
         if (args.empty())
         {
-            kitt_custom_rate::Notify(player);
+            kitt_custom_rate::Notify(player, true, false);
             return true;
         }
 
@@ -171,8 +237,12 @@ public:
 
         CustomXPRates[player->GetGUID()] = newRate;
 
-        CharacterDatabase.PExecute("REPLACE INTO character_kitt_custom_rate (player_guid, player_name, xp_rate) VALUES ({}, '{}', {})",
+        //CharacterDatabase.PExecute("REPLACE INTO character_kitt_custom_rate (player_guid, player_name, xp_rate) VALUES ({}, '{}', {})",
+        //    player->GetGUID().GetCounter(), player->GetName().c_str(), newRate);
+        CharacterDatabase.PExecute("INSERT INTO character_kitt_custom_rate (player_guid, player_name, xp_rate) VALUES ({}, '{}', {})"
+            " ON DUPLICATE KEY UPDATE xp_rate = VALUES(xp_rate), player_name = VALUES(player_name)",
             player->GetGUID().GetCounter(), player->GetName().c_str(), newRate);
+
 
         if (newRate == 0)
         {
@@ -192,6 +262,84 @@ public:
 
         return true;
     }
+
+    static bool HandleSetRepRateCommand(ChatHandler* handler, Tail args)
+    {
+        if (sKittCustomRateRepEnabled == 0)
+        {
+            handler->SendSysMessage("|cffff0000Error:|r This system is currently disabled in server config.");
+            return true;
+        }
+
+        Player* player = handler->GetSession()->GetPlayer();
+        if (!player)
+            return false;
+
+        std::string_view argsStr = args;
+        if (args.empty())
+        {
+            kitt_custom_rate::Notify(player, false, true);
+            return true;
+        }
+
+        std::string input(argsStr);
+        for (char const& c : input)
+        {
+            if (!isdigit(c))
+            {
+                handler->SendSysMessage("|cffff0000Error:|r |cffffffffPlease enter a whole number (1, 2, ...).|r");
+                return true;
+            }
+        }
+
+        uint32 newRate = (uint32)atoi(input.c_str());
+
+        if (newRate > 3)
+        {
+            handler->SendSysMessage("|cffff0000Error:|r |cffffffffMaximum allowed rate is 3.|r");
+            return true;
+        }
+
+        // --- PROTECTIE FLOOD (Cooldown 300 secunde) ---
+        time_t currentTime = GameTime::GetGameTime();
+
+        if (zKittCustomRateMap.count(player->GetGUID()) && currentTime < zKittCustomRateMap[player->GetGUID()])
+        {
+            uint32 waitTime = zKittCustomRateMap[player->GetGUID()] - currentTime;
+            handler->PSendSysMessage("|cffff0000[Anti-Flood]|r Please wait |cffffffff%u|r seconds before changing your rate again.", (uint32)waitTime);
+            return true;
+        }
+
+        zKittCustomRateMap[player->GetGUID()] = currentTime + zKittCustomRateCommandCD;
+        // ----------------------------------------------
+
+        CustomRepRates[player->GetGUID()] = newRate;
+
+        //CharacterDatabase.PExecute("REPLACE INTO character_kitt_custom_rate (player_guid, player_name, rep_rate) VALUES ({}, '{}', {})",
+        //    player->GetGUID().GetCounter(), player->GetName().c_str(), newRate);
+        CharacterDatabase.PExecute("INSERT INTO character_kitt_custom_rate (player_guid, player_name, rep_rate) VALUES ({}, '{}', {})"
+            " ON DUPLICATE KEY UPDATE rep_rate = VALUES(rep_rate), player_name = VALUES(player_name)",
+            player->GetGUID().GetCounter(), player->GetName().c_str(), newRate);
+
+
+        if (newRate == 0)
+        {
+            float sRateKill = sWorld->getRate(RATE_REPUTATION_GAIN);
+            //float sRateQuest = sWorld->getRate(RATE_XP_QUEST);
+
+            handler->PSendSysMessage("|cff00ccffRep Rate reset.|r |cffffffffUsing server settings:|r");
+            handler->PSendSysMessage("- Rep: x%u", (uint32)sRateKill);
+
+            //handler->PSendSysMessage("- Kill XP: x%u", (uint32)sRateKill);
+            //handler->PSendSysMessage("- Quest XP: x%u", (uint32)sRateQuest);
+        }
+        else
+        {
+            handler->PSendSysMessage("|cff00ccffSuccess!|r |cffffffffYour Rep rate is now set to: |cff00ff00x%u|r.", (uint32)newRate);
+        }
+
+        return true;
+    }
 };
 
 class kitt_custom_rate_config : public WorldScript
@@ -201,7 +349,8 @@ public:
 
     void OnConfigLoad(bool /*reload*/) override
     {
-        sKittCustomRateEnabled = sConfigMgr->GetIntDefault("Kitt.Custom.Rate", 0);
+        sKittCustomRateXpEnabled = sConfigMgr->GetIntDefault("Kitt.Custom.Rate.Xp", 0);
+        sKittCustomRateRepEnabled = sConfigMgr->GetIntDefault("Kitt.Custom.Rate.Rep", 0);
     }
 };
 
@@ -210,7 +359,7 @@ class kitt_custom_rate_startup : public WorldScript
 public:
     kitt_custom_rate_startup() : WorldScript("kitt_custom_rate_startup") {}
 
-    void OnStartup() override
+    void OnStartupOFF() /*override*/
     {
         CustomXPRates.clear();
 
@@ -236,6 +385,56 @@ public:
         } while (result->NextRow());
 
         TC_LOG_INFO("server.loading", ">> KITT [Custom Xp Rate] Loaded {} with custom rate.", count);
+    }
+
+    void OnStartup() override
+    {
+        CustomXPRates.clear();
+        CustomRepRates.clear();
+
+        /*QueryResult result = CharacterDatabase.PQuery(
+            "SELECT c.guid, k.xp_rate, k.rep_rate "
+            "FROM character_kitt_custom_rate k "
+            "JOIN characters c ON k.player_guid = c.guid "
+            "WHERE (k.xp_rate > 0 AND c.level < 80) OR k.rep_rate > 0");*/
+        QueryResult result = CharacterDatabase.PQuery(
+            "SELECT c.guid, k.xp_rate, k.rep_rate "
+            "FROM character_kitt_custom_rate k "
+            "JOIN characters c ON k.player_guid = c.guid "
+            "WHERE ((k.xp_rate > 0 AND c.level < 80) OR k.rep_rate > 0) "
+            "AND c.logout_time > (UNIX_TIMESTAMP() - (20 * 24 * 60 * 60))");
+
+        if (!result)
+            return;
+
+        uint32 countXp = 0;
+        uint32 countRep = 0;
+
+        do
+        {
+            Field* fields = result->Fetch();
+            ObjectGuid guid = ObjectGuid::Create<HighGuid::Player>(fields[0].GetUInt32());
+
+            uint32 xpRate = fields[1].GetUInt32();
+            uint32 repRate = fields[2].GetUInt32();
+
+            // Daca are XP setat si e sub lvl 80, punem in mapa de XP
+            if (xpRate > 0)
+            {
+                CustomXPRates[guid] = xpRate;
+                countXp++;
+            }
+
+            // Daca are Reputatie setata, punem in mapa de Reputatie (indiferent de level)
+            if (repRate > 0)
+            {
+                CustomRepRates[guid] = repRate;
+                countRep++;
+            }
+
+        } while (result->NextRow());
+
+        TC_LOG_INFO("server.loading", ">> KITT [Custom Rate] Loaded: {} players with Custom XP and {} with Custom Rep.", countXp, countRep);
     }
 };
 
