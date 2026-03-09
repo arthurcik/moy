@@ -27,6 +27,8 @@
 #include <string>
 #include "botmgr.h"
 #include "bot_ai.h"
+#include "CharacterCache.h"
+#include "botdatamgr.h"
 
 
 /*enum kittGossipOptionIcon : uint8
@@ -57,6 +59,7 @@ namespace
     static const uint32 ResetAllSpellCd = 100 * 10000;  // pret Reset all spell cooldown
     static const uint32 ResetAllAura = 50 * 10000;   // pret UnAura all spell
     static const uint32 KittBotFix = 50 * 10000;   // Bot Fix
+    static const uint32 KittBotNewOwner = 500 * 10000;   // Bot Fix
     static const uint32 KittSelectDrop = 25 * 10000;   // db loot select show
 
 
@@ -70,6 +73,7 @@ namespace
     static const std::string sResetAllSpellCd = std::to_string(ResetAllSpellCd / 10000);
     static const std::string sResetAllAura = std::to_string(ResetAllAura / 10000);
     static const std::string sKittBotFix = std::to_string(KittBotFix / 10000);
+    static const std::string sKittBotNewOwner = std::to_string(KittBotNewOwner / 10000);
     static const std::string sKittSelectDrop = std::to_string(KittSelectDrop / 10000);
 }
 // stocare valori temporare
@@ -166,6 +170,7 @@ enum KittAction
     KITT_ACTION_FLY_BABY_FLY            = 123,   // Poti sa zbori pe map 0 & 1
     KITT_ACTION_TFC_BOT_FIX             = 124,   // Reparare bot
     KITT_ACTION_DB_DROP_SHOW            = 125,   // Afiseaza rata de drop
+    KITT_ACTION_TFC_BOT_OWNER           = 126,   // Seteaza un nou proprietar
 
     KITT_ACTION_TFC_ENCHANT_MENU        = 286,
     KITT_ACTION_TFC_ENCHANT_DISMISS     = 287,
@@ -252,7 +257,7 @@ static const std::array<MainMenuOption, 8> KittTeleportTo = { {
     { GOSSIP_ICON_CHAT, "Raid Teleports",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_RAID }
 } };
 // Meniu Fun Zone
-static const std::array<MainMenuOptionConfirm, 7> KittFunZone = { {
+static const std::array<MainMenuOptionConfirm, 8> KittFunZone = { {
     { GOSSIP_ICON_TALK, "Fun Zone (Teleports)",                                    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TELE_FUN_ZONE },
     { GOSSIP_ICON_TAXI, "Fly baby! Fly...",                                        KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_FLY_BABY_FLY },
     { GOSSIP_ICON_BATTLE, "Do Not Press!!! (" + sNuApasaPret + " g)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Are you sure?", NuApasaPret, true},
@@ -260,6 +265,8 @@ static const std::array<MainMenuOptionConfirm, 7> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Clear All Auras & Buffs (" + sResetAllAura + " g)",       KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_RESET_ALL_BUFF, "Clear all spell buffs & auras", ResetAllAura, false},
     { GOSSIP_ICON_CHAT, "Reset All Spell Cooldowns (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all spell cooldowns", ResetAllSpellCd, false},
     { GOSSIP_ICON_CHAT, "Fix b0t (" + sKittBotFix + " g)",                         KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TFC_BOT_FIX, "1. Select the problematic B0t and click 'Accept'. \n2. After repair: use normal cast/fly mount abilities.", KittBotFix, false},
+    { GOSSIP_ICON_CHAT, "Transfer b0t Owner (" + sKittBotNewOwner + " g)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TFC_BOT_OWNER, "To transfer the SELECTED b0t:\n1. Type the receiver's Character Name.\n2. Both characters must be on YOUR account.\n3. Click 'Accept' to pay fee and transfer.", KittBotNewOwner, true},
+
  //   { GOSSIP_ICON_CHAT, "Check Item Drop Location (" + sKittSelectDrop + " g)",    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_DB_DROP_SHOW, "Enter Item ID \nYou will only be charged if results are found.", KittSelectDrop, true}
 } };
 
@@ -941,6 +948,139 @@ public:
                         }
                         return true;
                         //break;
+                    }
+
+                    case KITT_ACTION_TFC_BOT_OWNER:
+                    {
+                        CloseGossipMenuFor(player);
+
+                        if (!player->IsAlive() || !player->HaveBot())
+                            return true;
+
+                        if (!player->HasEnoughMoney(KittBotNewOwner))
+                        {
+                            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, nullptr, 0, 0);
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
+                        uint32 currentTime = uint32(GameTime::GetGameTime());
+
+                        if (kitt_select_drop_cooldowns.count(player->GetGUID()) && kitt_select_drop_cooldowns[player->GetGUID()] > currentTime)
+                        {
+                            uint32 waitTime = kitt_select_drop_cooldowns[player->GetGUID()] - currentTime;
+                            ChatHandler(player->GetSession()).PSendSysMessage("Please wait %u seconds before your next action.", waitTime);
+                            player->PlayerTalkClass->SendCloseGossip();
+                            return true;
+                        }
+
+                        kitt_select_drop_cooldowns[player->GetGUID()] = currentTime + 30; // secunde
+
+                        if (!code || !*code)
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r You must enter a name!");
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
+                        std::string inputName1 = code;
+
+                        if (inputName1.length() < 2 || inputName1.length() > 12)
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r The name must be between 2 and 12 characters long!");
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
+                        for (char const& c : inputName1)
+                        {
+                            if (!std::isalpha(static_cast<unsigned char>(c)))
+                            {
+                                ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r Only letters (A-Z) are allowed!");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                        }
+
+                        Unit* target = player->GetSelectedUnit();
+                        if (!target || !target->ToCreature() || !target->ToCreature()->IsNPCBot())
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r You must have a b0t selected! Please select B0t to send to new owner.");
+                            return true;
+                        }
+
+                        Creature* botTarget = target->ToCreature();
+
+                        if (bot_ai* botAI = dynamic_cast<bot_ai*>(botTarget->GetAI()))
+                        {
+                            if (botAI->GetBotOwnerGuid() != player->GetGUID().GetCounter())
+                            {
+                                ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Eroare:|r That b0t is not yours!");
+                                return true;
+                            }
+
+                            uint32 botEntry = botTarget->GetEntry();
+
+                            std::string inputName = inputName1;
+
+                            if (!inputName.empty())
+                            {
+                                std::transform(inputName.begin(), inputName.end(), inputName.begin(), ::tolower);
+
+                                inputName[0] = std::toupper(inputName[0]);
+                            }
+
+                            ObjectGuid newOwnerGuid = sCharacterCache->GetCharacterGuidByName(inputName);
+
+                            if (!newOwnerGuid)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Error:|r Player |cffffffff'%s'|r does not exist!", inputName.c_str());
+                                return true;
+                            }
+
+                            uint32 newOwnerAcc = sCharacterCache->GetCharacterAccountIdByGuid(newOwnerGuid);
+                            if (newOwnerAcc != player->GetSession()->GetAccountId())
+                            {
+                                ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r You can only transfer b0ts to characters on your own account!");
+                                return true;
+                            }
+
+                            std::vector<ObjectGuid> existingBots;
+                            BotDataMgr::GetNPCBotGuidsByOwner(existingBots, newOwnerGuid);
+
+                            if (existingBots.size() >= 4)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000Error:|r Player |cffffffff'%s'|r already has %u b0ts (Max: 4)!", inputName.c_str(), (uint32)existingBots.size());
+                                return true;
+                            }
+
+                            uint32 newOwnerLow = newOwnerGuid.GetCounter();
+                            if (newOwnerLow == player->GetGUID().GetCounter())
+                            {
+                                ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r You cannot transfer the b0t to yourself!");
+                                return true;
+                            }
+
+                            BotDataMgr::UpdateNpcBotData(botEntry, NPCBOT_UPDATE_OWNER, &newOwnerLow);
+                            botAI->ReinitOwner();
+
+                            if (Group* group = player->GetGroup())
+                            {
+                                group->RemoveMember(botTarget->GetGUID());
+                            }
+
+                            player->GetBotMgr()->RemoveBot(botTarget->GetGUID(), BOT_REMOVE_LOGOUT);
+
+                            player->ModifyMoney(-int32(KittBotNewOwner));
+
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Success:|r New Owner set to |cffffffff%s|r for b0t |cffffffff%s|r.", inputName.c_str(), botTarget->GetName().c_str());
+                        }
+                        else
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r Could not access the b0t's system.");
+                        }
+
+                        return true;
                     }
 
                     case KITT_ACTION_DB_DROP_SHOW:
