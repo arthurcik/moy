@@ -21,10 +21,19 @@ Kitt.Play.Time.Reward = 0
 # Defaul: 0 (disable)
 
 # ICC
-Kitt.ICC.Instance.Requirement = 1
+Kitt.ICC.Instance.Requirement = 0
+Kitt.ICC.Instance.Req.10n = 0
+Kitt.ICC.Instance.Req.10h = 0
+Kitt.ICC.Instance.Req.25n = 0
+Kitt.ICC.Instance.Req.25h = 0
 Kitt.ICC.Instance.MinItemLevel = 232
 # RS
-Kitt.RS.Instance.Requirement = 1
+Kitt.RS.Instance.Requirement = 0
+Kitt.RS.Instance.Req.10n = 0
+Kitt.RS.Instance.Req.10h = 0
+Kitt.RS.Instance.Req.25n = 0
+Kitt.RS.Instance.Req.25h = 0
+Kitt.RS.Instance.MinItemLevel = 232
 ##### Instance Req end #####
 
 ##################
