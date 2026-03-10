@@ -46,13 +46,13 @@ public:
         if (item->GetEntry() == KittItemID)
         {
             // -- item dezactivat start --
-            player->DestroyItemCount(KittItemID, 1, true);
-            player->ModifyMoney(50000000);
-            ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Custom HS was disabled, you received 5k gold back.|r");
-            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-            player->SaveInventoryAndGoldToDB(trans);
-            CharacterDatabase.CommitTransaction(trans);
-            return true;
+            //player->DestroyItemCount(KittItemID, 1, true);
+            //player->ModifyMoney(50000000);
+            //ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Custom HS was disabled, you received 5k gold back.|r");
+            //CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+            //player->SaveInventoryAndGoldToDB(trans);
+            //CharacterDatabase.CommitTransaction(trans);
+            //return true;
             // -- item dezactivat end --
             // restul codului nu se executa
 

@@ -20,6 +20,7 @@ namespace
     static uint32 sKittRSInstanceReq25n = 0;
     static uint32 sKittRSInstanceReq25h = 0;
     static uint32 sKittRSMinItemLevel = 0;
+    // req item count
     static uint8 ReqEquippedItemCount = 11;
 }
 
