@@ -1061,15 +1061,29 @@ public:
                                 return true;
                             }
 
-                            BotDataMgr::UpdateNpcBotData(botEntry, NPCBOT_UPDATE_OWNER, &newOwnerLow);
-                            botAI->ReinitOwner();
+                            if (botTarget->IsInCombat())
+                            {
+                                ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r B0t is in Combat!");
+                                return true;
+                            }
 
                             if (Group* group = player->GetGroup())
                             {
-                                group->RemoveMember(botTarget->GetGUID());
+                                player->GetBotMgr()->RemoveBotFromGroup(botTarget);
                             }
 
-                            player->GetBotMgr()->RemoveBot(botTarget->GetGUID(), BOT_REMOVE_LOGOUT);
+                            botAI->SetBotCommandState(BOT_COMMAND_FULLSTOP);
+                            botTarget->SetPhaseMask(0, true);
+
+                            BotDataMgr::UpdateNpcBotData(botEntry, NPCBOT_UPDATE_OWNER, &newOwnerLow);
+                            botAI->ReinitOwner();
+
+                            botTarget->RemoveAllAuras();
+
+                            if (player->GetBotMgr()->GetBot(botTarget->GetGUID()))
+                            {
+                                player->GetBotMgr()->RemoveBot(botTarget->GetGUID(), BOT_REMOVE_UNSUMMON);
+                            }
 
                             player->ModifyMoney(-int32(KittBotNewOwner));
 
