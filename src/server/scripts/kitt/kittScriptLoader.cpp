@@ -19,6 +19,7 @@
 
 //void AddSC_kitt_test_script();
 void AddSC_kitt_custom_rate();
+void AddSC_kitt_quest_complet();
 
 
 // The name of this function should match:
@@ -27,4 +28,5 @@ void AddkittScripts()
 {
 //    AddSC_kitt_test_script();
     AddSC_kitt_custom_rate();
+    AddSC_kitt_quest_complet();
 }
