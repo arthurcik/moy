@@ -17,8 +17,8 @@ class kitt_first_lvl80 : public PlayerScript
 
         void OnLevelChanged(Player* player, uint8 /*oldLevel*/) override
         {
-            //if (player->GetClass() == CLASS_DEATH_KNIGHT)
-            //    return;
+            if (player->GetClass() == CLASS_DEATH_KNIGHT)
+                return;
 
             uint8 newLevel = player->GetLevel();
 
