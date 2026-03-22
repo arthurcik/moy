@@ -29,6 +29,7 @@
 #include "bot_ai.h"
 #include "CharacterCache.h"
 #include "botdatamgr.h"
+#include "Log.h"
 
 
 /*enum kittGossipOptionIcon : uint8
@@ -46,6 +47,8 @@
 
 namespace
 {
+    static uint32 sKittNpcMenuBotTransferEnable = 0;
+
     static std::string KittResetCode = "RESET"; // Valoare default config
     static std::string KittNuApasaCode = "fun"; // default Fun Zone NuApasa
 
@@ -954,6 +957,12 @@ public:
                     {
                         CloseGossipMenuFor(player);
 
+                        if (sKittNpcMenuBotTransferEnable == 0)
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r Menu disabled by config");
+                            return true;
+                        }
+
                         if (!player->IsAlive() || !player->HaveBot())
                             return true;
 
@@ -1073,17 +1082,17 @@ public:
                             }
 
                             botAI->SetBotCommandState(BOT_COMMAND_FULLSTOP);
-                            botTarget->SetPhaseMask(0, true);
-
-                            BotDataMgr::UpdateNpcBotData(botEntry, NPCBOT_UPDATE_OWNER, &newOwnerLow);
-                            botAI->ReinitOwner();
-
-                            botTarget->RemoveAllAuras();
+                            //botTarget->SetPhaseMask(0, true);
 
                             if (player->GetBotMgr()->GetBot(botTarget->GetGUID()))
                             {
                                 player->GetBotMgr()->RemoveBot(botTarget->GetGUID(), BOT_REMOVE_UNSUMMON);
                             }
+
+                            //botTarget->RemoveAllAuras();
+
+                            BotDataMgr::UpdateNpcBotData(botEntry, NPCBOT_UPDATE_OWNER, &newOwnerLow);
+                            botAI->ReinitOwner();
 
                             player->ModifyMoney(-int32(KittBotNewOwner));
 
@@ -2903,8 +2912,35 @@ public:
     }
 };
 
+class kitt_npc_menu_config : public WorldScript
+{
+public:
+    kitt_npc_menu_config() : WorldScript("kitt_npc_menu_config") {}
+
+    void OnConfigLoad(bool /*reload*/) override
+    {
+        // Bot Transfer Enable
+        sKittNpcMenuBotTransferEnable = sConfigMgr->GetIntDefault("KittNpcMenu.Bot.Transfer.Enable", 0);
+    }
+};
+
+class kitt_npc_menu_startup : public WorldScript
+{
+public:
+    kitt_npc_menu_startup() : WorldScript("kitt_npc_menu_startup") {}
+
+    void OnStartup() override
+    {
+        //TC_LOG_ERROR("kitt", "Bot Transfer enable: {})", sKittNpcMenuBotTransferEnable);
+
+        TC_LOG_INFO("server.loading", ">> KITT [npc MENU] Loaded: Transfer Bot Enable: {}", sKittNpcMenuBotTransferEnable ? "ON" : "OFF");
+    }
+};
+
 void AddSC_kitt_npc_menu()
 {
+    new kitt_npc_menu_config();
+    new kitt_npc_menu_startup();
     new kitt_npc_menu();
     new kitt_npc_menu_validator();
     new Kitt_Player_Cleanup();

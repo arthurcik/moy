@@ -75,6 +75,10 @@ Kitt.Reset.Code = "tfcc"
 #
 Kitt.Fun.NuApasa.Code = "4fun"
 
+# transfer bot
+# default: 0
+KittNpcMenu.Bot.Transfer.Enable = 0
+
 ##############
 # Start Guild
 ##############
