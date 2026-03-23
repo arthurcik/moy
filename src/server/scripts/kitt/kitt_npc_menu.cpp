@@ -29,7 +29,6 @@
 #include "bot_ai.h"
 #include "CharacterCache.h"
 #include "botdatamgr.h"
-#include "Log.h"
 
 
 /*enum kittGossipOptionIcon : uint8
@@ -1031,6 +1030,7 @@ public:
                             uint32 botEntry = botTarget->GetEntry();
 
                             std::string inputName = inputName1;
+                            std::string botName = botTarget->GetName();
 
                             if (!inputName.empty())
                             {
@@ -1081,22 +1081,28 @@ public:
                                 player->GetBotMgr()->RemoveBotFromGroup(botTarget);
                             }
 
+                            //botTarget->SetPhaseMask(16777215, true);
+                            //botTarget->SetVisible(false);
+                            //botTarget->SetReactState(REACT_PASSIVE);
+                            //botTarget->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_UNINTERACTIBLE | UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
+                            botTarget->CombatStop(true);
+                            botTarget->GetThreatManager().ClearAllThreat();
                             botAI->SetBotCommandState(BOT_COMMAND_FULLSTOP);
-                            //botTarget->SetPhaseMask(0, true);
+                            botTarget->RemoveAllAuras();
 
+                            //botTarget->SetPhaseMask(0, true);
                             if (player->GetBotMgr()->GetBot(botTarget->GetGUID()))
                             {
-                                player->GetBotMgr()->RemoveBot(botTarget->GetGUID(), BOT_REMOVE_UNSUMMON);
+                                player->GetBotMgr()->UnbindBot(botTarget->GetGUID());
                             }
-
-                            //botTarget->RemoveAllAuras();
 
                             BotDataMgr::UpdateNpcBotData(botEntry, NPCBOT_UPDATE_OWNER, &newOwnerLow);
                             botAI->ReinitOwner();
+                            botAI->ResetBotAI(BOTAI_RESET_UNBIND);
 
                             player->ModifyMoney(-int32(KittBotNewOwner));
 
-                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Success:|r New Owner set to |cffffffff%s|r for b0t |cffffffff%s|r.", inputName.c_str(), botTarget->GetName().c_str());
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Success:|r New Owner set to |cffffffff%s|r for b0t |cffffffff%s|r.", inputName.c_str(), botName.c_str());
                         }
                         else
                         {
