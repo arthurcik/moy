@@ -2746,6 +2746,11 @@ FactionTemplateEntry const* WorldObject::GetFactionTemplateEntry() const
 // function based on function Unit::UnitReaction from 13850 client
 ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
 {
+    // kitt
+    if (!target || (uintptr_t)this < 0x1000 || (uintptr_t)target < 0x1000)
+        return REP_FRIENDLY;
+    // -----------
+
     // always friendly to self
     if (this == target)
         return REP_FRIENDLY;
@@ -2843,6 +2848,11 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
 
 /*static*/ ReputationRank WorldObject::GetFactionReactionTo(FactionTemplateEntry const* factionTemplateEntry, WorldObject const* target)
 {
+    // kitt
+    if (!target || !factionTemplateEntry || (uintptr_t)target < 0x1000)
+        return REP_NEUTRAL;
+    // -----------
+
     // always neutral when no template entry found
     if (!factionTemplateEntry)
         return REP_NEUTRAL;
@@ -2908,16 +2918,28 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
 
 bool WorldObject::IsHostileTo(WorldObject const* target) const
 {
+    // kitt
+    if (!target || (uintptr_t)this < 0x1000 || (uintptr_t)target < 0x1000)
+        return false;
+    // ---------
     return GetReactionTo(target) <= REP_HOSTILE;
 }
 
 bool WorldObject::IsFriendlyTo(WorldObject const* target) const
 {
+    // kitt
+    if (!target || (uintptr_t)this < 0x1000 || (uintptr_t)target < 0x1000)
+        return true;
+    // ---------
     return GetReactionTo(target) >= REP_FRIENDLY;
 }
 
 bool WorldObject::IsHostileToPlayers() const
 {
+    // kitt
+    if ((uintptr_t)this < 0x1000)
+        return false;
+    // ---------
     FactionTemplateEntry const* my_faction = GetFactionTemplateEntry();
     if (!my_faction->Faction)
         return false;

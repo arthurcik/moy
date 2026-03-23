@@ -12563,6 +12563,11 @@ bool Unit::IsInPartyWith(Unit const* unit) const
 
 bool Unit::IsInRaidWith(Unit const* unit) const
 {
+    // kitt
+    if (!unit || (uintptr_t)this < 0x1000 || (uintptr_t)unit < 0x1000)
+        return this == unit;
+    // ---------
+
     if (this == unit)
         return true;
 
@@ -12573,10 +12578,12 @@ bool Unit::IsInRaidWith(Unit const* unit) const
 
     Unit const* u1 = GetCharmerOrOwnerOrSelf();
     Unit const* u2 = unit->GetCharmerOrOwnerOrSelf();
+
     // kitt
-    if (!u1 || !u2)
+    if (!u1 || !u2 || (uintptr_t)u1 < 0x1000 || (uintptr_t)u2 < 0x1000)
         return false;
     // ----------
+
     if (u1 == u2)
         return true;
 
@@ -12591,7 +12598,7 @@ bool Unit::IsInRaidWith(Unit const* unit) const
     if (pla && bot)
     {
         // kitt fix
-        if (!pla->GetBotMgr())
+        if ((uintptr_t)pla < 0x1000 || !pla->GetBotMgr())
             return false;
         // ---------
         return (pla->GetGroup() && pla->GetGroup() == bot->GetBotGroup()) ? true : !!pla->GetBotMgr()->GetBot(bot->GetGUID());
