@@ -123,7 +123,7 @@ public:
         CreatureTemplate const* cinfo = sObjectMgr->GetCreatureTemplate(id);
         if (cinfo && cinfo->IsNPCBotOrPet())
         {
-            handler->PSendSysMessage("You tried to spawn creature %u, which is part of NPCBots mod. To spawn bots use '.npcbot spawn' instead.", id);
+            handler->PSendSysMessage("You tried to spawn creature %u, which is part of NPCBots mod. To spawn bots use '.npcbot spawn' instead.", uint32(id));
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -1036,6 +1036,16 @@ public:
         Player* chr = handler->GetSession()->GetPlayer();
         if (!sObjectMgr->GetCreatureTemplate(id))
             return false;
+
+        //npcbot
+        CreatureTemplate const* cinfo = sObjectMgr->GetCreatureTemplate(id);
+        if (cinfo && cinfo->IsNPCBotOrPet())
+        {
+            handler->PSendSysMessage("You tried to spawn creature %u, which is part of NPCBots mod. To spawn bots use '.npcbot spawn' instead.", uint32(id));
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+        //end npcbot
 
         chr->SummonCreature(id, chr->GetPosition(), loot ? TEMPSUMMON_CORPSE_TIMED_DESPAWN : TEMPSUMMON_CORPSE_DESPAWN, 30s);
 
