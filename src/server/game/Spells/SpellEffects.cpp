@@ -483,7 +483,7 @@ void Spell::EffectSchoolDMG()
                 {
                     // converts each extra point of energy into ($f1+$AP/410) additional damage
                     float ap = unitCaster->GetTotalAttackPowerValue(BASE_ATTACK);
-                    float multiple = ap / 410 + effectInfo->DamageMultiplier;
+                    float multiple = ap / 410 + effectInfo->ChainAmplitude;
                     int32 energy = -(unitCaster->ModifyPower(POWER_ENERGY, -30));
                     damage += int32(energy * multiple);
                     damage += int32(CalculatePct(unitCaster->ToPlayer()->GetComboPoints() * ap, 7));
@@ -791,10 +791,6 @@ void Spell::EffectDummy()
             return;
         }
     }
-
-    // normal DB scripted effect
-    TC_LOG_DEBUG("spells", "Spell ScriptStart spellid {} in EffectDummy({})", m_spellInfo->Id, uint32(effectInfo->EffectIndex));
-    m_caster->GetMap()->ScriptsStart(sSpellScripts, uint32(m_spellInfo->Id | (effectInfo->EffectIndex << 24)), m_caster, unitTarget);
 }
 
 void Spell::EffectTriggerSpell()
@@ -1117,7 +1113,7 @@ void Spell::CalculateJumpSpeeds(SpellEffectInfo const& spellEffectInfo, float di
     if (Creature* creature = unitCaster->ToCreature())
         runSpeed *= creature->GetCreatureTemplate()->speed_run;
 
-    float multiplier = spellEffectInfo.ValueMultiplier;
+    float multiplier = spellEffectInfo.Amplitude;
     if (multiplier <= 0.0f)
         multiplier = 1.0f;
 
@@ -2449,10 +2445,22 @@ void Spell::EffectLearnSpell()
 
     Player* player = unitTarget->ToPlayer();
 
-    uint32 spellToLearn = (m_spellInfo->Id == 483 || m_spellInfo->Id == 55884) ? damage : effectInfo->TriggerSpell;
-    player->LearnSpell(spellToLearn, false);
+    if (m_CastItem && !effectInfo->TriggerSpell)
+    {
+        for (_Spell const& itemEffect : m_CastItem->GetTemplate()->Spells)
+        {
+            if (itemEffect.SpellTrigger != ITEM_SPELLTRIGGER_LEARN_SPELL_ID)
+                continue;
 
-    TC_LOG_DEBUG("spells", "Spell: Player {} has learned spell {} from Npc {}", player->GetGUID().ToString(), spellToLearn, m_caster->GetGUID().ToString());
+            player->LearnSpell(itemEffect.SpellId, false);
+        }
+    }
+
+    if (effectInfo->TriggerSpell)
+    {
+        player->LearnSpell(effectInfo->TriggerSpell, false);
+        TC_LOG_DEBUG("spells", "Spell: Player {} has learned spell {} from Npc {}", player->GetGUID().ToString(), effectInfo->TriggerSpell, m_caster->GetGUID().ToString());
+    }
 }
 
 void Spell::EffectDispel()
@@ -3777,10 +3785,6 @@ void Spell::EffectScriptEffect()
             break;
         }
     }
-
-    // normal DB scripted effect
-    TC_LOG_DEBUG("spells", "Spell ScriptStart spellid {} in EffectScriptEffect({})", m_spellInfo->Id, uint32(effectInfo->EffectIndex));
-    m_caster->GetMap()->ScriptsStart(sSpellScripts, uint32(m_spellInfo->Id | (effectInfo->EffectIndex << 24)), m_caster, unitTarget);
 }
 
 void Spell::EffectSanctuary()
@@ -3949,7 +3953,7 @@ void Spell::EffectStuck()
     }
 
     // we have hearthstone not on cooldown, just use it
-    player->CastSpell(player, 8690, TriggerCastFlags(TRIGGERED_FULL_MASK&~TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD));
+    player->CastSpell(player, 8690, TRIGGERED_FULL_MASK & ~TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD);
 }
 
 void Spell::EffectSummonPlayer()
@@ -5658,8 +5662,9 @@ void Spell::EffectCastButtons()
         if (player->GetPower(POWER_MANA) < cost)
             continue;
 
-        TriggerCastFlags triggerFlags = TriggerCastFlags(TRIGGERED_IGNORE_GCD | TRIGGERED_IGNORE_CAST_IN_PROGRESS | TRIGGERED_CAST_DIRECTLY);
-        player->CastSpell(player, spell_id, triggerFlags);
+        CastSpellExtraArgs args;
+        args.TriggerFlags = TRIGGERED_IGNORE_GCD | TRIGGERED_IGNORE_CAST_IN_PROGRESS | TRIGGERED_CAST_DIRECTLY;
+        m_caster->CastSpell(m_caster, spellInfo->Id, args);
     }
 }
 
