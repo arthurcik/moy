@@ -425,6 +425,41 @@ void bot_ai::BotYell(std::string&& text, Player const* /*target*/) const
     me->Yell(text, LANG_UNIVERSAL);
 }
 
+// kitt start
+void bot_ai::UpdateItemDurations(uint32 diff)
+{
+    uint32 secondsToSubtract = diff / 1000; 
+
+    for (uint8 i = 0; i < BOT_INVENTORY_SIZE; ++i)
+    {
+        if (Item* item = _equips[i])
+        {
+            int32 duration = item->GetUInt32Value(ITEM_FIELD_DURATION);
+            if (duration > 0)
+            {
+                uint32 itemGuidLow = item->GetGUID().GetCounter();
+                if (duration <= (int32)secondsToSubtract)
+                {
+                    (void)_unequip(i, ObjectGuid::Empty, false);
+                    CharacterDatabase.PExecute("DELETE FROM item_instance WHERE guid = {}", itemGuidLow);
+                    //TC_LOG_ERROR("kitt", "test item. sters item guid: {}", itemGuidLow);
+                }
+                else
+                {
+                    uint32 newDuration = duration - secondsToSubtract;
+                    item->SetUInt32Value(ITEM_FIELD_DURATION, newDuration);
+                    item->SetState(ITEM_CHANGED);
+                    CharacterDatabase.PExecute("UPDATE item_instance SET duration = {} WHERE guid = {}",
+                        newDuration, itemGuidLow);
+                    //TC_LOG_ERROR("kitt", "test item change. new duration: {} , guid: {}", newDuration, itemGuidLow);
+                }
+            }
+        }
+    }
+}
+// kitt end
+
+
 void bot_ai::ReportSpellCast(uint32 spellId, const std::string& followedByString, Player const* target) const
 {
     std::string spellName;

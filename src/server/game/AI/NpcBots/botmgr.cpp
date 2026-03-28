@@ -1208,6 +1208,24 @@ void BotMgr::Update(uint32 diff)
 
     _update_lock = true;
 
+    // kitt start
+    static uint32 itemUpdateTimer = 0;
+    itemUpdateTimer += diff;
+
+    if (itemUpdateTimer >= 300000)
+    {
+        for (BotMap::const_iterator itr = _bots.begin(); itr != _bots.end(); ++itr)
+        {
+            if (Creature* bot = itr->second)
+                if (bot->IsAlive())
+                    if (bot_ai* ai = bot->GetBotAI())
+                        ai->UpdateItemDurations(300000);
+        }
+        itemUpdateTimer = 0;
+    }
+    // kitt end
+
+
     for (BotMap::const_iterator itr = _bots.begin(); itr != _bots.end(); ++itr)
     {
         //guid = itr->first;

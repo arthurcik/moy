@@ -794,6 +794,12 @@ class bot_ai : public CreatureAI
     public:
         typedef std::unordered_map<uint32 /*firstrankspellid*/, BotSpell* /*spell*/> BotSpellMap;
         BotSpellMap const& GetSpellMap() const { return _spells; }
+        // kitt start
+        Item* GetEquippedItem(uint8 slot) const { return (slot < BOT_INVENTORY_SIZE) ? _equips[slot] : nullptr; }
+        void UpdateItemDurations(uint32 diff);
+        // kitt end
+
+
 
     private:
         BotSpellMap _spells;
