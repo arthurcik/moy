@@ -15,7 +15,7 @@ class kitt_first_lvl80 : public PlayerScript
     public:
         kitt_first_lvl80() : PlayerScript("kitt_first_lvl80") { }
 
-        void OnLevelChanged(Player* player, uint8 /*oldLevel*/) override
+        void OnLevelChanged(Player* player, uint8 oldLevel) override
         {
             if (player->GetClass() == CLASS_DEATH_KNIGHT)
                 return;
@@ -63,7 +63,7 @@ class kitt_first_lvl80 : public PlayerScript
             //uint32 itemId = 1977; // Exemplu: ID-ul itemului pe care vrei sa il adaugi
             //uint32 itemCount = 1;  // Cantitatea
 
-            if (newLevel == 21)
+            if (newLevel >= 21 && oldLevel <= 20)
             {
                 if (item21Config > 0)
                 {
@@ -125,7 +125,7 @@ class kitt_first_lvl80 : public PlayerScript
                 }
             }
 
-            if (newLevel == 30)
+            if (newLevel >= 30 && oldLevel <= 29)
             {
                 if (item30Config > 0)
                 {
@@ -187,7 +187,7 @@ class kitt_first_lvl80 : public PlayerScript
                 }
             }
 
-            if (newLevel == 40)
+            if (newLevel >= 40 && oldLevel <= 39)
             {
                 if (item40Config > 0)
                 {
@@ -249,7 +249,7 @@ class kitt_first_lvl80 : public PlayerScript
                 }
             }
 
-            if (newLevel == 50)
+            if (newLevel >= 50 && oldLevel <= 49)
             {
                 if (item50Config > 0)
                 {
@@ -311,7 +311,7 @@ class kitt_first_lvl80 : public PlayerScript
                 }
             }
 
-            if (newLevel == 60)
+            if (newLevel >= 60 && oldLevel <= 59)
             {
                 if (item60Config > 0)
                 {
@@ -373,7 +373,7 @@ class kitt_first_lvl80 : public PlayerScript
                 }
             }
 
-            if (newLevel == 70)
+            if (newLevel >= 70 && oldLevel <= 69)
             {
                 if (item70Config > 0)
                 {
@@ -435,7 +435,7 @@ class kitt_first_lvl80 : public PlayerScript
                 }
             }
 
-            if (newLevel == 80)
+            if (newLevel >= 80 && oldLevel <= 79)
             {
                 if (item80Config > 0)
                 {
