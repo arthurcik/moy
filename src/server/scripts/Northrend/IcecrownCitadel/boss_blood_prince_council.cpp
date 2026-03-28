@@ -234,7 +234,6 @@ struct boss_blood_council_controller : public BossAI
     void Reset() override
     {
         _Reset();
-        scheduler.CancelAll();
         Initialize();
         me->SummonCreatureGroup(SUMMON_PRINCES_GROUP);
 

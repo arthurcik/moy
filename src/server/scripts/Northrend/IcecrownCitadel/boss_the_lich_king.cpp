@@ -31,6 +31,7 @@
 #include "TemporarySummon.h"
 #include "Vehicle.h"
 #include "Weather.h"
+//#include "Log.h"
 
 enum LichKingTexts
 {
@@ -488,7 +489,6 @@ struct boss_the_lich_king : public BossAI
     void Reset() override
     {
         _Reset();
-        scheduler.CancelAll();
         me->SetImmuneToPC(true);
         me->SetReactState(REACT_PASSIVE);
         events.SetPhase(PHASE_INTRO);
@@ -864,7 +864,7 @@ struct boss_the_lich_king : public BossAI
         // --- kitt ANTI-FALL PROTECTION START ---
         if (!events.IsInPhase(PHASE_FROSTMOURNE) && !events.IsInPhase(PHASE_INTRO) && !events.IsInPhase(PHASE_OUTRO))
         {
-            if (me->IsInCombat() && me->GetPositionZ() < 839.0f) // Verific?m dac? LK a c?zut sub platform?
+            if (me->IsInCombat() && me->GetPositionZ() < 839.0f)
             {
                 float const centerX = 505.28f;
                 float const centerY = -2124.19f;
@@ -878,12 +878,13 @@ struct boss_the_lich_king : public BossAI
                     if (victim->GetPositionZ() < 839.0f)
                     {
                         victim->NearTeleportTo(centerX + 2.0f, centerY + 2.0f, centerZ, victim->GetOrientation());
-                        if (victim->GetTypeId() == TYPEID_UNIT) // Dac? este creatur?/bot
+                        if (victim->GetTypeId() == TYPEID_UNIT)
                             victim->GetMotionMaster()->Clear();
                     }
 
                     me->GetMotionMaster()->MoveChase(victim);
                 }
+                //TC_LOG_ERROR("scripts", "Lich King Anti-Fall: Boss and Tank recovered from under platform.");
             }
         }
         // --- ANTI-FALL PROTECTION END ---
@@ -907,6 +908,7 @@ struct boss_the_lich_king : public BossAI
                     player->NearTeleportTo(centerX + 40.0f, centerY, centerZ + 2.0f, player->GetOrientation());
 
                     player->StopMoving();
+                    //TC_LOG_ERROR("scripts", "Player {} was drifting in ghost mode. Teleported to platform edge.", player->GetName().c_str());
                 }
             }
         }

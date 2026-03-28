@@ -263,7 +263,6 @@ struct boss_deathbringer_saurfang : public BossAI
         if (_dead)
             return;
         _Reset();
-        scheduler.CancelAll();
         events.SetPhase(PHASE_COMBAT);
         _frenzied = false;
         _dead = false;

@@ -159,7 +159,6 @@ struct boss_blood_queen_lana_thel : public BossAI
     void Reset() override
     {
         _Reset();
-        scheduler.CancelAll();
         events.ScheduleEvent(EVENT_BERSERK, 330s); // kitt +60 sec, 330 original
         events.ScheduleEvent(EVENT_VAMPIRIC_BITE, 15s);
         events.ScheduleEvent(EVENT_BLOOD_MIRROR, 2500ms, EVENT_GROUP_CANCELLABLE);
