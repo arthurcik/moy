@@ -975,6 +975,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         void Update(uint32 time) override;
 
+        void Heartbeat() override;
+
         static bool BuildEnumData(PreparedQueryResult result, WorldPacket* data);
 
         bool IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster, bool requireImmunityPurgesEffectAttribute = false) const override;
@@ -1846,7 +1848,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetSemaphoreTeleportFar(bool semphsetting) { mSemaphoreTeleport_Far = semphsetting; }
         void ProcessDelayedOperations();
 
-        void CheckAreaExploreAndOutdoor(void);
+        void CheckAreaExplore();
+        void CheckOutdoorsAuraRequirements();
 
         static uint32 TeamForRace(uint8 race);
         static TeamId TeamIdForRace(uint8 race);
@@ -2541,8 +2544,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint8 m_fishingSteps;
 
         bool m_needsZoneUpdate;
-
-        TimeTracker m_groupUpdateTimer;
 
     private:
         /*****************************************************************/
