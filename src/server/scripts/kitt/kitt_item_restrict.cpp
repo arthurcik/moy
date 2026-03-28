@@ -24,12 +24,12 @@ namespace
         // { ID_ITEM, {  RANG_GM, { LISTA_MAP_ID_NEPERMIS } } }
 
         // gm item
-        { 900901,      { 5,       { 489, 529, 30, 566, 628, 607 } } }, // tfc Thunderfury
-        { 900902,      { 9,       {  } } }, // Staff of Disintegration
-        { 919347,      { 9,       {  } } }, // Claw of Chromaggus
-        { 950412,      { 9,       {  } } }, // Bloodvenom Blade
-        { 954806,      { 5,       {  } } }, // TFC Frostscythe of Lord Ahune
-        { 17,          { 9,       {  } } }, // Martin Fury
+        { 900901,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // tfc Thunderfury //rank 5
+        { 900902,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Staff of Disintegration //rank 9
+        { 919347,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Claw of Chromaggus //rank 9
+        { 950412,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Bloodvenom Blade //rank 9
+        { 954806,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // TFC Frostscythe of Lord Ahune //rank 5
+        { 17,          { 9,       { 489, 529, 30, 566, 628, 607 } } }, // Martin Fury
 
 
         // player item
