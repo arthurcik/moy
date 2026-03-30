@@ -175,14 +175,15 @@ class kitt_custom_rate_command : public CommandScript
 public:
     kitt_custom_rate_command() : CommandScript("kitt_custom_rate_command") {}
 
-    std::vector<ChatCommandBuilder> GetCommands() const override
+    std::span<ChatCommandBuilder const> GetCommands() const override
     {
-        return
+        static ChatCommandTable commandTable =
         {
             {"zxprate", HandleSetXPRateCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No},
             {"zreprate", HandleSetRepRateCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No}
 
         };
+        return commandTable;
     }
 
     static bool HandleSetXPRateCommand(ChatHandler* handler, Tail args)
