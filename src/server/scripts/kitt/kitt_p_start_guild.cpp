@@ -53,11 +53,19 @@ class kitt_p_start_guild : public PlayerScript
 
                        if (Guild* targetGuild = sGuildMgr->GetGuildById(gId))
                        {
+                           // logs cine intra
+                           TC_LOG_ERROR("sql.sql", "DEBUG START: Jucator {} (GUID: {}) incearca intrare in Gilda ID {} (Nume in RAM: >>> {} <<<)",
+                               p->GetName().c_str(), p->GetGUID().GetCounter(), gId, targetGuild->GetName().c_str());
+
                            if (!p->GetGuildId())
                            {
                                CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
                                targetGuild->AddMember(trans, p->GetGUID(), GUILD_RANK_NONE);
                                CharacterDatabase.CommitTransaction(trans);
+
+                               // logs cine a intrat
+                               TC_LOG_ERROR("sql.sql", "DEBUG SUCCESS: Jucator {} adaugat. Nume Gilda in RAM dupa operatiune: >>> {} <<<",
+                                   p->GetName().c_str(), targetGuild->GetName().c_str());
                            }
                        }
                    }), player->m_Events.CalculateTime(10s));
