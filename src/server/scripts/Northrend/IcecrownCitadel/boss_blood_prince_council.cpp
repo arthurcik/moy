@@ -444,7 +444,6 @@ struct BloodPrincesBossAI : public BossAI
     void Reset() override
     {
         events.Reset();
-        scheduler.CancelAll();
         summons.DespawnAll();
         me->SetCombatPulseDelay(0);
 
