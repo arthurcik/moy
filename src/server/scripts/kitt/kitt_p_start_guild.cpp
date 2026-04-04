@@ -34,11 +34,33 @@ class kitt_p_start_guild : public PlayerScript
 
            Guild* guild = sGuildMgr->GetGuildById(desiredGuildId);
 
-           if (guild)
+           /*if (guild)
            {
                CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
                guild->AddMember(trans, player->GetGUID(), GUILD_RANK_NONE);
                CharacterDatabase.CommitTransaction(trans);
+           }*/
+           if (guild)
+           {
+               ObjectGuid playerGuid = player->GetGUID();
+               uint32 gId = desiredGuildId;
+
+               player->m_Events.AddEvent(new LambdaBasicEvent([playerGuid, gId]()
+                   {
+                       Player* p = ObjectAccessor::FindConnectedPlayer(playerGuid);
+                       if (!p)
+                           return;
+
+                       if (Guild* targetGuild = sGuildMgr->GetGuildById(gId))
+                       {
+                           if (!p->GetGuildId())
+                           {
+                               CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                               targetGuild->AddMember(trans, p->GetGUID(), GUILD_RANK_NONE);
+                               CharacterDatabase.CommitTransaction(trans);
+                           }
+                       }
+                   }), player->m_Events.CalculateTime(10s));
            }
            else
            {
