@@ -77,6 +77,10 @@ namespace
     static const std::string sKittBotFix = std::to_string(KittBotFix / 10000);
     static const std::string sKittBotNewOwner = std::to_string(KittBotNewOwner / 10000);
     static const std::string sKittSelectDrop = std::to_string(KittSelectDrop / 10000);
+
+    // acc kitt for enchant enquip and bags
+    static const uint32 kittAcc1 = 2;
+    static const uint32 kittAcc2 = 5;
 }
 // stocare valori temporare
 std::map<ObjectGuid, uint32> kitt_select_drop_cooldowns;
@@ -1333,38 +1337,73 @@ public:
                         {
                             bool found = false;
 
-                            // Parcurgem toate sloturile de echipament (0-18)
-                            for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+                            uint32 kPlAccId = player->GetSession()->GetAccountId();
+                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
                             {
-                                Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
-                                if (!item)
-                                    continue;
-
-                                // Verific?m dac? are orice enchant ?n slotul 0 sau 1 (sau slotul t?u custom)
-                                if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) != 0)
+                                // verificam itemele echipate si cele din sac
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
                                 {
-                                    // ?tergem enchant-urile din sloturile folosite
-                                    item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 0, 0, 0);
-                                    item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 0, 0, 0);
-                                    item->SetEnchantment(PROP_ENCHANTMENT_SLOT_2, 0, 0, 0);
-                                    item->SetEnchantment(PROP_ENCHANTMENT_SLOT_3, 0, 0, 0);
+                                    Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
+                                    if (!item)
+                                        continue;
 
-                                    // For??m serverul s? recalculeze statisticile player-ului (HP, AP, etc.)
-                                    //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, false);
-                                    //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, false);
-                                    //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, false);
-                                    //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_3, false);
+                                    // Verificam daca are orice enchant in slotul 0 sau 1 (sau slotul tau custom)
+                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) != 0)
+                                    {
+                                        // Stergem enchant-urile din sloturile folosite
+                                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 0, 0, 0);
+                                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 0, 0, 0);
+                                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_2, 0, 0, 0);
+                                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_3, 0, 0, 0);
 
-                                    // Re-aplic?m starea "f?r? enchant" pentru a cur??a bonusurile
-                                    player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
-                                    player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
-                                    player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, true);
-                                    player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_3, true);
+                                        // Re-aplicam starea "fara enchant" pentru a curata bonusurile
+                                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
+                                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
+                                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, true);
+                                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_3, true);
 
-                                    item->SetState(ITEM_CHANGED, player);
-                                    item->SendUpdateToPlayer(player);
+                                        item->SetState(ITEM_CHANGED, player);
+                                        item->SendUpdateToPlayer(player);
 
-                                    found = true;
+                                        found = true;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Parcurgem toate sloturile de echipament (0-18)
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+                                {
+                                    Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
+                                    if (!item)
+                                        continue;
+
+                                    // Verific?m dac? are orice enchant ?n slotul 0 sau 1 (sau slotul t?u custom)
+                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) != 0)
+                                    {
+                                        // ?tergem enchant-urile din sloturile folosite
+                                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_0, 0, 0, 0);
+                                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_1, 0, 0, 0);
+                                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_2, 0, 0, 0);
+                                        item->SetEnchantment(PROP_ENCHANTMENT_SLOT_3, 0, 0, 0);
+
+                                        // For??m serverul s? recalculeze statisticile player-ului (HP, AP, etc.)
+                                        //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, false);
+                                        //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, false);
+                                        //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, false);
+                                        //player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_3, false);
+
+                                        // Re-aplic?m starea "f?r? enchant" pentru a cur??a bonusurile
+                                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_0, true);
+                                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_1, true);
+                                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_2, true);
+                                        player->ApplyEnchantment(item, PROP_ENCHANTMENT_SLOT_3, true);
+
+                                        item->SetState(ITEM_CHANGED, player);
+                                        item->SendUpdateToPlayer(player);
+
+                                        found = true;
+                                    }
                                 }
                             }
 
@@ -1383,21 +1422,48 @@ public:
                             ClearGossipMenuFor(player);
 
                             bool found = false;
-                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
-                            for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+
+                            uint32 kPlAccId = player->GetSession()->GetAccountId();
+                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
                             {
-                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                // verificam itemele echipate si cele din sac
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
                                 {
-                                    ItemTemplate const* proto = item->GetTemplate();
-                                    // Filtram: Arme (2) sau Armuri (4)
-                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                                     {
-                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtram: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
                                         {
-                                            std::string itemName = proto->Name1;
-                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
-                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_MDPS, item->GetGUID().GetCounter());
-                                            found = true;
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_MDPS, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+                                {
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                    {
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtram: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                        {
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_MDPS, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
                                         }
                                     }
                                 }
@@ -1416,21 +1482,48 @@ public:
                             ClearGossipMenuFor(player);
 
                             bool found = false;
-                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
-                            for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+
+                            uint32 kPlAccId = player->GetSession()->GetAccountId();
+                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
                             {
-                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                // verificam itemele echipate si cele din sac
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
                                 {
-                                    ItemTemplate const* proto = item->GetTemplate();
-                                    // Filtr?m: Arme (2) sau Armuri (4)
-                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                                     {
-                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtr?m: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
                                         {
-                                            std::string itemName = proto->Name1;
-                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
-                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_TANK, item->GetGUID().GetCounter());
-                                            found = true;
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_TANK, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+                                {
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                    {
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtr?m: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                        {
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_TANK, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
                                         }
                                     }
                                 }
@@ -1448,21 +1541,48 @@ public:
                             ClearGossipMenuFor(player);
 
                             bool found = false;
-                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
-                            for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+
+                            uint32 kPlAccId = player->GetSession()->GetAccountId();
+                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
                             {
-                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                // verificam itemele echipate si cele din sac
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
                                 {
-                                    ItemTemplate const* proto = item->GetTemplate();
-                                    // Filtr?m: Arme (2) sau Armuri (4)
-                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                                     {
-                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtr?m: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
                                         {
-                                            std::string itemName = proto->Name1;
-                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
-                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_CDPS, item->GetGUID().GetCounter());
-                                            found = true;
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_CDPS, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+                                {
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                    {
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtr?m: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                        {
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_CDPS, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
                                         }
                                     }
                                 }
@@ -1480,21 +1600,48 @@ public:
                             ClearGossipMenuFor(player);
 
                             bool found = false;
-                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
-                            for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+
+                            uint32 kPlAccId = player->GetSession()->GetAccountId();
+                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
                             {
-                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                // verificam itemele echipate si cele din sac
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
                                 {
-                                    ItemTemplate const* proto = item->GetTemplate();
-                                    // Filtr?m: Arme (2) sau Armuri (4)
-                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                                     {
-                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtr?m: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
                                         {
-                                            std::string itemName = proto->Name1;
-                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
-                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_HEAL, item->GetGUID().GetCounter());
-                                            found = true;
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_HEAL, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+                                {
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                    {
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtr?m: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                        {
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_HEAL, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
                                         }
                                     }
                                 }
@@ -1512,21 +1659,48 @@ public:
                             ClearGossipMenuFor(player);
 
                             bool found = false;
-                            // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
-                            for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+
+                            uint32 kPlAccId = player->GetSession()->GetAccountId();
+                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
                             {
-                                if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                // verificam itemele echipate si cele din sac
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
                                 {
-                                    ItemTemplate const* proto = item->GetTemplate();
-                                    // Filtr?m: Arme (2) sau Armuri (4)
-                                    if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                                     {
-                                        if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtr?m: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
                                         {
-                                            std::string itemName = proto->Name1;
-                                            // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
-                                            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_RDPS, item->GetGUID().GetCounter());
-                                            found = true;
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_RDPS, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Scan?m doar rucsacul principal (Main Bag: INVENTORY_SLOT_ITEM_START p?n? la END)
+                                for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+                                {
+                                    if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+                                    {
+                                        ItemTemplate const* proto = item->GetTemplate();
+                                        // Filtr?m: Arme (2) sau Armuri (4)
+                                        if (item->GetEnchantmentId(PROP_ENCHANTMENT_SLOT_0) == 0)
+                                        {
+                                            if (proto->Class == ITEM_CLASS_WEAPON || proto->Class == ITEM_CLASS_ARMOR)
+                                            {
+                                                std::string itemName = proto->Name1;
+                                                // Folosim GUID-ul low ca "action" pentru a identifica itemul ulterior
+                                                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, itemName, KITT_SENDER_TFC_APPLY_ENCHANT_RDPS, item->GetGUID().GetCounter());
+                                                found = true;
+                                            }
                                         }
                                     }
                                 }
@@ -1554,6 +1728,7 @@ public:
                 {
                     ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
                     Item* item = player->GetItemByGuid(itemGuid);
+                    uint32 kPlAccId = player->GetSession()->GetAccountId();
 
                     if (player->IsInCombat())
                     {
@@ -1572,7 +1747,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped())
+                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
@@ -1603,6 +1778,7 @@ public:
                 {
                     ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
                     Item* item = player->GetItemByGuid(itemGuid);
+                    uint32 kPlAccId = player->GetSession()->GetAccountId();
 
                     if (player->IsInCombat())
                     {
@@ -1621,7 +1797,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped())
+                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
@@ -1655,6 +1831,7 @@ public:
                 {
                     ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
                     Item* item = player->GetItemByGuid(itemGuid);
+                    uint32 kPlAccId = player->GetSession()->GetAccountId();
 
                     if (player->IsInCombat())
                     {
@@ -1673,7 +1850,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped())
+                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
@@ -1704,6 +1881,7 @@ public:
                 {
                     ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
                     Item* item = player->GetItemByGuid(itemGuid);
+                    uint32 kPlAccId = player->GetSession()->GetAccountId();
 
                     if (player->IsInCombat())
                     {
@@ -1722,7 +1900,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped())
+                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
@@ -1755,6 +1933,7 @@ public:
                 {
                     ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(action);
                     Item* item = player->GetItemByGuid(itemGuid);
+                    uint32 kPlAccId = player->GetSession()->GetAccountId();
 
                     if (player->IsInCombat())
                     {
@@ -1773,7 +1952,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped())
+                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
