@@ -37,6 +37,7 @@ void AddSC_kitt_custom_rate();
 //void AddSC_kitt_custom_loot_mapid();
 void AddSC_kitt_instance_requirement();
 void AddSC_kitt_custom_sanctuary();
+void AddSC_kitt_invite_friend();
 
 
 // The name of this function should match:
@@ -63,4 +64,5 @@ void AddkittScripts()
 //    AddSC_kitt_custom_loot_mapid();
     AddSC_kitt_instance_requirement();
     AddSC_kitt_custom_sanctuary();
+    AddSC_kitt_invite_friend();
 }
