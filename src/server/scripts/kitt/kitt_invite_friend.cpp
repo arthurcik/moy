@@ -415,7 +415,7 @@ public:
     }
 
     // --- 3. PREMIU JUCATOR NOU ---
-    static bool HandleClaimNewbieReward(ChatHandler* handler, Tail /*args*/)
+    static bool HandleClaimNewbieReward(ChatHandler* handler)
     {
         Player* me = handler->GetSession()->GetPlayer();
         if (!me) return true;
@@ -472,7 +472,7 @@ public:
     }
 
     // --- 4. PREMIU RECRUTATOR (PE NUME PRIETEN) ---
-    static bool HandleClaimReferrerReward(ChatHandler* handler, char const* args)
+    static bool HandleClaimReferrerReward(ChatHandler* handler, Optional<std::string_view> args)
     {
         Player* me = handler->GetSession()->GetPlayer();
         if (!me) return true;
@@ -484,7 +484,7 @@ public:
         }
 
         // 1. Verificam daca argumentul (numele) lipseste
-        if (!*args)
+        if (!args)
         {
             handler->SendSysMessage("Usage: |cffffffff.zinvite_claim_friend|r CHARACTER_NAME");
             return true;
@@ -493,7 +493,7 @@ public:
         uint32 myAcc = me->GetSession()->GetAccountId();
 
         // 2. Normalizare Nume
-        std::string targetName = args;
+        std::string targetName(args.value());
         if (!targetName.empty()) {
             std::transform(targetName.begin(), targetName.end(), targetName.begin(), ::tolower);
             targetName[0] = std::toupper(targetName[0]);
@@ -577,7 +577,7 @@ public:
     }
 
     // --- 5. STATISTICI (Ultra Rapid) ---
-    static bool HandleZShowStatisticsCommand(ChatHandler* handler, Tail /*args*/)
+    static bool HandleZShowStatisticsCommand(ChatHandler* handler)
     {
         Player* me = handler->GetSession()->GetPlayer();
         if (!me) return true;
@@ -660,7 +660,7 @@ public:
     }
 
     // --- 6 Show items Reward ---
-    static bool HandleZShowRewardsCommand(ChatHandler* handler, Tail /*args*/)
+    static bool HandleZShowRewardsCommand(ChatHandler* handler)
     {
         Player* me = handler->GetSession()->GetPlayer();
         if (!me) return true;
