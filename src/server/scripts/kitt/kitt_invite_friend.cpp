@@ -272,7 +272,7 @@ public:
     }
 
     // --- 2. INREGISTRARE RECOMANDARE ---
-    static bool HandleZRecomandatCommand(ChatHandler* handler, char const* args)
+    static bool HandleZRecomandatCommand(ChatHandler* handler, Optional<std::string_view> args)
     {
         Player* me = handler->GetSession()->GetPlayer();
         if (!me) return true;
@@ -292,12 +292,12 @@ public:
             // In structura actuala stocam numele original in DB, 
             // Altfel, afisam un mesaj generic sau cautam in DB. 
             // Presupunand ca am adaugat recomName in struct:
-            handler->PSendSysMessage("You have already set |cffFFFF00%s|r as the person who invited you.", it->second.recomName.c_str());
+            handler->PSendSysMessage("You have already set |cffffffff%s|r as the person who invited you.", it->second.recomName.c_str());
             return true;
         }
 
         // 2. Mesaj de ajutor daca nu a scris numele
-        if (!*args)
+        if (!args)
         {
             handler->SendSysMessage("Usage: |cffffffff.zinvite_by|r CHARACTER_NAME");
             handler->SendSysMessage("Note: You can only set your referrer within the first 10 hours of play time.");
@@ -312,7 +312,7 @@ public:
         }
 
         // 4. Normalizare Nume
-        std::string targetName = args;
+        std::string targetName(args.value());
         if (!targetName.empty())
         {
             std::transform(targetName.begin(), targetName.end(), targetName.begin(), ::tolower);
@@ -415,7 +415,7 @@ public:
     }
 
     // --- 3. PREMIU JUCATOR NOU ---
-    static bool HandleClaimNewbieReward(ChatHandler* handler, char const* /*args*/)
+    static bool HandleClaimNewbieReward(ChatHandler* handler, Tail /*args*/)
     {
         Player* me = handler->GetSession()->GetPlayer();
         if (!me) return true;
@@ -577,7 +577,7 @@ public:
     }
 
     // --- 5. STATISTICI (Ultra Rapid) ---
-    static bool HandleZShowStatisticsCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleZShowStatisticsCommand(ChatHandler* handler, Tail /*args*/)
     {
         Player* me = handler->GetSession()->GetPlayer();
         if (!me) return true;
@@ -660,7 +660,7 @@ public:
     }
 
     // --- 6 Show items Reward ---
-    static bool HandleZShowRewardsCommand(ChatHandler* handler, char const* /*args*/)
+    static bool HandleZShowRewardsCommand(ChatHandler* handler, Tail /*args*/)
     {
         Player* me = handler->GetSession()->GetPlayer();
         if (!me) return true;

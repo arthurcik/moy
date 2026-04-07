@@ -4,11 +4,16 @@
 Kitt.Custom.Rate.Xp = 0
 Kitt.Custom.Rate.Rep = 0
 
-# kitt play time reward
+# Kitt play time reward
 # periodic reward system
 # enable = 1
 # Default: 0
 Kitt.Play.Time.Reward = 0
+
+# Kitt invite system
+# enable = 1
+# Default: 0
+Kitt.Invite.Friend = 0
 
 ###################################
 ##### Kitt Instance Req start #####
