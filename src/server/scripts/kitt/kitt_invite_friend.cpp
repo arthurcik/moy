@@ -230,7 +230,7 @@ public:
                 if (it == RecommendCache.end() && p->GetTotalPlayedTime() < 36000)
                 {
                     // Daca e nou si nu a setat pe nimeni, ii reamintim
-                    ChatHandler(p->GetSession()).PSendSysMessage("|cffFFFF00Tip:|r Were you invited by a friend? Use |cffffffff.zinvite by Name|r to register!");
+                    ChatHandler(p->GetSession()).PSendSysMessage("|cffFFFF00Tip:|r Were you invited by a friend? Use |cffffffff.zinvite by|r |cff00ff00CharacterName|r to register!");
                 }
                 else if (it != RecommendCache.end() && p->GetLevel() >= 80 && !it->second.rewardedNew)
                 {
@@ -310,7 +310,7 @@ public:
         // 2. Mesaj de ajutor daca nu a scris numele
         if (!args)
         {
-            handler->SendSysMessage("Usage: |cffffffff.zinvite by|r CharacterName");
+            handler->SendSysMessage("Usage: |cffffffff.zinvite by|r |cff00ff00CharacterName|r");
             handler->SendSysMessage("Note: You can only set your referrer within the first 10 hours of play time.");
             return true;
         }
@@ -444,7 +444,7 @@ public:
         if (it == RecommendCache.end())
         {
             handler->SendSysMessage("You are not registered in the recommendation system.");
-            handler->SendSysMessage("Use |cffffffff.zinvite by CharacterName|r first (only available in the first 10 hours).");
+            handler->SendSysMessage("Use |cffffffff.zinvite by|r |cff00ff00CharacterName|r first (only available in the first 10 hours).");
             return true;
         }
 
