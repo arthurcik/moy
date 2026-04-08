@@ -316,10 +316,11 @@ public:
             return true;
         }
 
-        // 3. Verificare timp (10 ore)
-        if (me->GetTotalPlayedTime() > 36000)
+        // 3. Verificare timp (10 ore) (36000 sec)
+        constexpr uint32 KittInviteByPlayTimeProtect = 40; // 40 ore InGame
+        if (me->GetTotalPlayedTime() > ((KittInviteByPlayTimeProtect * 60) * 60))
         {
-            handler->SendSysMessage("You have exceeded the 10-hour limit to set a referrer.");
+            handler->PSendSysMessage("You have exceeded the %u-hour limit to set a referrer.", KittInviteByPlayTimeProtect);
             return true;
         }
 
