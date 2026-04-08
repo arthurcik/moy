@@ -230,16 +230,16 @@ public:
                 if (it == RecommendCache.end() && p->GetTotalPlayedTime() < 36000)
                 {
                     // Daca e nou si nu a setat pe nimeni, ii reamintim
-                    ChatHandler(p->GetSession()).PSendSysMessage("|cffFFFF00Tip:|r Were you invited by a friend? Use |cffffffff.zinvite_by NAME|r to register!");
+                    ChatHandler(p->GetSession()).PSendSysMessage("|cffFFFF00Tip:|r Were you invited by a friend? Use |cffffffff.zinvite by Name|r to register!");
                 }
                 else if (it != RecommendCache.end() && p->GetLevel() >= 80 && !it->second.rewardedNew)
                 {
                     // Daca are 80 si nu si-a luat premiul de "Nou Venit"
-                    ChatHandler(p->GetSession()).PSendSysMessage("|cff00ff00[Reward]:|r Your Welcome Reward is ready! Use |cffffffff.zinvite_claim_me|r to claim it.");
+                    ChatHandler(p->GetSession()).PSendSysMessage("|cff00ff00[Reward]:|r Your Welcome Reward is ready! Use |cffffffff.zinvite claim me|r to claim it.");
                 }
 
-                ChatHandler(p->GetSession()).PSendSysMessage("Type |cffffffff.zinvite_list|r to see your invited friends status.");
-                ChatHandler(p->GetSession()).PSendSysMessage("To see the list of rewards, type |cffffffff.zinvite_rewards|r.");
+                ChatHandler(p->GetSession()).PSendSysMessage("Type |cffffffff.zinvite list|r to see your invited friends status.");
+                ChatHandler(p->GetSession()).PSendSysMessage("To see the list of rewards, type |cffffffff.zinvite rewards|r.");
 
             }, 30s);
     }
@@ -260,15 +260,26 @@ public:
 
     std::vector<ChatCommandBuilder> GetCommands() const override
     {
-        static std::vector<ChatCommandBuilder> recommendationCommandTable =
+        static std::vector<ChatCommandBuilder> KittInviteClaimSubcommandTable =
         {
-            { "zinvite_by",           HandleZRecomandatCommand,     rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
-            { "zinvite_claim_me",     HandleClaimNewbieReward,      rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
-            { "zinvite_claim_friend", HandleClaimReferrerReward,    rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
-            { "zinvite_list",         HandleZShowStatisticsCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
-            { "zinvite_rewards",      HandleZShowRewardsCommand,    rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
+            { "me",     HandleClaimNewbieReward,      rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
+            { "friend", HandleClaimReferrerReward,    rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
         };
-        return recommendationCommandTable;
+
+        static std::vector<ChatCommandBuilder> KittInviteSubcommandTable =
+        {
+            { "by",           HandleZRecomandatCommand,     rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
+            { "claim",        KittInviteClaimSubcommandTable },
+            { "list",         HandleZShowStatisticsCommand, rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
+            { "rewards",      HandleZShowRewardsCommand,    rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
+        };
+
+        static std::vector<ChatCommandBuilder> KittInviteCommandTable =
+        {
+            { "zinvite", KittInviteSubcommandTable },
+        };
+
+        return KittInviteCommandTable;
     }
 
     // --- 2. INREGISTRARE RECOMANDARE ---
@@ -299,7 +310,7 @@ public:
         // 2. Mesaj de ajutor daca nu a scris numele
         if (!args)
         {
-            handler->SendSysMessage("Usage: |cffffffff.zinvite_by|r CHARACTER_NAME");
+            handler->SendSysMessage("Usage: |cffffffff.zinvite by|r CharacterName");
             handler->SendSysMessage("Note: You can only set your referrer within the first 10 hours of play time.");
             return true;
         }
@@ -433,7 +444,7 @@ public:
         if (it == RecommendCache.end())
         {
             handler->SendSysMessage("You are not registered in the recommendation system.");
-            handler->SendSysMessage("Use |cffffffff.zinvite_by CHARACTER_NAME|r first (only available in the first 10 hours).");
+            handler->SendSysMessage("Use |cffffffff.zinvite by CharacterName|r first (only available in the first 10 hours).");
             return true;
         }
 
@@ -486,7 +497,7 @@ public:
         // 1. Verificam daca argumentul (numele) lipseste
         if (!args)
         {
-            handler->SendSysMessage("Usage: |cffffffff.zinvite_claim_friend|r CHARACTER_NAME");
+            handler->SendSysMessage("Usage: |cffffffff.zinvite claim friend|r CharacterName");
             return true;
         }
 
@@ -653,7 +664,7 @@ public:
         else
         {
             handler->SendSysMessage("---------------------------------------------");
-            handler->SendSysMessage("To claim a reward, use: |cffffffff.zinvite_claim_friend|r NAME");
+            handler->SendSysMessage("To claim a reward, use: |cffffffff.zinvite claim friend|r Name");
         }
 
         return true;
@@ -740,8 +751,8 @@ public:
         handler->SendSysMessage("---------------------------------------------");
         handler->SendSysMessage("|cff00ff00Requirements:|r The invited player must reach |cffFFFF00Level 80|r.");
         handler->SendSysMessage("|cffFFFF00To claim your rewards, use:|r");
-        handler->SendSysMessage("- |cffffffff.zinvite_claim_me|r (If you were invited)");
-        handler->SendSysMessage("- |cffffffff.zinvite_claim_friend NAME|r (If you invited a friend)");
+        handler->SendSysMessage("- |cffffffff.zinvite claim me|r (If you were invited)");
+        handler->SendSysMessage("- |cffffffff.zinvite claim friend Name|r (If you invited a friend)");
         handler->SendSysMessage("---------------------------------------------");
         return true;
     }
