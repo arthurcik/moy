@@ -390,7 +390,7 @@ public:
         if (!resultJoin)
         {
             //handler->SendSysMessage("|cffff0000Error:|r Your account is too old to participate in this system.");
-            handler->SendSysMessage("|cffff0000Error:|r Only accounts created in the last 5 days can set a invite_by.");
+            handler->SendSysMessage("|cffff0000Error:|r Only accounts created in the last 5 days can set a zinvite by CharacterName.");
             return true;
         }
 
