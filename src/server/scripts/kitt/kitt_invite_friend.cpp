@@ -46,7 +46,8 @@ namespace
     const std::vector<RewardItem> newbieRewards = {
         { 49426, 150 }, // Embleme of Frost
         { 47241, 150 }, // Embleme of Triumph
-        { 40753, 150 }  // Emblem of Valor
+        { 40753, 150 }, // Emblem of Valor
+        { 23720, 1 }    // Riding Turtle
     };
 
     // Premii pentru RECRUTATOR (cel care a recomandat)
