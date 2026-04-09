@@ -36,7 +36,7 @@ namespace
     // --- CONFIGURARE PREMII AICI ---
     // puncte pe site VP / DP pentru cel ce invita
     static int KittInviteBySiteVP = 30;
-    static int KittInviteBySiteDP = 50;
+    static int KittInviteBySiteDP = 25;
     // puncte site VP / DP pentru cel Nou
     static int KittInviteNewSiteVP = 15;
     static int KittInviteNewSiteDP = 0;
