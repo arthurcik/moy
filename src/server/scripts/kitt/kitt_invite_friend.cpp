@@ -54,6 +54,7 @@ namespace
     const std::vector<RewardItem> referrerRewards = {
         { 44990, 100 }, // Champion's Seal
         { 33079, 1 },  // Murloc Costume
+        { 23162, 1 },  // Bag 36 slot Foror's Crate of Endless Resist Gear Storage
         { 38233, 100 },  // Path of Illidan
         { 33927, 1 },  // Brewfest Pony Keg
         { 13379, 1 }  // Piccolo of the Flaming Fire
