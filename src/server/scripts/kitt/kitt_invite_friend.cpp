@@ -225,23 +225,24 @@ public:
                 uint32 myAcc = p->GetSession()->GetAccountId();
 
                 // Trimitem un mesaj informativ discret
-                ChatHandler(p->GetSession()).PSendSysMessage("|cff00ff00[Invite System]:|r Invite your friends and earn rewards at level 80!");
+                ChatHandler(p->GetSession()).PSendSysMessage("|cff00ccff --- [Invite System] ---|r ");
+                ChatHandler(p->GetSession()).PSendSysMessage("|cffFFFF00Tip:|r Invite your friends and earn rewards at level 80!");
 
                 // Verificam daca cel care s-a logat are deja setat un "invitator"
                 auto it = RecommendCache.find(myAcc);
                 if (it == RecommendCache.end() && p->GetTotalPlayedTime() < 36000)
                 {
                     // Daca e nou si nu a setat pe nimeni, ii reamintim
-                    ChatHandler(p->GetSession()).PSendSysMessage("|cffFFFF00Tip:|r Were you invited by a friend? Use |cffffffff.zinvite by|r |cff00ff00CharacterName|r to register!");
+                    ChatHandler(p->GetSession()).PSendSysMessage("|cffFFFF00Tip:|r Were you invited by a friend? Type |cff00ccff.zinvite by <CharacterName>|r to register!");
                 }
                 else if (it != RecommendCache.end() && p->GetLevel() >= 80 && !it->second.rewardedNew)
                 {
                     // Daca are 80 si nu si-a luat premiul de "Nou Venit"
-                    ChatHandler(p->GetSession()).PSendSysMessage("|cff00ff00[Reward]:|r Your Welcome Reward is ready! Use |cffffffff.zinvite claim me|r to claim it.");
+                    ChatHandler(p->GetSession()).PSendSysMessage("|cff00ff00[Reward]:|r Your Welcome Reward is ready! Type |cff00ccff.zinvite claim me|r to claim it.");
                 }
 
-                ChatHandler(p->GetSession()).PSendSysMessage("Type |cffffffff.zinvite list|r to see your invited friends status.");
-                ChatHandler(p->GetSession()).PSendSysMessage("To see the list of rewards, type |cffffffff.zinvite rewards|r.");
+                ChatHandler(p->GetSession()).PSendSysMessage("Type: |cff00ccff.zinvite list|r to see your invited friends status.");
+                ChatHandler(p->GetSession()).PSendSysMessage("Type: |cff00ccff.zinvite rewards|r to see the list of rewards.");
 
             }, 30s);
     }
