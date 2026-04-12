@@ -751,8 +751,8 @@ void WorldSession::ResetTimeOutTime(bool onlyActive)
 bool WorldSession::IsConnectionIdle() const
 {
     // kitt inactive time
-//    if (_player && _player->isAFK() && sWorld->getIntConfig(CONFIG_AFK_PREVENT_LOGOUT) > 0)
-//        return false;
+    if (_player && _player->isAFK() && sWorld->getIntConfig(CONFIG_AFK_PREVENT_LOGOUT) > 0)
+        return false;
     // kitt ------------
 
     return m_timeOutTime < GameTime::GetGameTime() && !m_inQueue;
