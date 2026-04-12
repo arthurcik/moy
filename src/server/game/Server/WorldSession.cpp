@@ -278,27 +278,6 @@ void WorldSession::LogUnprocessedTail(WorldPacket* packet)
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
-    // kitt
-    if (_player)
-    {
-        if (_player->isAFK())
-        {
-            uint32 configValue = sWorld->getIntConfig(CONFIG_AFK_PREVENT_LOGOUT);
-            bool prevent = (configValue == 2) || (configValue == 1 && sAreaTableStore.LookupEntry(_player->GetAreaId())->IsSanctuary());
-
-            if (prevent)
-            {
-                if (_timeSyncTimer < 3600000)
-                    _timeSyncTimer = 3600000;
-            }
-        }
-        else if (_timeSyncTimer > 10000)
-        {
-            _timeSyncTimer = 10000;
-        }
-    }
-    // kitt ----------
-
     ///- Before we process anything:
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)
@@ -750,11 +729,6 @@ void WorldSession::ResetTimeOutTime(bool onlyActive)
 
 bool WorldSession::IsConnectionIdle() const
 {
-    // kitt inactive time
-    if (_player && _player->isAFK() && sWorld->getIntConfig(CONFIG_AFK_PREVENT_LOGOUT) > 0)
-        return false;
-    // kitt ------------
-
     return m_timeOutTime < GameTime::GetGameTime() && !m_inQueue;
 }
 
