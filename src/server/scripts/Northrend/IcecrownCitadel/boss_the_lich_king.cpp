@@ -270,6 +270,7 @@ enum LichKingEvents
 
     // Strangulate Vehicle (Harvest Soul)
     EVENT_TELEPORT,
+    EVENT_TELEPORT_NOW,
     EVENT_MOVE_TO_LICH_KING,
     EVENT_DESPAWN_SELF,
 
@@ -1655,6 +1656,7 @@ struct npc_strangulate_vehicle : public ScriptedAI
         {
             switch (eventId)
             {
+                // kitt fix Start ------------
                 case EVENT_TELEPORT:
                     me->GetMotionMaster()->Clear();
                     me->GetMotionMaster()->MoveIdle();
@@ -1662,8 +1664,27 @@ struct npc_strangulate_vehicle : public ScriptedAI
                     {
                         if (Unit* summoner = summ->GetSummonerUnit())
                         {
-                            summoner->CastSpell(nullptr, SPELL_HARVEST_SOUL_VISUAL, true);
+                            //summoner->CastSpell(nullptr, SPELL_HARVEST_SOUL_VISUAL, true);
                             summoner->ExitVehicle(summoner);
+                            _events.ScheduleEvent(EVENT_TELEPORT_NOW, 500ms);
+                            /**if (!IsHeroic())
+                                summoner->CastSpell(summoner, SPELL_HARVEST_SOUL_TELEPORT, true);
+                            else
+                            {
+                                summoner->CastSpell(summoner, SPELL_HARVEST_SOULS_TELEPORT, true);
+                                summoner->RemoveAurasDueToSpell(HARVEST_SOUL, ObjectGuid::Empty, 0, AURA_REMOVE_BY_EXPIRE);
+                            }**/
+                        }
+                    }
+                    //_events.ScheduleEvent(EVENT_DESPAWN_SELF, 65s);
+                    break;
+
+                case EVENT_TELEPORT_NOW:
+                    if (TempSummon* summ = me->ToTempSummon())
+                    {
+                        if (Unit* summoner = summ->GetSummonerUnit())
+                        {
+                            summoner->CastSpell(nullptr, SPELL_HARVEST_SOUL_VISUAL, true);
                             if (!IsHeroic())
                                 summoner->CastSpell(summoner, SPELL_HARVEST_SOUL_TELEPORT, true);
                             else
@@ -1673,9 +1694,10 @@ struct npc_strangulate_vehicle : public ScriptedAI
                             }
                         }
                     }
-
                     _events.ScheduleEvent(EVENT_DESPAWN_SELF, 65s);
                     break;
+                    // kitt fix end ------------
+
                 case EVENT_MOVE_TO_LICH_KING:
                     if (Creature* lichKing = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_THE_LICH_KING)))
                     {
