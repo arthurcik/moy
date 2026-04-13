@@ -86,6 +86,32 @@ kitt.Quests.AutoReputation.Enable = 0
 # Default: "" # Ex.: "10733,10738"
 kitt.Quests.AutoReputation.List = ""
 
+########################################
+# TELEGRAM CHAT BOT SETTINGS
+########################################
+
+# Activeaza sau dezactiveaza botul (1 = Pornit, 0 = Oprit)
+Kitt.Telegram.Enable = 0
+
+# Token-ul primit de la @BotFather
+Kitt.Telegram.Token = ""
+
+# ID-ul de chat (ex: -10054321) daca chatID este: 54321
+Kitt.Telegram.ChatId = "-100"
+
+# Numele canalului care va fi monitorizat (litere mici)
+Kitt.Telegram.Channel = "global"
+
+# anti-spam doar pt canal setat
+# interval secunde
+Kitt.Telegram.SpamTime = 5
+
+# nr msg in interval
+Kitt.Telegram.SpamCount = 2
+
+# mute time in secunde
+Kitt.Telegram.MuteTime = 60
+
 ###################
 # KITT NPC CONFIG
 ##################
