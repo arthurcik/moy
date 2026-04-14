@@ -102,6 +102,13 @@ Kitt.Telegram.ChatId = "-100"
 # Numele canalului care va fi monitorizat (litere mici)
 Kitt.Telegram.Channel = "global"
 
+# program noapte start interval H 0...23
+# to disabled set 0 to start and end
+Kitt.Telegram.NightStart = 0
+
+# program noapte end
+Kitt.Telegram.NightEnd = 0
+
 # anti-spam doar pt canal setat
 # interval secunde
 Kitt.Telegram.SpamTime = 5

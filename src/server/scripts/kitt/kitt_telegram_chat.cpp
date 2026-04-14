@@ -7,6 +7,8 @@
 #include "Player.h"
 #include "Chat.h"
 #include "Channel.h"
+#include "ChatCommand.h"
+#include "ChannelMgr.h"
 #include "GameTime.h"
 #include "WorldSession.h"
 #include <string>
@@ -16,10 +18,10 @@
 #include "Log.h"
 #include "Config.h"
 #include <regex>
-
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include "World.h"
 
 
 namespace
@@ -30,6 +32,10 @@ namespace
     std::string TelegramToken = "";
     std::string TelegramChatId = "";
     std::string TelegramChannel = "global";
+
+    uint32 KittNightStart = 23; // Ora 23:00
+    uint32 KittNightEnd = 10;   // Ora 10:00
+
 
     bool workerRunning = true;
     std::queue<std::string> messageQueue;
@@ -110,6 +116,26 @@ namespace
     uint32 KittSpamTimeMsg = 5;
     uint32 KittSpamContMsg = 2;
     uint32 KittSpamMuteTime = 60;
+
+    bool IsNightTime()
+    {
+        if (KittNightStart == KittNightEnd)
+            return false;
+
+        time_t t = time(nullptr);
+        tm* now = localtime(&t);
+        uint32 hour = now->tm_hour;
+
+        if (KittNightStart > KittNightEnd)
+        {
+            return (hour >= KittNightStart || hour < KittNightEnd);
+        }
+        else
+        {
+            return (hour >= KittNightStart && hour < KittNightEnd);
+        }
+    }
+
 }
 
 
@@ -120,8 +146,11 @@ public:
 
     void OnChat(Player* player, uint32 type, uint32 /*lang*/, std::string& msg, Channel* channel) override
     {
-        if (!TelegramEnable || !channel)
+        if (!TelegramEnable || !channel || IsNightTime())
             return;
+
+        //if (msg.find("[Telegram]") != std::string::npos)
+        //    return;
 
         std::string KittchannelName = channel->GetName();
         std::string lowerChannelName = KittchannelName;
@@ -204,6 +233,9 @@ public:
         KittSpamTimeMsg = sConfigMgr->GetIntDefault("Kitt.Telegram.SpamTime", 5);
         KittSpamContMsg = sConfigMgr->GetIntDefault("Kitt.Telegram.SpamCount", 3);
         KittSpamMuteTime = sConfigMgr->GetIntDefault("Kitt.Telegram.MuteTime", 60);
+        KittNightStart = sConfigMgr->GetIntDefault("Kitt.Telegram.NightStart", 23);
+        KittNightEnd = sConfigMgr->GetIntDefault("Kitt.Telegram.NightEnd", 10);
+
 
         if (TelegramEnable)
             TC_LOG_INFO("server.loading", ">> KITT [Telegram Chat] config load. Option ACTIVAT.");
@@ -223,8 +255,58 @@ public:
     }
 };
 
+using namespace Trinity::ChatCommands;
+
+class KittTelegram_Command : public CommandScript
+{
+public:
+    KittTelegram_Command() : CommandScript("KittTelegram_Command") {}
+
+    std::vector<ChatCommandBuilder> GetCommands() const override
+    {
+        static std::vector<ChatCommandBuilder> KittTelegramSubcommandTable =
+        {
+            // Adaugam un spatiu si _string pentru a accepta argumente multiple (mesajul complet)
+            { "send", HandleTelegramSendInternal, rbac::RBAC_PERM_COMMAND_RELOAD_CONFIG, Console::Yes },
+        };
+
+        static std::vector<ChatCommandBuilder> KittTelegramCommandTable =
+        {
+            { "telegram", KittTelegramSubcommandTable },
+        };
+
+        return KittTelegramCommandTable;
+    }
+
+    static bool HandleTelegramSendInternal(ChatHandler* /*handler*/, Tail args)
+    {
+        if (args.empty())
+            return false;
+
+        std::string channelName = TelegramChannel;
+        //std::string msgContent(args.value());
+        std::string msgText = "|cff00ccff[Telegram]|r |cffffffff" + std::string(args) + "|r";
+        //std::string msgText = std::string(args);
+        //ObjectGuid senderGuid = ObjectGuid::Create<HighGuid::Player>(1);
+        ObjectGuid senderGuid = ObjectGuid::Empty;
+
+
+        WorldPacket data;
+        ChatHandler::BuildChatPacket(data, CHAT_MSG_CHANNEL, LANG_UNIVERSAL, senderGuid, senderGuid, msgText, 0, "", "", 0, false, channelName);
+
+        sWorld->SendGlobalMessage(&data);
+
+        return true;
+    }
+
+
+
+
+};
+
 void AddSC_kitt_telegram_chat()
 {
     new KittKittTelegramChatScript_config();
     new KittTelegramChatScript();
+    new KittTelegram_Command();
 }
