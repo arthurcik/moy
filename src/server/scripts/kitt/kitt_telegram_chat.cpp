@@ -44,7 +44,10 @@ namespace
 
     std::string KittCleanWoWLinks(std::string text)
     {
-        static const std::regex linkRegex("\\|c[0-9a-fA-F]{8}\\|H[a-zA-Z0-9:]+\\|h\\[([^\\]]+)\\]\\|h\\|r");
+        //static const std::regex linkRegex("\\|c[0-9a-fA-F]{8}\\|H[a-zA-Z0-9:]+\\|h\\[([^\\]]+)\\]\\|h\\|r");
+        //static const std::regex linkRegex("\\|c[0-9a-fA-F]{8}\\|H[a-zA-Z0-9:/\\+ ]+\\|h\\[([^\\]]+)\\]\\|h\\|r");
+        static const std::regex linkRegex("\\|c[a-fA-F0-9]{8}\\|H.*?\\|h\\[([^\\]]+)\\]\\|h\\|r");
+
 
         return std::regex_replace(text, linkRegex, "[$1]");
     }
@@ -285,7 +288,9 @@ public:
 
         std::string channelName = TelegramChannel;
         //std::string msgContent(args.value());
-        std::string msgText = "|cff00ccff[Telegram]|r |cffffffff" + std::string(args) + "|r";
+        //std::string msgText = "|cff00ccff[Telegram]|r |cffffffff" + std::string(args) + "|r";
+        std::string msgText = "[T] " + std::string(args);
+
         //std::string msgText = std::string(args);
         //ObjectGuid senderGuid = ObjectGuid::Create<HighGuid::Player>(1);
         ObjectGuid senderGuid = ObjectGuid::Empty;
