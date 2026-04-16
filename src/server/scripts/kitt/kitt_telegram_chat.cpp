@@ -89,7 +89,9 @@ namespace
     {
         while (workerRunning)
         {
-            std::string msg;
+            //std::string msg;
+            std::string batchMessage = "";
+            bool bufferWasFull = false;
             {
                 std::unique_lock<std::mutex> lock(queueMutex);
                 queueCondition.wait(lock, [] { return !messageQueue.empty() || !workerRunning; });
@@ -97,14 +99,46 @@ namespace
                 if (!workerRunning && messageQueue.empty())
                     break;
 
-                msg = messageQueue.front();
-                messageQueue.pop();
+                batchMessage = "~_~_~_~_~_~\n\n";
+
+
+                //msg = messageQueue.front();
+                //messageQueue.pop();
+                while (!messageQueue.empty())
+                {
+                    std::string nextMsg = messageQueue.front();
+
+                    if (batchMessage.length() + nextMsg.length() > 3800)
+                    {
+                        bufferWasFull = true;
+                        break;
+                    }
+
+                    batchMessage += nextMsg + "\n\n";
+                    messageQueue.pop();
+                }
             }
 
-            SendToTelegram(msg);
+            if (!batchMessage.empty())
+            {
+                SendToTelegram(batchMessage);
+            }
+
+            if (bufferWasFull)
+            {
+                // 100ms = 10 mesaje pe secunda
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            }
+            else
+            {
+                std::this_thread::sleep_for(std::chrono::seconds(30));
+            }
+
+            //SendToTelegram(msg);
 
             // 100ms pauza = max 10 mesaje pe secunda (siguranta totala pentru Telegram)
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            //std::this_thread::sleep_for(std::chrono::seconds(30));
         }
     }
 
@@ -152,7 +186,7 @@ public:
         if (!TelegramEnable || !channel || IsNightTime())
             return;
 
-        //if (msg.find("[Telegram]") != std::string::npos)
+        //if (msg.find("[T]") != std::string::npos)
         //    return;
 
         std::string KittchannelName = channel->GetName();
@@ -193,7 +227,9 @@ public:
 
             std::string KittcleanedMsg = KittCleanWoWLinks(msg);
             std::string playerName = player->GetName();
-            std::string fullMessage = "<" + KittchannelName + "> [" + playerName + "]: " + KittcleanedMsg;
+            //std::string fullMessage = "<" + KittchannelName + "> [" + playerName + "]: " + KittcleanedMsg;
+            std::string fullMessage = "[" + playerName + "]: " + KittcleanedMsg;
+
 
             {
                 std::lock_guard<std::mutex> lock(queueMutex);
