@@ -99,7 +99,7 @@ namespace
                 if (!workerRunning && messageQueue.empty())
                     break;
 
-                batchMessage = "~_~_~_~_~_~\n\n";
+                batchMessage = "~\n\n";
 
 
                 //msg = messageQueue.front();
@@ -244,10 +244,10 @@ public:
     }
 };
 
-class KittKittTelegramChatScript_config : public WorldScript
+class KittTelegramChatScript_config : public WorldScript
 {
 public:
-    KittKittTelegramChatScript_config() : WorldScript("KittKittTelegramChatScript_config") {}
+    KittTelegramChatScript_config() : WorldScript("KittTelegramChatScript_config") {}
 
     void OnStartup() override
     {
@@ -347,7 +347,7 @@ public:
 
 void AddSC_kitt_telegram_chat()
 {
-    new KittKittTelegramChatScript_config();
+    new KittTelegramChatScript_config();
     new KittTelegramChatScript();
     new KittTelegram_Command();
 }
