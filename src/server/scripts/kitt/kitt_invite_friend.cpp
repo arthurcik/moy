@@ -319,7 +319,7 @@ public:
         }
 
         // 3. Verificare timp (10 ore) (36000 sec)
-        constexpr uint32 KittInviteByPlayTimeProtect = 40; // 40 ore InGame
+        constexpr uint32 KittInviteByPlayTimeProtect = 100; // 40 ore InGame
         if (me->GetTotalPlayedTime() > ((KittInviteByPlayTimeProtect * 60) * 60))
         {
             handler->PSendSysMessage("You have exceeded the %u-hour limit to set a referrer.", KittInviteByPlayTimeProtect);
