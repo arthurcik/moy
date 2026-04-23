@@ -434,28 +434,28 @@ static const std::array<TeleportLocation, 19> ClassicDungeonsLocs = { {
 
 // BC Dungeons
 static const std::array<TeleportLocation, 6> BcDungeonsLocs = { {
-    {530, -3324.49f, 4943.45f, -101.239f, 4.63901f, "Auchindoun",          70},
-    {1, -8369.65f, -4253.11f, -204.272f, -2.70526f, "The Caverns of Time", 70},
-    {530, 738.865f, 6865.77f, -69.4659f, 6.27655f, "Coilfang Reservoir",   70},
-    {530, -347.29f, 3089.82f, 21.394f, 5.68114f, "Hellfire Citadel",       70},
-    {530, 12884.6f, -7317.69f, 65.5023f, 4.799f, "Magisters\' Terrace",    70},
-    {530, 3100.48f, 1536.49f, 190.3f, 4.62226f, "Tempest Keep",            70},
+    {530, -3324.49f, 4943.45f, -101.239f, 4.63901f, "Auchindoun",          60},
+    {1, -8369.65f, -4253.11f, -204.272f, -2.70526f, "The Caverns of Time", 60},
+    {530, 738.865f, 6865.77f, -69.4659f, 6.27655f, "Coilfang Reservoir",   60},
+    {530, -347.29f, 3089.82f, 21.394f, 5.68114f, "Hellfire Citadel",       60},
+    {530, 12884.6f, -7317.69f, 65.5023f, 4.799f, "Magisters\' Terrace",    60},
+    {530, 3100.48f, 1536.49f, 190.3f, 4.62226f, "Tempest Keep",            60},
 } };
 
 // Wrath Dungeons
 static const std::array<TeleportLocation, 12> WrathDungeonsLocs = { {
-    {571, 3707.86f, 2150.23f, 36.76f, 3.22f, "Azjol-Nerub",                     80},
-    {1, -8756.39f, -4440.68f, -199.489f, 4.66289f, "The Culling of Stratholme", 80},
-    {571, 8590.95f, 791.792f, 558.235f, 3.13127f, "Trial of the Champion",      80},
-    {571, 4765.59f, -2038.24f, 229.363f, 0.887627f, "Drak\'Tharon Keep",        80},
-    {571, 6722.44f, -4640.67f, 450.632f, 3.91123f, "Gundrak",                   80},
-    {571, 5643.16f, 2028.81f, 798.274f, 4.60242f, "Icecrown Citadel Dungeons",  80},
-    {571, 3782.89f, 6965.23f, 105.088f, 6.14194f, "The Nexus Dungeons",         80},
-    {571, 5693.08f, 502.588f, 652.672f, 4.0229f, "The Violet Hold",             80},
-    {571, 9136.52f, -1311.81f, 1066.29f, 5.19113f, "Halls of Lightning",        80},
-    {571, 8922.12f, -1009.16f, 1039.56f, 1.57044f, "Halls of Stone",            80},
-    {571, 1203.41f, -4868.59f, 41.2486f, 0.283237f, "Utgarde Keep",             80},
-    {571, 1267.24f, -4857.3f, 215.764f, 3.22768f, "Utgarde Pinnacle",           80},
+    {571, 3707.86f, 2150.23f, 36.76f, 3.22f, "Azjol-Nerub",                     70},
+    {1, -8756.39f, -4440.68f, -199.489f, 4.66289f, "The Culling of Stratholme", 70},
+    {571, 8590.95f, 791.792f, 558.235f, 3.13127f, "Trial of the Champion",      70},
+    {571, 4765.59f, -2038.24f, 229.363f, 0.887627f, "Drak\'Tharon Keep",        70},
+    {571, 6722.44f, -4640.67f, 450.632f, 3.91123f, "Gundrak",                   70},
+    {571, 5643.16f, 2028.81f, 798.274f, 4.60242f, "Icecrown Citadel Dungeons",  70},
+    {571, 3782.89f, 6965.23f, 105.088f, 6.14194f, "The Nexus Dungeons",         70},
+    {571, 5693.08f, 502.588f, 652.672f, 4.0229f, "The Violet Hold",             70},
+    {571, 9136.52f, -1311.81f, 1066.29f, 5.19113f, "Halls of Lightning",        70},
+    {571, 8922.12f, -1009.16f, 1039.56f, 1.57044f, "Halls of Stone",            70},
+    {571, 1203.41f, -4868.59f, 41.2486f, 0.283237f, "Utgarde Keep",             70},
+    {571, 1267.24f, -4857.3f, 215.764f, 3.22768f, "Utgarde Pinnacle",           70},
 } };
 
 // Raid Teleports
