@@ -74,6 +74,43 @@ void WorldSession::SendNameQueryOpcode(ObjectGuid guid)
     }
     //end npcbot
 
+    // --- START FAKE NAME QUERY ---
+    if (guid.GetCounter() > 1000000 && sWorld->getBoolConfig(CONFIG_FAKE_WHO_LIST))
+    {
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(FAKE_CHAR_ONLINE);
+        stmt->setUInt32(0, sWorld->getIntConfig(CONFIG_FAKE_WHO_ONLINE_INTERVAL));
+        PreparedQueryResult result = CharacterDatabase.Query(stmt);
+
+        if (result)
+        {
+            do {
+                Field* fields = result->Fetch();
+                std::string fName = fields[0].GetString(); // name
+
+                uint32 nameHash = uint32(std::hash<std::string>{}(fName));
+                ObjectGuid checkGuid = ObjectGuid::Create<HighGuid::Player>(nameHash + 1000000);
+
+                if (checkGuid == guid)
+                {
+                    WorldPackets::Query::QueryPlayerNameResponse fResponse;
+                    fResponse.Player = guid;
+                    fResponse.Result = RESPONSE_SUCCESS; // name known
+
+                    WorldPackets::Query::PlayerGuidLookupData& fData = fResponse.Data.emplace();
+                    fData.Name = fName;
+                    fData.Race = fields[1].GetUInt8();   // race
+                    fData.Sex = fields[5].GetUInt8();    // gender
+                    fData.ClassID = fields[2].GetUInt8(); // class
+
+                    SendPacket(fResponse.Write());
+                    return;
+                }
+            } while (result->NextRow());
+        }
+    }
+    // --- END FAKE NAME QUERY ---
+
+
     WorldPackets::Query::QueryPlayerNameResponse response;
     response.Player = guid;
 

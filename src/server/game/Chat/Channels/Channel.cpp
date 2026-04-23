@@ -606,7 +606,67 @@ void Channel::List(Player const* player) const
     TC_LOG_DEBUG("chat.system", "SMSG_CHANNEL_LIST {} Channel: {}",
         player->GetSession()->GetPlayerInfo(), channelName);
 
-    WorldPacket data(SMSG_CHANNEL_LIST, 1 + (channelName.size() + 1) + 1 + 4 + _playersStore.size() * (8 + 1));
+    // fake member to channel
+    bool addFakes = sWorld->getBoolConfig(CONFIG_FAKE_WHO_LIST) &&
+        (channelName == "global" || channelName == "Global");
+
+    std::vector<std::pair<ObjectGuid, uint8>> fakeMembers;
+    if (addFakes)
+    {
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(FAKE_CHAR_ONLINE);
+        stmt->setUInt32(0, sWorld->getIntConfig(CONFIG_FAKE_WHO_ONLINE_INTERVAL));
+        PreparedQueryResult result = CharacterDatabase.Query(stmt);
+
+        if (result)
+        {
+            std::vector<std::string> tempNames;
+            std::set<std::string> uniqueNames;
+
+            // 1. Colectam toate numele unice din rezultat
+            do {
+                Field* fields = result->Fetch();
+                std::string fName = fields[0].GetString();
+
+                if (uniqueNames.find(fName) == uniqueNames.end())
+                {
+                    uniqueNames.insert(fName);
+                    tempNames.push_back(fName);
+                }
+            } while (result->NextRow());
+
+            // 2. Amestecam lista de nume in mod aleatoriu
+            if (!tempNames.empty())
+            {
+                for (size_t i = tempNames.size() - 1; i > 0; --i)
+                {
+                    std::swap(tempNames[i], tempNames[irand(0, i)]);
+                }
+            }
+
+            // 3. Luam primele 80 (sau limita setata) din lista deja amestecata
+            uint32 count = 0;
+            for (std::string const& fName : tempNames)
+            {
+                uint32 nameHash = uint32(std::hash<std::string>{}(fName));
+                ObjectGuid fakeGuid = ObjectGuid::Create<HighGuid::Player>(nameHash + 1000000);
+
+                fakeMembers.push_back({ fakeGuid, 0x00 });
+
+                if (++count >= 80)
+                    break;
+            }
+        }
+    }
+
+
+
+    // Calculam marimea pachetului: reali + fake
+    uint32 totalPossibleCount = _playersStore.size() + fakeMembers.size();
+
+    WorldPacket data(SMSG_CHANNEL_LIST, 1 + (channelName.size() + 1) + 1 + 4 + totalPossibleCount * (8 + 1));
+    // fake member end ---------------------
+
+    //WorldPacket data(SMSG_CHANNEL_LIST, 1 + (channelName.size() + 1) + 1 + 4 + _playersStore.size() * (8 + 1));
     data << uint8(1);                                   // channel type?
     data << channelName;                                // channel name
     data << uint8(GetFlags());                          // channel flags?
@@ -632,6 +692,14 @@ void Channel::List(Player const* player) const
             data << uint8(i->second.flags);             // flags seems to be changed...
             ++count;
         }
+    }
+
+    // 2. add fake member
+    for (auto const& fake : fakeMembers)
+    {
+        data << fake.first;
+        data << uint8(fake.second);
+        ++count;
     }
 
     data.put<uint32>(pos, count);
