@@ -612,6 +612,17 @@ struct boss_professor_putricide : public BossAI
                     break;
                 }
                 case EVENT_UNSTABLE_EXPERIMENT:
+                    // kitt -------------
+                    if (me->HasUnitState(UNIT_STATE_CASTING) ||
+                        (me->GetHealthPct() >= 79.0f && me->GetHealthPct() <= 85.0f) ||
+                        (me->GetHealthPct() <= 40.0f))
+                    {
+                        // Nu programam altul, lasam DoAction(ACTION_CHANGE_PHASE) sa preia controlul
+                        events.ScheduleEvent(EVENT_UNSTABLE_EXPERIMENT, 35s, 40s);
+                        break;
+                    }
+                    // kitt -------------
+
                     Talk(EMOTE_UNSTABLE_EXPERIMENT);
                     DoCast(me, SPELL_UNSTABLE_EXPERIMENT);
                     events.ScheduleEvent(EVENT_UNSTABLE_EXPERIMENT, 35s, 40s);
