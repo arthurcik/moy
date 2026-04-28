@@ -30,7 +30,7 @@
 #include "Transport.h"
 #include "World.h"
 #include "revision_data.h"
-#include "../../../scripts/kitt/npcbot/kitt_npcbot_ai.h"
+#include "kitt_npcbot_ai.h"
 /*
 Npc Bot Manager by Trickerer (onlysuffering@gmail.com)
 Player NpcBots management

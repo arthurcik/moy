@@ -8,7 +8,7 @@
 #include "Creature.h"
 #include "bot_ai.h"
 #include "botmgr.h"
-//#include "Map.h"
+#include "Map.h"
 #include "SpellAuras.h"
 #include "SpellHistory.h"
 #include "Transport.h"
