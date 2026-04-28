@@ -30,6 +30,7 @@
 #include "Transport.h"
 #include "World.h"
 #include "revision_data.h"
+#include "../scripts/kitt/npcbot/kitt_npcbot_ai.h"
 /*
 Npc Bot Manager by Trickerer (onlysuffering@gmail.com)
 Player NpcBots management
@@ -1269,6 +1270,11 @@ void BotMgr::Update(uint32 diff)
         }
 
         ai->canUpdate = true;
+
+        // kitt bot AI start
+        KittBotAI::KittUpdateRaidStrategies(bot, _owner);
+        // kitt bot AI end
+
         bot->Update(diff);
         ai->canUpdate = false;
     }
