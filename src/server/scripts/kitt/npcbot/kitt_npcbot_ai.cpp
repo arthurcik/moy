@@ -423,10 +423,10 @@ namespace KittBotAI
         {
             if (bot->GetPositionX() > 4475.49f || bot->GetPositionZ() < 202.000f)
             {
-                uint32 const callbackX = 4407.42f;
-                uint32 const callbackY = 2483.41f;
-                uint32 const callbackZ = 203.67f;
-                uint32 const callbackO = 6.27f;
+                float const callbackX = 4407.42f;
+                float const callbackY = 2483.41f;
+                float const callbackZ = 203.67f;
+                float const callbackO = 6.27f;
                 bot->NearTeleportTo(callbackX, callbackY, callbackZ, callbackO);
             }
         }
@@ -462,7 +462,7 @@ namespace KittBotAI
                     return;
 
                 float distToSindra = bot->GetDistance(sindra);
-                float zDiff = abs(sindra->GetPositionZ() - bot->GetPositionZ());
+                float zDiff = std::abs(sindra->GetPositionZ() - bot->GetPositionZ());
 
                 if (zDiff > 18.0f || distToSindra > 80.0f)
                 {
