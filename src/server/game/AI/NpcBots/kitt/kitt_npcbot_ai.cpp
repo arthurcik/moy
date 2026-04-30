@@ -394,6 +394,7 @@ namespace KittBotAI
         uint32 const spellMutatedPlague25H = 72672; // Mutated Plague faza 3 // 72672(25H) 72671(10H) 72463(25n)
         uint32 const spellMutatedPlague10H = 72671; // 10 Heroic
         uint32 const spellMutatedPlague25N = 72463; // 25 Normal
+        uint32 const spellMutatedPlague10N = 72451; // 10 Normal
 
         uint32 const NpcVolatileOoze = 37697;    // NPC_VOLATILE_OOZE
         uint32 const NpcGasCloud = 37562;
@@ -419,6 +420,10 @@ namespace KittBotAI
                 if (map->Is25ManRaid())
                 {
                     spellMutatedPlague = spellMutatedPlague25N;
+                }
+                else
+                {
+                    spellMutatedPlague = spellMutatedPlague10N;
                 }
             }
         }
