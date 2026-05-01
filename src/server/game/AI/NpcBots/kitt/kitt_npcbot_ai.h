@@ -25,6 +25,8 @@ namespace KittBotAI
 
     void KittHandlePutricide(Creature* bot, Player* master, bot_ai* ai);
 
+    void KittHandleValithia(Creature* bot, Player* master, bot_ai* ai);
+
     void KittHandleSindragosa(Creature* bot, Player* master, bot_ai* ai);
 
 }

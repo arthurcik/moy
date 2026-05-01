@@ -9,6 +9,7 @@
 #include "bot_ai.h"
 #include "botmgr.h"
 #include "botspell.h"
+#include "Group.h"
 #include "Map.h"
 #include "SpellAuras.h"
 #include "SpellHistory.h"
@@ -47,6 +48,7 @@ namespace KittBotAI
                     KittHandleMarrowgar(bot, master, ai); // marrow
                     KittHandleLadyDeathwhisper(bot, master, ai); // lady
                     KittHandleGunship(bot, master, ai); // gunship
+                    KittHandleValithia(bot, master, ai); // Valithia
                     break;
                 }
                 case 4890: // profesor
@@ -559,6 +561,175 @@ namespace KittBotAI
             }
         }
     }
+
+    void KittHandleValithia(Creature* bot, Player* master, bot_ai* ai)
+    {
+        if (!bot || !master || !bot->IsAlive() || !ai->HasRole(BOT_ROLE_HEAL))
+            return;
+
+        uint32 const ValithiaID = 36789;
+        Creature* valithia = bot->FindNearestCreature(ValithiaID, 10.0f, true);
+
+        if (!valithia || !valithia->IsAlive())
+            return;
+
+        if (valithia->GetHealthPct() >= 100.0f)
+        {
+            if (ai->GetBotCommandState() == BOT_COMMAND_STAY)
+            {
+                ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+                //ai->SetBotCommandState(BOT_COMMAND_FOLLOW);
+            }
+
+            return;
+        }
+
+        // verificam daca cineva din raid are nevoie de heal
+        bool raidNeedsUrgentHeal = false;
+        Group* group = master->GetGroup();
+        if (group)
+        {
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                Player* member = itr->GetSource();
+                if (!member || !member->IsInMap(bot) || !member->IsAlive())
+                    continue;
+
+                if (member && member->IsInMap(bot) && member->IsAlive() && member->GetHealthPct() < 60.0f)
+                {
+                    if (ai->GetBotCommandState() == BOT_COMMAND_STAY)
+                    {
+                        ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+                        //ai->SetBotCommandState(BOT_COMMAND_FOLLOW);
+                    }
+
+                    raidNeedsUrgentHeal = true;
+                    break;
+                }
+
+                /*Unit::AuraApplicationMap const& auras = member->GetAppliedAuras();
+                for (auto const& pair : auras)
+                {
+                    SpellInfo const* spellInfo = pair.second->GetBase()->GetSpellInfo();
+
+                    if (pair.second->GetBase()->GetSpellInfo()->IsPositive())
+                        continue;
+
+                    uint32 dispelType = spellInfo->Dispel;
+                    uint8 BotClass = bot->GetClass();
+
+                    bool canDispel = false;
+                    if (BotClass == BOT_CLASS_PRIEST && (dispelType == DISPEL_MAGIC || dispelType == DISPEL_DISEASE)) canDispel = true;
+                    else if (BotClass == BOT_CLASS_PALADIN && (dispelType == DISPEL_MAGIC || dispelType == DISPEL_POISON || dispelType == DISPEL_DISEASE)) canDispel = true;
+                    else if (BotClass == BOT_CLASS_SHAMAN && (dispelType == DISPEL_CURSE || dispelType == DISPEL_POISON)) canDispel = true;
+                    else if (BotClass == BOT_CLASS_DRUID && (dispelType == DISPEL_CURSE || dispelType == DISPEL_POISON)) canDispel = true;
+
+                    if (canDispel)
+                    {
+                        if (ai->GetBotCommandState() == BOT_COMMAND_STAY)
+                            ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+
+                        raidNeedsUrgentHeal = true;
+                        break;
+                    }
+                }
+
+
+                if (raidNeedsUrgentHeal)
+                {
+                    break;
+                }*/
+            }
+        }
+
+        // 2. daca raid e ok si boss se afla in raza a 20m
+        if (!raidNeedsUrgentHeal && bot->GetDistance(valithia) <= 10.0f)
+        {
+            uint8 BotClass = bot->GetClass();
+
+            switch (BotClass)
+            {
+               case BOT_CLASS_PRIEST:
+               {
+                   if (!bot->HasUnitState(UNIT_STATE_CASTING | UNIT_STATE_STUNNED | UNIT_STATE_CHARGING))
+                   {
+                       // Greater Heal (Rank 9)
+                       uint32 healSpell = 48063;
+                       if (bot->GetPower(POWER_MANA) >= 2300)
+                       {
+                           if (bot->isMoving())
+                           {
+                               bot->StopMoving();
+                           }
+
+                           /*if (ai->GetBotCommandState() != BOT_COMMAND_STAY)
+                           {
+                               ai->SetBotCommandState(BOT_COMMAND_STAY);
+                           }*/
+
+                           bot->CastSpell(valithia, healSpell, false);
+                       }
+                   }
+                   break;
+               }
+               case BOT_CLASS_PALADIN:
+               {
+                   if (!bot->HasUnitState(UNIT_STATE_CASTING))
+                   {
+                       // Holy Light (Rank 13)
+                       uint32 healSpell = 48952;
+                       if (bot->GetPower(POWER_MANA) >= 2300)
+                       {
+                           if (bot->isMoving())
+                           {
+                               bot->StopMoving();
+                           }
+
+                           bot->CastSpell(valithia, healSpell, false);
+                       }
+                   }
+                   break;
+               }
+               case BOT_CLASS_SHAMAN:
+               {
+                   if (!bot->HasUnitState(UNIT_STATE_CASTING))
+                   {
+                       // Healing Wave (Rank 14)
+                       uint32 healSpell = 49273;
+                       if (bot->GetPower(POWER_MANA) >= 2300)
+                       {
+                           if (bot->isMoving())
+                           {
+                               bot->StopMoving();
+                           }
+
+                           bot->CastSpell(valithia, healSpell, false);
+                       }
+                   }
+                   break;
+               }
+               case BOT_CLASS_DRUID:
+               {
+                   if (!bot->HasUnitState(UNIT_STATE_CASTING))
+                   {
+                       // Healing Touch (Rank 15)
+                       uint32 healSpell = 48378;
+                       if (bot->GetPower(POWER_MANA) >= 2300)
+                       {
+                           if (bot->isMoving())
+                           {
+                               bot->StopMoving();
+                           }
+
+                           bot->CastSpell(valithia, healSpell, false);
+                       }
+                   }
+                   break;
+               }
+            }
+        }
+    }
+
 
     void KittHandleSindragosa(Creature* bot, Player* master, bot_ai* ai)
     {
