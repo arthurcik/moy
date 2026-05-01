@@ -83,6 +83,7 @@ namespace KittBotAI
                     if (bot->GetVictim() != NpcSpikeTar)
                     {
                         bot->SetInCombatWith(NpcSpikeTar);
+                        bot->GetThreatManager().FixateTarget(NpcSpikeTar);
                         //NpcSpikeTar->SetInCombatWith(bot);
 
                         //bot->Attack(NpcSpikeTar, true);
@@ -231,6 +232,8 @@ namespace KittBotAI
                             {
                                 bot->SetInCombatWith(NpcAds1a);
                                 //NpcAds1a->SetInCombatWith(bot);
+                                bot->GetThreatManager().FixateTarget(NpcAds1a);
+
                                 if (ai->HasRole(BOT_ROLE_RANGED))
                                 {
                                     bot->Attack(NpcAds1a, false);
@@ -340,6 +343,8 @@ namespace KittBotAI
                             {
                                 bot->SetInCombatWith(NpcAds1a);
                                 //NpcAds1a->SetInCombatWith(bot);
+                                bot->GetThreatManager().FixateTarget(NpcAds1a);
+
                                 if (ai->HasRole(BOT_ROLE_RANGED))
                                 {
                                     bot->Attack(NpcAds1a, false);
@@ -730,7 +735,6 @@ namespace KittBotAI
         }
     }
 
-
     void KittHandleSindragosa(Creature* bot, Player* master, bot_ai* ai)
     {
         if (!bot || !bot->IsInWorld() || !bot->IsAlive())
@@ -749,7 +753,13 @@ namespace KittBotAI
                 float const callbackY = 2483.41f;
                 float const callbackZ = 203.67f;
                 float const callbackO = 6.27f;
+
+                bot->AttackStop();
+                //bot->StopMoving();
                 bot->NearTeleportTo(callbackX, callbackY, callbackZ, callbackO);
+                ai->SetBotCommandState(BOT_COMMAND_FOLLOW);
+
+                return;
             }
         }
         // anti drift
@@ -820,7 +830,15 @@ namespace KittBotAI
                         ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
                         //bot->Yell("a aterizat....", LANG_UNIVERSAL);
 
-                        if (ai->HasRole(BOT_ROLE_TANK) || ai->HasRole(BOT_ROLE_TANK_OFF) || ai->HasRole(BOT_ROLE_DPS))
+                        if (ai->HasRole(BOT_ROLE_RANGED))
+                        {
+                            float x = tomb->GetPositionX() + 15.0f;
+                            float y = tomb->GetPositionY();
+                            float z = tomb->GetPositionZ();
+                            float o = tomb->GetOrientation();
+                            bot->NearTeleportTo(x, y, z, o);
+                        }
+                        else
                         {
                             float x = tomb->GetPositionX() + 5.0f;
                             float y = tomb->GetPositionY();
@@ -828,15 +846,16 @@ namespace KittBotAI
                             float o = tomb->GetOrientation();
                             bot->NearTeleportTo(x, y, z, o);
                         }
+                        //return;
                     }
                 }
 
-                if ((!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL)) && bot->GetVictim() != tomb && (distToSindra < 80.0f || zDiff < 18.0f))
+                if ((!ai->HasRole(BOT_ROLE_TANK) && ai->HasRole(BOT_ROLE_DPS)) && bot->GetVictim() != tomb && (distToSindra < 80.0f || zDiff < 18.0f))
                 {
                     bot->SetInCombatWith(tomb);
                     //tomb->SetInCombatWith(bot);
+                    bot->GetThreatManager().FixateTarget(tomb);
 
-                    //bot->Attack(tomb, true);
                     if (ai->HasRole(BOT_ROLE_RANGED))
                     {
                         bot->Attack(tomb, false);
