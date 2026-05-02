@@ -27,7 +27,7 @@ namespace
         { 900901,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // tfc Thunderfury //rank 5
         { 900902,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Staff of Disintegration //rank 9
         { 919347,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Claw of Chromaggus //rank 9
-        { 950412,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // Bloodvenom Blade //rank 9
+        { 950412,      { 9,       { 489, 529, 30, 566, 628, 607 } } }, // Bloodvenom Blade //rank 9
         { 954806,      { 0,       { 489, 529, 30, 566, 628, 607 } } }, // TFC Frostscythe of Lord Ahune //rank 5
         { 17,          { 9,       { 489, 529, 30, 566, 628, 607 } } }, // Martin Fury
 
