@@ -33,8 +33,8 @@ namespace KittBotAI
         if (!ai)
             return;
 
-        uint32 mapId = bot->GetMapId();
-        uint32 areaId = bot->GetAreaId();
+        uint32 mapId = master->GetMapId();
+        uint32 areaId = master->GetAreaId();
 
         if (mapId != 631)
             return;
@@ -741,8 +741,9 @@ namespace KittBotAI
             return;
 
         uint32 const spellFrostBeacon = 70126; // mark
-        uint32 const entryIceTomb = 36980;    // id cub gheata
-        uint32 const NpcSindragosa = 36853; // boss sindra
+        uint32 const entryIceTomb   = 36980;  // id cub gheata
+        uint32 const entryFrostBomb = 37186; // frost bomb
+        uint32 const NpcSindragosa  = 36853; // boss sindra
 
         // anti drift
         if (bot->IsAlive() && bot->IsInCombat())
@@ -786,9 +787,96 @@ namespace KittBotAI
             }
         }
 
-        if (Creature* tomb = bot->FindNearestCreature(entryIceTomb, 40.0f, true))
+        // fereste de bombe
+        if (Creature* tomb = bot->FindNearestCreature(entryIceTomb, 10.0f, true))
         {
-            if (Creature* sindra = bot->FindNearestCreature(NpcSindragosa, 200.0f, true))
+            if (bot->HasUnitState(UNIT_STATE_ROOT))
+            {
+                if (Creature* bomb = bot->FindNearestCreature(entryFrostBomb, 200.0f, true))
+                {
+                    float zDiff = std::abs(bomb->GetPositionZ() - bot->GetPositionZ());
+
+                    if (zDiff <= 5.0f)
+                    {
+                        bot->AttackStop();
+                        float angleFromBombToTomb = bomb->GetAbsoluteAngle(tomb);
+                        float distantaInSpate = 0.5f;
+                        float x = tomb->GetPositionX() + (distantaInSpate * std::cos(angleFromBombToTomb));
+                        float y = tomb->GetPositionY() + (distantaInSpate * std::sin(angleFromBombToTomb));
+                        float z = tomb->GetPositionZ();
+
+                        bot->NearTeleportTo(x, y, z, Position::NormalizeOrientation(angleFromBombToTomb + M_PI));
+                    }
+                }
+            }
+        }
+
+        // dps pe ice tomb pana la X%
+        if (Creature* tomb = bot->FindNearestCreature(entryIceTomb, 7.0f, true))
+        {
+            if (bot->HasUnitState(UNIT_STATE_ROOT))
+            {
+                if (bot->GetBotRoles() != BOT_ROLE_HEAL)
+                {
+                    Map* map = master->GetMap();
+                    float MinHpProc = 0.0f;
+                    if (map)
+                    {
+                        if (map->IsHeroic())
+                        {
+                            if (map->Is25ManRaid())
+                            {
+                                MinHpProc = 30.0f;
+                            }
+                            else
+                            {
+                                MinHpProc = 45.0f;
+                            }
+                        }
+                        else
+                        {
+                            if (map->Is25ManRaid())
+                            {
+                                MinHpProc = 40.0f;
+                            }
+                            else
+                            {
+                                MinHpProc = 60.0f;
+                            }
+                        }
+                    }
+
+                    
+                    if (tomb->GetHealthPct() > MinHpProc)
+                    {
+                        if (bot->GetVictim() != tomb)
+                        {
+                            //bot->ClearInCombat();
+                            //bot->CombatStop();
+                            bot->AttackerStateUpdate(tomb, MAX_ATTACK, true);
+                            bot->SetInCombatWith(tomb);
+                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                            ai->AttackStart(tomb);
+                            //ai->BotMovement(BOT_MOVE_CHASE, nullptr, tomb);
+                        }
+                        //return;
+                    }
+                    else
+                    {
+                        if (bot->GetVictim() == tomb)
+                        {
+                            bot->AttackStop();
+                            //ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (Creature* tomb = bot->FindNearestCreature(entryIceTomb, 80.0f, true))
+        {
+            // faza in aer
+            if (Creature* sindra = bot->FindNearestCreature(NpcSindragosa, 300.0f, true))
             {
                 if (!sindra || !sindra->IsInWorld() || !sindra->IsAlive())
                     return;
@@ -800,24 +888,16 @@ namespace KittBotAI
                 {
                     if (!bot->HasUnitState(UNIT_STATE_ROOT))
                     {
-                        float x = tomb->GetPositionX(); // +frand(-1.0f, 1.0f); //4354.33f;
-                        float y = tomb->GetPositionY(); // +frand(-1.0f, 1.0f);  //2484.06f;
-                        float z = tomb->GetPositionZ();  //204.145f;
-                        float o = tomb->GetOrientation();  //6.28f;
+                        float angleTowardsTomb = sindra->GetAbsoluteAngle(tomb);
 
-                        //bot->GetMotionMaster()->MovePoint(1001, x, y, z);
-                        bot->NearTeleportTo(x, y, z, o);
+                        float distantaInSpate = 5.0f;
+                        float x = tomb->GetPositionX() + (distantaInSpate * cos(angleTowardsTomb));
+                        float y = tomb->GetPositionY() + (distantaInSpate * sin(angleTowardsTomb));
+                        float z = tomb->GetPositionZ();
+
+                        bot->NearTeleportTo(x, y, z, angleTowardsTomb + M_PI);
+
                         bot->AddUnitState(UNIT_STATE_ROOT);
-
-                        //ai->RemoveBotCommandState(BOT_COMMAND_ATTACK);
-                        bot->AttackStop();
-
-                        if (!ai->HasRole(BOT_ROLE_HEAL))
-                        {
-                            ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
-                        }
-
-                        //bot->Yell("am fugit", LANG_UNIVERSAL);
                     }
 
                     return;
@@ -828,6 +908,8 @@ namespace KittBotAI
                     {
                         bot->ClearUnitState(UNIT_STATE_ROOT);
                         ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
+                        ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+                        ai->SetBotCommandState(BOT_COMMAND_FOLLOW);
                         //bot->Yell("a aterizat....", LANG_UNIVERSAL);
 
                         if (ai->HasRole(BOT_ROLE_RANGED))
@@ -846,7 +928,6 @@ namespace KittBotAI
                             float o = tomb->GetOrientation();
                             bot->NearTeleportTo(x, y, z, o);
                         }
-                        //return;
                     }
                 }
 
@@ -854,21 +935,13 @@ namespace KittBotAI
                 {
                     bot->SetInCombatWith(tomb);
                     //tomb->SetInCombatWith(bot);
-                    bot->GetThreatManager().FixateTarget(tomb);
-
-                    if (ai->HasRole(BOT_ROLE_RANGED))
-                    {
-                        bot->Attack(tomb, false);
-                    }
-                    else
-                    {
-                        bot->Attack(tomb, true);
-                    }
+                    //bot->GetThreatManager().FixateTarget(tomb);
+                    bot->AttackerStateUpdate(tomb, MAX_ATTACK, true);
                     ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                    ai->AttackStart(tomb);
                     ai->BotMovement(BOT_MOVE_CHASE, nullptr, tomb);
                 }
             }
-
             return;
         }
         else
