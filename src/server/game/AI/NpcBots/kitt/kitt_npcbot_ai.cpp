@@ -96,10 +96,9 @@ namespace KittBotAI
                         else
                         {
                             bot->Attack(NpcSpikeTar, true);
-                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcSpikeTar);
                         }
                         ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                        //ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcSpikeTar);
+                        ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcSpikeTar);
                     }
                     return;
                 }
@@ -238,10 +237,9 @@ namespace KittBotAI
                             else
                             {
                                 bot->Attack(NpcAds1, true);
-                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1);
                             }
                             ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            //ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1);
+                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1);
                         }
                         return;
                     }
@@ -263,10 +261,9 @@ namespace KittBotAI
                             else
                             {
                                 bot->Attack(NpcAds2, true);
-                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds2);
                             }
                             ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            //ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds2);
+                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds2);
                         }
                         return;
                     }
@@ -288,10 +285,9 @@ namespace KittBotAI
                             else
                             {
                                 bot->Attack(NpcAds3, true);
-                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3);
                             }
                             ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            //ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3);
+                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3);
                         }
                         return;
                     }
