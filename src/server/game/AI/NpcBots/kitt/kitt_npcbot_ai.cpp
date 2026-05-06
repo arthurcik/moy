@@ -96,9 +96,10 @@ namespace KittBotAI
                         else
                         {
                             bot->Attack(NpcSpikeTar, true);
+                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcSpikeTar);
                         }
                         ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                        ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcSpikeTar);
+                        //ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcSpikeTar);
                     }
                     return;
                 }
@@ -106,87 +107,194 @@ namespace KittBotAI
         }
     }
 
-    void KittHandleLadyDeathwhisper(Creature* bot, Player* /*master*/, bot_ai* ai)
+    void KittHandleLadyDeathwhisper(Creature* bot, Player* master, bot_ai* ai)
     {
         if (!bot || !bot->IsInWorld() || !bot->IsAlive())
             return;
 
+        uint32 const BossLady = 36855;
         uint32 const NpcCult  = 37949;
         uint32 const NpcEmpow = 38136;
         uint32 const NpcReani = 38010;
+        uint32 const spellDominateMind = 71290; // Dominate Mind scale
 
-        if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+
+
+        if (Creature* TarBossLady = bot->FindNearestCreature(BossLady, 80.0f, true))
         {
-            if (Creature* NpcAds1 = bot->FindNearestCreature(NpcCult, 40.0f, true))
-            {
-                if (NpcAds1->IsInWorld() && NpcAds1->IsAlive())
-                {
-                    if (bot->GetVictim() != NpcAds1)
-                    {
-                        bot->SetInCombatWith(NpcAds1);
-                        //NpcAds1->SetInCombatWith(bot);
+            if (!TarBossLady || !TarBossLady->IsInWorld() || !TarBossLady->IsAlive())
+                return;
 
-                        //bot->Attack(NpcAds1, true);
-                        if (ai->HasRole(BOT_ROLE_RANGED))
+            if (Group* group = master->GetGroup())
+            {
+                for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                {
+                    Player* member = itr->GetSource();
+                    if (!member || !member->IsAlive() || !member->HasAura(spellDominateMind))
+                        continue;
+
+                    float dist = bot->GetDistance(member);
+                    if (dist < 30.0f)
+                    {
+                        if (member->HasAura(spellDominateMind))
                         {
-                            bot->Attack(NpcAds1, false);
+                            if (!member->HasUnitState(UNIT_STATE_LOST_CONTROL | UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED | UNIT_STATE_ROOT))
+                            {
+                                float dist = bot->GetDistance(member);
+                                float razaCast = 8.0f; // 8 cast
+
+                                if (dist > razaCast)
+                                {
+                                    float x, y, z;
+                                    member->GetContactPoint(bot, x, y, z, razaCast);
+                                    //bot->GetMotionMaster()->Clear();
+                                    bot->GetMotionMaster()->MovePoint(1, x, y, z);
+                                }
+                                else
+                                {
+                                    switch (bot->GetBotClass())
+                                    {
+                                       case BOT_CLASS_PALADIN:
+                                       {
+                                           // Hammer of Justice (ID: 10308)
+                                           bot->CastSpell(member, 10308, true);
+                                           break;
+                                       }
+                                       case BOT_CLASS_MAGE:
+                                       {
+                                           // Polymorph (ID: 118)
+                                           bot->CastSpell(member, 118, true);
+                                           break;
+                                       }
+                                       case BOT_CLASS_ROGUE:
+                                       {
+                                           // Blind (ID: 2094)
+                                           bot->CastSpell(member, 2094, true);
+                                           break;
+                                       }
+                                       case BOT_CLASS_DRUID:
+                                       {
+                                           // Cyclone (ID: 33786)
+                                           bot->AttackStop();
+                                           bot->CastSpell(member, 33786, true);
+                                           break;
+                                       }
+                                       case BOT_CLASS_WARRIOR:
+                                       {
+                                           // Concussion Blow sau Intercept Stun
+                                           break;
+                                       }
+                                       case BOT_CLASS_WARLOCK:
+                                       {
+                                           bot->CastSpell(member, 5782, true);  // Fear
+                                           break;
+                                       }
+                                       case BOT_CLASS_HUNTER:
+                                       {
+                                           //bot->CastSpell(member, 19503, true); // Scatter Shot
+                                           bot->CastSpell(member, 14311, true); // Freezing Trap
+                                           break;
+                                       }
+                                       case BOT_CLASS_PRIEST:
+                                       {
+                                           bot->CastSpell(member, 8122, true);  // Psychic Scream
+                                           break;
+                                       }
+                                       case BOT_CLASS_SHAMAN:
+                                       {
+                                           bot->CastSpell(member, 51514, true); // Hex
+                                           break;
+                                       }
+                                       case BOT_CLASS_DEATH_KNIGHT:
+                                       {
+                                           //bot->CastSpell(member, 47476, true); // Strangulate
+                                           break;
+                                       }
+                                    }
+                                }
+                            }
                         }
-                        else
-                        {
-                            bot->Attack(NpcAds1, true);
-                        }
-                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                        ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1);
+                        return;
                     }
-                    return;
                 }
             }
-            else if (Creature* NpcAds2 = bot->FindNearestCreature(NpcEmpow, 40.0f, true))
-            {
-                if (NpcAds2->IsInWorld() && NpcAds2->IsAlive())
-                {
-                    if (bot->GetVictim() != NpcAds2)
-                    {
-                        bot->SetInCombatWith(NpcAds2);
-                        //NpcAds2->SetInCombatWith(bot);
 
-                        //bot->Attack(NpcAds2, true);
-                        if (ai->HasRole(BOT_ROLE_RANGED))
+            if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+            {
+                if (Creature* NpcAds1 = bot->FindNearestCreature(NpcCult, 40.0f, true))
+                {
+                    if (NpcAds1->IsInWorld() && NpcAds1->IsAlive())
+                    {
+                        if (bot->GetVictim() != NpcAds1)
                         {
-                            bot->Attack(NpcAds2, false);
+                            bot->SetInCombatWith(NpcAds1);
+                            //NpcAds1->SetInCombatWith(bot);
+
+                            //bot->Attack(NpcAds1, true);
+                            if (ai->HasRole(BOT_ROLE_RANGED))
+                            {
+                                bot->Attack(NpcAds1, false);
+                            }
+                            else
+                            {
+                                bot->Attack(NpcAds1, true);
+                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1);
+                            }
+                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                            //ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1);
                         }
-                        else
-                        {
-                            bot->Attack(NpcAds2, true);
-                        }
-                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                        ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds2);
+                        return;
                     }
-                    return;
                 }
-            }
-            else if (Creature* NpcAds3 = bot->FindNearestCreature(NpcReani, 40.0f, true))
-            {
-                if (NpcAds3->IsInWorld() && NpcAds3->IsAlive())
+                else if (Creature* NpcAds2 = bot->FindNearestCreature(NpcEmpow, 40.0f, true))
                 {
-                    if (bot->GetVictim() != NpcAds3)
+                    if (NpcAds2->IsInWorld() && NpcAds2->IsAlive())
                     {
-                        bot->SetInCombatWith(NpcAds3);
-                        //NpcAds3->SetInCombatWith(bot);
+                        if (bot->GetVictim() != NpcAds2)
+                        {
+                            bot->SetInCombatWith(NpcAds2);
+                            //NpcAds2->SetInCombatWith(bot);
 
-                        //bot->Attack(NpcAds3, true);
-                        if (ai->HasRole(BOT_ROLE_RANGED))
-                        {
-                            bot->Attack(NpcAds3, false);
+                            //bot->Attack(NpcAds2, true);
+                            if (ai->HasRole(BOT_ROLE_RANGED))
+                            {
+                                bot->Attack(NpcAds2, false);
+                            }
+                            else
+                            {
+                                bot->Attack(NpcAds2, true);
+                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds2);
+                            }
+                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                            //ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds2);
                         }
-                        else
-                        {
-                            bot->Attack(NpcAds3, true);
-                        }
-                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                        ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3);
+                        return;
                     }
-                    return;
+                }
+                else if (Creature* NpcAds3 = bot->FindNearestCreature(NpcReani, 40.0f, true))
+                {
+                    if (NpcAds3->IsInWorld() && NpcAds3->IsAlive())
+                    {
+                        if (bot->GetVictim() != NpcAds3)
+                        {
+                            bot->SetInCombatWith(NpcAds3);
+                            //NpcAds3->SetInCombatWith(bot);
+
+                            //bot->Attack(NpcAds3, true);
+                            if (ai->HasRole(BOT_ROLE_RANGED))
+                            {
+                                bot->Attack(NpcAds3, false);
+                            }
+                            else
+                            {
+                                bot->Attack(NpcAds3, true);
+                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3);
+                            }
+                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                            //ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3);
+                        }
+                        return;
+                    }
                 }
             }
         }
