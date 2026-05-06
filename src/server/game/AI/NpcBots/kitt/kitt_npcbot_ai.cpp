@@ -14,6 +14,8 @@
 #include "SpellAuras.h"
 #include "SpellHistory.h"
 #include "Transport.h"
+#include "MotionMaster.h"
+
 
 
 namespace
@@ -741,9 +743,17 @@ namespace KittBotAI
             return;
 
         uint32 const spellFrostBeacon = 70126; // mark
+        uint32 const spellAuraIceTomb = 70157; // SPELL_ICE_TOMB_DAMAGE
         uint32 const entryIceTomb   = 36980;  // id cub gheata
         uint32 const entryFrostBomb = 37186; // frost bomb
         uint32 const NpcSindragosa  = 36853; // boss sindra
+
+        Map* map = master->GetMap();
+
+
+        // daca bot este in Ice Tomb
+        if (bot->HasAura(spellAuraIceTomb))
+            return;
 
         // anti drift
         if (bot->IsAlive() && bot->IsInCombat())
@@ -758,7 +768,6 @@ namespace KittBotAI
                 bot->AttackStop();
                 //bot->StopMoving();
                 bot->NearTeleportTo(callbackX, callbackY, callbackZ, callbackO);
-                ai->SetBotCommandState(BOT_COMMAND_FOLLOW);
 
                 return;
             }
@@ -816,32 +825,31 @@ namespace KittBotAI
         {
             if (bot->HasUnitState(UNIT_STATE_ROOT))
             {
-                if (bot->GetBotRoles() != BOT_ROLE_HEAL)
+                if (!ai->HasRole(BOT_ROLE_HEAL))
                 {
-                    Map* map = master->GetMap();
-                    float MinHpProc = 0.0f;
+                    float MinHpProc = 100.0f;
                     if (map)
                     {
                         if (map->IsHeroic())
                         {
                             if (map->Is25ManRaid())
                             {
-                                MinHpProc = 30.0f;
+                                MinHpProc = 50.0f;
                             }
                             else
                             {
-                                MinHpProc = 45.0f;
+                                MinHpProc = 100.0f;
                             }
                         }
                         else
                         {
                             if (map->Is25ManRaid())
                             {
-                                MinHpProc = 40.0f;
+                                MinHpProc = 60.0f;
                             }
                             else
                             {
-                                MinHpProc = 60.0f;
+                                MinHpProc = 100.0f;
                             }
                         }
                     }
@@ -849,25 +857,29 @@ namespace KittBotAI
                     
                     if (tomb->GetHealthPct() > MinHpProc)
                     {
-                        if (bot->GetVictim() != tomb)
+                        if (tomb->IsAlive()/*bot->GetVictim() != tomb*/)
                         {
-                            //bot->ClearInCombat();
-                            //bot->CombatStop();
-                            bot->AttackerStateUpdate(tomb, MAX_ATTACK, true);
+                            ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
+                            bot->GetMotionMaster()->Clear();
                             bot->SetInCombatWith(tomb);
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                            //ai->SetBotCommandState(BOT_COMMAND_ATTACK);
                             ai->AttackStart(tomb);
-                            //ai->BotMovement(BOT_MOVE_CHASE, nullptr, tomb);
+
+                            if (ai->HasRole(BOT_ROLE_RANGED))
+                            {
+                                bot->Attack(tomb, false);
+                            }
+                            else
+                            {
+                                bot->Attack(tomb, true);
+                            }
                         }
-                        //return;
+                        return;
                     }
                     else
                     {
-                        if (bot->GetVictim() == tomb)
-                        {
-                            bot->AttackStop();
-                            //ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
-                        }
+                        bot->AttackStop();
+                        ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
                     }
                 }
             }
@@ -898,6 +910,32 @@ namespace KittBotAI
                         bot->NearTeleportTo(x, y, z, angleTowardsTomb + M_PI);
 
                         bot->AddUnitState(UNIT_STATE_ROOT);
+
+                        if (map && !ai->HasRole(BOT_ROLE_HEAL))
+                        {
+                            if (map->IsHeroic())
+                            {
+                                if (map->Is25ManRaid())
+                                {
+                                    // 25 heroic
+                                }
+                                else
+                                {
+                                    ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
+                                }
+                            }
+                            else
+                            {
+                                if (map->Is25ManRaid())
+                                {
+                                    // 25 normal
+                                }
+                                else
+                                {
+                                    ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
+                                }
+                            }
+                        }
                     }
 
                     return;
@@ -908,38 +946,44 @@ namespace KittBotAI
                     {
                         bot->ClearUnitState(UNIT_STATE_ROOT);
                         ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
-                        ai->RemoveBotCommandState(BOT_COMMAND_STAY);
-                        ai->SetBotCommandState(BOT_COMMAND_FOLLOW);
+                        //ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+                        //ai->SetBotCommandState(BOT_COMMAND_FOLLOW);
                         //bot->Yell("a aterizat....", LANG_UNIVERSAL);
-
-                        if (ai->HasRole(BOT_ROLE_RANGED))
-                        {
-                            float x = tomb->GetPositionX() + 15.0f;
-                            float y = tomb->GetPositionY();
-                            float z = tomb->GetPositionZ();
-                            float o = tomb->GetOrientation();
-                            bot->NearTeleportTo(x, y, z, o);
-                        }
-                        else
-                        {
-                            float x = tomb->GetPositionX() + 5.0f;
-                            float y = tomb->GetPositionY();
-                            float z = tomb->GetPositionZ();
-                            float o = tomb->GetOrientation();
-                            bot->NearTeleportTo(x, y, z, o);
-                        }
                     }
                 }
 
-                if ((!ai->HasRole(BOT_ROLE_TANK) && ai->HasRole(BOT_ROLE_DPS)) && bot->GetVictim() != tomb && (distToSindra < 80.0f || zDiff < 18.0f))
+                if (!ai->HasRole(BOT_ROLE_TANK) && ai->HasRole(BOT_ROLE_DPS) && tomb->IsAlive() /*bot->GetVictim() != tomb*/ && (distToSindra < 80.0f || zDiff < 18.0f))
                 {
+                    float zDiffX = std::abs(tomb->GetPositionX() - bot->GetPositionX());
+                    bot->GetThreatManager().ClearAllThreat();
+                    bot->GetThreatManager().AddThreat(tomb, 1300300.0f);
+
+
                     bot->SetInCombatWith(tomb);
-                    //tomb->SetInCombatWith(bot);
-                    //bot->GetThreatManager().FixateTarget(tomb);
-                    bot->AttackerStateUpdate(tomb, MAX_ATTACK, true);
-                    ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                    //ai->SetBotCommandState(BOT_COMMAND_ATTACK);
                     ai->AttackStart(tomb);
-                    ai->BotMovement(BOT_MOVE_CHASE, nullptr, tomb);
+
+                    if (ai->HasRole(BOT_ROLE_RANGED))
+                    {
+                        if (zDiffX < 2.0f)
+                        {
+                            bot->GetMotionMaster()->Clear();
+                            bot->SetInFront(tomb);
+                            bot->SendMovementFlagUpdate();
+                        }
+                        bot->Attack(tomb, false);
+                    }
+                    else
+                    {
+                        if (zDiffX < 2.0f)
+                        {
+                            bot->GetMotionMaster()->Clear();
+                            bot->SetInFront(tomb);
+                            bot->SendMovementFlagUpdate();
+                        }
+                        bot->Attack(tomb, true);
+                        //ai->BotMovement(BOT_MOVE_CHASE, nullptr, tomb);
+                    }
                 }
             }
             return;
@@ -949,6 +993,10 @@ namespace KittBotAI
             if (bot->HasUnitState(UNIT_STATE_ROOT))
             {
                 bot->ClearUnitState(UNIT_STATE_ROOT);
+            }
+
+            if (ai->HasBotCommandState(BOT_COMMAND_FULLSTOP))
+            {
                 ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
             }
             return;
