@@ -952,6 +952,33 @@ namespace KittBotAI
                     }
                 }
 
+                if (bot->GetVictim() != sindra && ai->HasRole(BOT_ROLE_TANK) && zDiff < 2)
+                {
+                    if (bot->HasUnitState(UNIT_STATE_ROOT))
+                    {
+                        bot->ClearUnitState(UNIT_STATE_ROOT);
+                    }
+
+                    if (ai->HasBotCommandState(BOT_COMMAND_FULLSTOP))
+                    {
+                        ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
+                    }
+
+                    bot->SetInCombatWith(sindra);
+                    ai->AttackStart(sindra);
+
+                    float distanta = 5.0f;
+                    float angleInFata = sindra->GetOrientation();
+
+                    float x = sindra->GetPositionX() + (distanta * cos(angleInFata));
+                    float y = sindra->GetPositionY() + (distanta * sin(angleInFata));
+                    float z = sindra->GetPositionZ();
+
+                    bot->NearTeleportTo(x, y, z, angleInFata + M_PI);
+                    bot->GetMotionMaster()->Clear();
+
+                }
+
                 if (!ai->HasRole(BOT_ROLE_TANK) && ai->HasRole(BOT_ROLE_DPS) && tomb->IsAlive() /*bot->GetVictim() != tomb*/ && (distToSindra < 80.0f || zDiff < 18.0f))
                 {
                     float zDiffX = std::abs(tomb->GetPositionX() - bot->GetPositionX());
