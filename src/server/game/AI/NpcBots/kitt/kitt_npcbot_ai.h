@@ -14,6 +14,8 @@ class bot_ai;
 
 namespace KittBotAI
 {
+    bool IsSafeToCure(Unit* target); // for dispell
+
     void KittUpdateRaidStrategies(Creature* bot, Player* master); // main start
 
 
@@ -28,6 +30,9 @@ namespace KittBotAI
     void KittHandleValithia(Creature* bot, Player* master, bot_ai* ai);
 
     void KittHandleSindragosa(Creature* bot, Player* master, bot_ai* ai);
+
+    void KittHandleLichKing(Creature* bot, Player* master, bot_ai* ai);
+
 
 }
 

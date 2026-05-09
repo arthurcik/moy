@@ -51,6 +51,8 @@
 #include "World.h"
 
 #include "G3DPosition.hpp"
+
+#include "kitt_npcbot_ai.h"
 /*
 NpcBot System by Trickerer (https://github.com/trickerer/Trinity-Bots; onlysuffering@gmail.com)
 Version 5.2.77a
@@ -2003,6 +2005,14 @@ bool bot_ai::_canCureTarget(Unit const* target, uint32 cureSpell) const
 
     std::list<Aura const*> dispel_list;
     _getBotDispellableAuraList(target, dispelMask, dispel_list);
+
+    if (!dispel_list.empty())
+    {
+        if (!KittBotAI::IsSafeToCure(const_cast<Unit*>(target)))
+        {
+            return false;
+        }
+    }
 
     return !(dispel_list.empty());
 }

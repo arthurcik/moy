@@ -9,23 +9,128 @@
 #include "bot_ai.h"
 #include "botmgr.h"
 #include "botspell.h"
+#include "GameTime.h"
 #include "Group.h"
 #include "Map.h"
+#include "Spell.h"
 #include "SpellAuras.h"
 #include "SpellHistory.h"
 #include "Transport.h"
 #include "MotionMaster.h"
+#include "Vehicle.h"
+
+//#include "botcommon.h"
 
 
 
 namespace
 {
-    std::set<ObjectGuid> activatedRocketeers; // icc gunship
+    static std::map<ObjectGuid, uint32> teleportCooldownMap;
+    static uint32 const TELEPORT_CD = 1000; // in ms / 1 secunde intre teleportari pentru acelasi obiect
+    static ObjectGuid triangleTargetGUID = ObjectGuid::Empty; // icon set faza sabiei normal mode
+
+    //std::set<ObjectGuid> activatedRocketeers; // icc gunship
 
 }
 
 namespace KittBotAI
 {
+    // daca vrem sa blocam dispell undeva
+    bool IsSafeToCure(Unit* target)
+    {
+        if (!target || !target->GetMap())
+        {
+            return true;
+        }
+
+        uint32 mapId = target->GetMapId();
+        uint32 areaId = target->GetAreaId();
+
+        if (mapId == 631)
+        {
+            switch (areaId)
+            {
+               case 4812: // Marrowgar
+               {
+                   // code
+                   break;
+               }
+               case 4890: // profesor
+               {
+                   // code
+                   break;
+               }
+
+               case 4889: // sindragosa
+               {
+                   // code
+                   break;
+               }
+               case 4859: // Lich King
+               {
+                   uint32 const npcShamblingHorror = 37698;
+                   uint32 spellNecroticPlague = 0;
+                   uint32 const spellNecroticPlague10N = 70337;
+                   uint32 const spellNecroticPlague10HC = 73913;
+                   uint32 const spellNecroticPlague25N = 73912;
+                   uint32 const spellNecroticPlague25HC = 73914;
+
+                   Map* map = target->GetMap();
+                   if (map)
+                   {
+                       if (map->IsHeroic())
+                       {
+                           if (map->Is25ManRaid())
+                           {
+                               spellNecroticPlague = spellNecroticPlague25HC;
+                           }
+                           else
+                           {
+                               spellNecroticPlague = spellNecroticPlague10HC;
+                           }
+                       }
+                       else
+                       {
+                           if (map->Is25ManRaid())
+                           {
+                               spellNecroticPlague = spellNecroticPlague25N;
+                           }
+                           else
+                           {
+                               spellNecroticPlague = spellNecroticPlague10N;
+                           }
+                       }
+                   }
+
+                   if (spellNecroticPlague == 0)
+                       break;
+
+
+
+                   // Necrotic Plague block
+                   if (target->HasAura(spellNecroticPlague))
+                   {
+                       if (Creature* horror = target->FindNearestCreature(npcShamblingHorror, 100.0f, true))
+                       {
+                           if (target->GetDistance(horror) > 5.0f)
+                           {
+                               return false;
+                           }
+                       }
+                       else
+                       {
+                           return true;
+                       }
+                   }
+
+                   break;
+               }
+            }
+        }
+
+        return true;
+    }
+
     void KittUpdateRaidStrategies(Creature* bot, Player* master)
     {
         if (!bot || !master || !bot->IsAlive() || !bot->IsInWorld())
@@ -64,14 +169,27 @@ namespace KittBotAI
                     KittHandleSindragosa(bot, master, ai);
                     break;
                 }
+                case 4859: // Lich King
+                {
+                    KittHandleLichKing(bot, master, ai);
+                    break;
+                }
+
             }
         }
     }
 
 
-    void KittHandleMarrowgar(Creature* bot, Player* /*master*/, bot_ai* ai)
+    void KittHandleMarrowgar(Creature* bot, Player* master, bot_ai* ai)
     {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
         if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
             return;
 
         uint32 const NpcSpike = 36619;
@@ -108,7 +226,14 @@ namespace KittBotAI
 
     void KittHandleLadyDeathwhisper(Creature* bot, Player* master, bot_ai* ai)
     {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
         if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
             return;
 
         uint32 const BossLady = 36855;
@@ -298,7 +423,14 @@ namespace KittBotAI
 
     void KittHandleGunship(Creature* bot, Player* master, bot_ai* ai)
     {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
         if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
             return;
 
         Transport* mTrans = master->GetTransport();
@@ -494,7 +626,14 @@ namespace KittBotAI
 
     void KittHandlePutricide(Creature* bot, Player* master, bot_ai* ai)
     {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
         if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
             return;
 
         uint32 const NpcBossProfesor = 36678; // boss Profesor
@@ -675,7 +814,17 @@ namespace KittBotAI
 
     void KittHandleValithia(Creature* bot, Player* master, bot_ai* ai)
     {
-        if (!bot || !master || !bot->IsAlive() || !ai->HasRole(BOT_ROLE_HEAL))
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
+            return;
+
+        if (!ai->HasRole(BOT_ROLE_HEAL))
             return;
 
         uint32 const ValithiaID = 36789;
@@ -843,7 +992,14 @@ namespace KittBotAI
 
     void KittHandleSindragosa(Creature* bot, Player* master, bot_ai* ai)
     {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
         if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
             return;
 
         uint32 const spellFrostBeacon = 70126; // mark
@@ -1131,6 +1287,640 @@ namespace KittBotAI
                 ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
             }
             return;
+        }
+    }
+
+    void KittHandleLichKing(Creature* bot, Player* master, bot_ai* ai)
+    {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
+            return;
+
+        time_t currentTimeMS = GameTime::GetGameTimeMS();
+
+        uint32 const npcBossLichKing = 36597;
+        uint32 const npcDefileTrigger = 38757;
+        uint32 const npcShadowTrapTrigger = 39137;
+        uint32 const npcIceSphere = 36633;
+        uint32 const npcValkyr = 36609;
+        uint32 const npcShamblingHorror = 37698;
+        uint32 const npcRacingSpirit = 36701;
+        uint32 const npcDrudgeGhoul = 37695;
+
+
+        // harvest souls aura 74297(main)
+        uint32 const spellHarvestSouls = 73655; // 25hc/10hc // in camera
+        uint32 const spellHarvestSoul = 72546; // 25n/10n // in camera
+        uint32 const spellFurryFrostNoRez = 72351; // aura no rez
+
+        // buff inainte de teleportare
+        uint32 spellHarvestSoulStartHC = 0; // heroic
+        uint32 spellHarvestSoulStartN = 0; // normal
+        uint32 const spellHarvestSouls25HC = 74297; // 25 heroic
+        uint32 const spellHarvestSouls10HC = 74296; // 10 heroic
+        uint32 const spellHarvestSoul25N = 74325; // 25 normal
+        uint32 const spellHarvestSoul10N = 68980; // 10 normal
+
+        uint32 spellNecroticPlague = 0;
+        uint32 const spellNecroticPlague10N = 70337;
+        uint32 const spellNecroticPlague10HC = 73913;
+        uint32 const spellNecroticPlague25N = 73912;
+        uint32 const spellNecroticPlague25HC = 73914;
+
+        // intre faze aura
+        uint32 spell1Winter = 0; // 74272 25hc // 74271 10hc // 74270 25N // 68981 10N
+        uint32 const spell1Winter10N = 68981;
+        uint32 const spell1Winter25N = 74270;
+        uint32 const spell1Winter10HC = 74271;
+        uint32 const spell1Winter25HC = 74272;
+
+        uint32 spell2Winter = 0; // 74275 25hc // 74274 10hc // 74273 25N  // 72259 10N
+        uint32 const spell2Winter10N = 72259;
+        uint32 const spell2Winter25N = 74273;
+        uint32 const spell2Winter10HC = 74274;
+        uint32 const spell2Winter25HC = 74275;
+
+
+        bool DefilesPrezent = false;
+        bool ShadowTrapPrez = false;
+
+        Map* map = master->GetMap();
+        if (map)
+        {
+            if (map->IsHeroic())
+            {
+                if (map->Is25ManRaid())
+                {
+                    spellNecroticPlague = spellNecroticPlague25HC;
+                    spell1Winter = spell1Winter25HC;
+                    spell2Winter = spell2Winter25HC;
+                    spellHarvestSoulStartHC = spellHarvestSouls25HC;
+
+                }
+                else
+                {
+                    spellNecroticPlague = spellNecroticPlague10HC;
+                    spell1Winter = spell1Winter10HC;
+                    spell2Winter = spell2Winter10HC;
+                    spellHarvestSoulStartHC = spellHarvestSouls10HC;
+                }
+            }
+            else
+            {
+                if (map->Is25ManRaid())
+                {
+                    spellNecroticPlague = spellNecroticPlague25N;
+                    spell1Winter = spell1Winter25N;
+                    spell2Winter = spell2Winter25N;
+                    spellHarvestSoulStartN = spellHarvestSoul25N;
+                }
+                else
+                {
+                    spellNecroticPlague = spellNecroticPlague10N;
+                    spell1Winter = spell1Winter10N;
+                    spell2Winter = spell2Winter10N;
+                    spellHarvestSoulStartN = spellHarvestSoul10N;
+                }
+            }
+        }
+
+        if (Creature* bossLichK = bot->FindNearestCreature(npcBossLichKing, 80.0f, true))
+        {
+            bool isWinter = (bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter));
+
+            // cand face cast sa fuga toti
+            if (bossLichK->HasUnitState(UNIT_STATE_CASTING))
+            {
+                if (Spell const* spell = bossLichK->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                {
+                    uint32 spellcast = spell->GetSpellInfo()->Id;
+
+                    if (spellcast == spell1Winter || spellcast == spell2Winter)
+                    {
+                        isWinter = true;
+                    }
+                }
+            }
+
+            if (isWinter)
+            {
+                float angle = bossLichK->GetOrientation() + 1.57f;
+                float dist = 55.0f; // distanta de siguranta
+
+                float targetX = bossLichK->GetPositionX() + (dist * std::cos(angle));
+                float targetY = bossLichK->GetPositionY() + (dist * std::sin(angle));
+                float targetZ = bossLichK->GetPositionZ();
+
+                if (bot->GetDistance(targetX, targetY, targetZ) > 5.0f)
+                {
+                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                    {
+                        bot->GetMotionMaster()->MovePoint(9, targetX, targetY, targetZ);
+                    }
+                }
+            }
+
+            // 1. shadow trap, faza 1
+            if (Creature* trap = bot->FindNearestCreature(npcShadowTrapTrigger, 8.0f, true)) // 5
+            {
+                if (bot->IsNonMeleeSpellCast(true))
+                {
+                    bot->InterruptNonMeleeSpells(true);
+                }
+
+                bot->AttackStop();
+                bot->GetMotionMaster()->Clear();
+                float angle = trap->GetAbsoluteAngle(bot);
+                float runDist = 11.0f; // 8
+                float x = bot->GetPositionX() + (runDist * std::cos(angle));
+                float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+                bot->GetMotionMaster()->MovePoint(2, x, y, bot->GetPositionZ());
+                ShadowTrapPrez = true;
+                //return;
+            }
+
+            // 2. Defile, faza 2
+            if (Creature* defile = bot->FindNearestCreature(npcDefileTrigger, 40.0f, true))
+            {
+                float currentScale = defile->GetObjectScale();
+                float safetyMargin = 2.0f;
+                float dynamicRadius = (8.0f * currentScale) + safetyMargin;
+
+                float distToDefile = bot->GetDistance(defile);
+
+                if (distToDefile < dynamicRadius)
+                {
+                    if (bot->IsNonMeleeSpellCast(true))
+                        bot->InterruptNonMeleeSpells(true);
+
+                    bot->AttackStop();
+
+                    float angle = defile->GetAbsoluteAngle(bot);
+                    float runDist = (dynamicRadius - distToDefile) + 10.0f;
+                    float x = bot->GetPositionX() + (runDist * std::cos(angle));
+                    float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+                    bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+                    DefilesPrezent = true;
+                    //return;
+                }
+            }
+
+            // 3. sphere, intre faze
+            if (Creature* sphere = bot->FindNearestCreature(npcIceSphere, 35.0f, true))
+            {
+                if (ai->HasRole(BOT_ROLE_RANGED) && ai->HasRole(BOT_ROLE_DPS))
+                {
+                    if (bot->GetVictim() != sphere)
+                    {
+                        bot->AttackStop();
+                        bot->GetMotionMaster()->Clear();
+                        if (bot->IsNonMeleeSpellCast(true))
+                        {
+                            bot->InterruptNonMeleeSpells(true);
+                        }
+
+                        if (gr)
+                        {
+                            if (sphere && gr->GetTargetIcons()[4] != sphere->GetGUID())
+                            {
+                                gr->SetTargetIcon(4, bot->GetGUID(), sphere->GetGUID());
+                            }
+                        }
+                        bot->SetInCombatWith(sphere);
+                        ai->AttackStart(sphere);
+                        bot->Attack(sphere, false);
+                    }
+                }
+            }
+
+            // 5. valkyr, faza 2
+            if (Creature* valkyr = bot->FindNearestCreature(npcValkyr, 40.0f, true))
+            {
+                //bool arePasager = valkyr->GetVehicleKit() && valkyr->GetVehicleKit()->GetPassenger(0);
+                if (valkyr->IsAlive() && !valkyr->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE)/* && valkyr->GetHealthPct() > 48.0f*/)
+                {
+                    if (ai->HasRole(BOT_ROLE_DPS) && !ai->HasRole(BOT_ROLE_HEAL) && !ai->HasRole(BOT_ROLE_TANK))
+                    {
+                        if (bot->GetVictim() != valkyr)
+                        {
+                            bot->AttackStop();
+                            //bot->GetMotionMaster()->Clear();
+                            if (bot->IsNonMeleeSpellCast(true))
+                            {
+                                bot->InterruptNonMeleeSpells(true);
+                            }
+
+                            if (gr)
+                            {
+                                if (valkyr && gr->GetTargetIcons()[5] != valkyr->GetGUID())
+                                {
+                                    gr->SetTargetIcon(5, bot->GetGUID(), valkyr->GetGUID());
+                                }
+                            }
+
+                            bot->SetInCombatWith(valkyr);
+                            ai->AttackStart(valkyr);
+
+                            if (bot->GetBotAI()->HasRole(BOT_ROLE_RANGED))
+                            {
+                                bot->Attack(valkyr, false);
+                            }
+                            else
+                            {
+                                bot->Attack(valkyr, true);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (bot->GetVictim() == valkyr)
+                    {
+                        if (gr)
+                        {
+                            if (valkyr && gr->GetTargetIcons()[5] == valkyr->GetGUID())
+                            {
+                                gr->SetTargetIcon(5, bot->GetGUID(), ObjectGuid::Empty);
+                            }
+                        }
+                        bot->AttackStop();
+                    }
+                }
+            }
+
+            // Drudge Ghoul
+            std::list<Creature*> npcdrudgeList;
+            bot->GetCreatureListWithEntryInGrid(npcdrudgeList, npcDrudgeGhoul, 50.0f);
+
+            if (!npcdrudgeList.empty())
+            {
+                float const centerZ = 841.90f;
+
+                if (bot->GetPositionZ() < 839.0f)
+                {
+                    bot->NearTeleportTo(bot->GetPositionX(), bot->GetPositionY(), centerZ, bot->GetOrientation());
+                    bot->GetMotionMaster()->Clear();
+                }
+
+                for (Creature* npcdrudge : npcdrudgeList)
+                {
+                    if (!npcdrudge || !npcdrudge->IsAlive())
+                        continue;
+
+                    if (npcdrudge->GetPositionZ() < 839.0f)
+                    {
+                        // --- anti-flood / curatare mapa ---
+                        // -- se pune doar in primul loot --
+                        if (teleportCooldownMap.size() > 100)
+                        {
+                            teleportCooldownMap.clear();
+                        }
+                        // --------------------------------------------
+
+                        float tx = npcdrudge->GetPositionX();
+                        float ty = npcdrudge->GetPositionY();
+
+                        if (teleportCooldownMap[npcdrudge->GetGUID()] <= currentTimeMS)
+                        {
+                            npcdrudge->NearTeleportTo(tx, ty, centerZ, npcdrudge->GetOrientation());
+                            teleportCooldownMap[npcdrudge->GetGUID()] = currentTimeMS + TELEPORT_CD;
+
+                            npcdrudge->GetMotionMaster()->Clear();
+
+                            if (Unit* target = npcdrudge->GetVictim())
+                            {
+                                npcdrudge->GetMotionMaster()->MoveChase(target);
+                            }
+                            else
+                            {
+                                npcdrudge->GetMotionMaster()->MoveChase(bot);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Spirit Racing
+            std::list<Creature*> npcspiritList;
+            bot->GetCreatureListWithEntryInGrid(npcspiritList, npcRacingSpirit, 50.0f);
+
+            if (!npcspiritList.empty())
+            {
+                float const centerZ = 841.90f;
+
+                if (bot->GetPositionZ() < 839.0f)
+                {
+                    bot->NearTeleportTo(bot->GetPositionX(), bot->GetPositionY(), centerZ, bot->GetOrientation());
+                    bot->GetMotionMaster()->Clear();
+                }
+
+                for (Creature* spirit : npcspiritList)
+                {
+                    if (!spirit || !spirit->IsAlive())
+                        continue;
+
+                    if (spirit->GetPositionZ() < 839.0f)
+                    {
+                        float tx = spirit->GetPositionX();
+                        float ty = spirit->GetPositionY();
+
+                        if (teleportCooldownMap[spirit->GetGUID()] <= currentTimeMS)
+                        {
+                            spirit->NearTeleportTo(tx, ty, centerZ, spirit->GetOrientation());
+                            teleportCooldownMap[spirit->GetGUID()] = currentTimeMS + TELEPORT_CD;
+
+                            spirit->GetMotionMaster()->Clear();
+
+                            if (Unit* target = spirit->GetVictim())
+                            {
+                                spirit->GetMotionMaster()->MoveChase(target);
+                            }
+                            else
+                            {
+                                spirit->GetMotionMaster()->MoveChase(bot);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Definim o singura locatie sigura pentru ambele mecanici (Ora 2 pe platforma)
+            float safeX = 485.707f;
+            float safeY = -2088.52f;
+            float const safeZ = 840.90f;
+
+            // 1. LOGICA PENTRU NECROTIC PLAGUE (Dinamica)
+            if (bot->HasAura(spellNecroticPlague))
+            {
+                if (Creature* horror = bot->FindNearestCreature(npcShamblingHorror, 50.0f, true))
+                {
+                    if (bot->GetDistance(horror) > 3.0f)
+                    {
+                        if (bot->IsNonMeleeSpellCast(true))
+                        {
+                            bot->InterruptNonMeleeSpells(true);
+                        }
+
+                        bot->AttackStop();
+
+                        if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                        {
+                            bot->GetMotionMaster()->MovePoint(4, horror->GetPositionX(), horror->GetPositionY(), horror->GetPositionZ());
+                        }
+                    }
+                    else
+                    {
+                        if (!ai->HasBotCommandState(BOT_COMMAND_STAY))
+                        {
+                            ai->SetBotCommandState(BOT_COMMAND_STAY);
+                        }
+                    }
+                }
+                else // Daca nu exista niciun Horror pe harta, mergem la punctul fix
+                {
+                    if (bot->GetDistance(safeX, safeY, safeZ) > 3.0f)
+                    {
+                        if (bot->IsNonMeleeSpellCast(true))
+                        {
+                            bot->InterruptNonMeleeSpells(true);
+                        }
+
+                        bot->AttackStop();
+
+                        if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                        {
+                            bot->GetMotionMaster()->MovePoint(5, safeX, safeY, safeZ);
+                        }
+                    }
+                    else
+                    {
+                        if (!ai->HasBotCommandState(BOT_COMMAND_STAY))
+                        {
+                            ai->SetBotCommandState(BOT_COMMAND_STAY);
+                        }
+                    }
+                }
+            }
+            else if (ai->HasBotCommandState(BOT_COMMAND_STAY))
+            {
+                // Scoatem STAY
+                ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+            }
+
+
+            // 2. LOGICA PENTRU OFF-TANK
+            if (ai->HasRole(BOT_ROLE_TANK_OFF))
+            {
+                std::list<Creature*> horrorList;
+                bot->GetCreatureListWithEntryInGrid(horrorList, npcShamblingHorror, 80.0f);
+
+                if (!horrorList.empty())
+                {
+                    ObjectGuid currentIcon6 = (gr) ? gr->GetTargetIcons()[6] : ObjectGuid::Empty;
+
+                    bool iconAlreadyOnAHorror = false;
+
+                    for (Creature* horror : horrorList)
+                    {
+                        if (!horror || !horror->IsAlive())
+                            continue;
+
+                        Unit* hVictim = horror->GetVictim();
+
+                        // Adaugam threat pe fiecare ads din lista
+                        if (hVictim && hVictim != bot)
+                        {
+                            horror->GetThreatManager().AddThreat(bot, 3000300.0f); // Adaugam intrarea in lista
+                            horror->GetThreatManager().MatchUnitThreatToHighestThreat(bot); // il pun pe locul 1
+                            horror->GetThreatManager().FixateTarget(bot);
+
+
+                            horror->SetInCombatWith(bot);
+
+                            if (UnitAI* horrorAi = horror->GetAI())
+                            {
+                                horrorAi->AttackStart(bot);
+                            }
+                        }
+
+                        // setare icon
+                        if (gr && !currentIcon6.IsEmpty() && horror->GetGUID() == currentIcon6)
+                        {
+                            iconAlreadyOnAHorror = true;
+                        }
+                    }
+
+                    if (Creature* nearhorror = bot->FindNearestCreature(npcShamblingHorror, 5.0f, true))
+                    {
+                        if (gr)
+                        {
+                            // CROSS (6) pe Shambling Horror.
+                            if (!iconAlreadyOnAHorror && gr->GetTargetIcons()[6] != nearhorror->GetGUID())
+                            {
+                                gr->SetTargetIcon(6, bot->GetGUID(), nearhorror->GetGUID());
+                            }
+
+                            if (bossLichK && !bossLichK->HasAura(spell1Winter) && !bossLichK->HasAura(spell2Winter))
+                            {
+                                if (bot->GetHealthPct() < 90.0f)
+                                {
+                                    if (gr->GetTargetIcons()[3] != bot->GetGUID())
+                                    {
+                                        gr->SetTargetIcon(3, bot->GetGUID(), bot->GetGUID());
+                                    }
+                                }
+                                else
+                                {
+                                    if (gr->GetTargetIcons()[3] == bot->GetGUID())
+                                    {
+                                        gr->SetTargetIcon(3, bot->GetGUID(), ObjectGuid::Empty);
+                                    }
+                                }
+                            }
+                        }
+
+                        if (bot->GetVictim() != nearhorror)
+                        {
+                            bot->SetInCombatWith(nearhorror);
+                            ai->AttackStart(nearhorror);
+                            bot->Attack(nearhorror, true);
+                        }
+                        
+                    }
+
+                    // --- LOGICA DE MISCARE INTELIGENTA PENTRU OT ---
+                    if (ShadowTrapPrez || DefilesPrezent || isWinter)
+                    {
+                        // Daca exista un Shadow Trap fix in calea lui sau sub el
+                        if (Creature* nearTrap = bot->FindNearestCreature(npcShadowTrapTrigger, 8.0f, true))
+                        {
+                            // Daca e o capcana aproape, OT nu se mai duce orbeste la SafeX
+                            // Il fortam sa se miste lateral fata de capcana (unghi de 90 grade) ca sa o ocoleasca
+                            float avoidAngle = nearTrap->GetAbsoluteAngle(bot) + 1.57f; // 90 grade fata de capcana
+                            float dist = 10.0f;
+                            float ax = bot->GetPositionX() + (dist * std::cos(avoidAngle));
+                            float ay = bot->GetPositionY() + (dist * std::sin(avoidAngle));
+
+                            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                            {
+                                bot->GetMotionMaster()->MovePoint(7, ax, ay, bot->GetPositionZ());
+                            }
+                        }
+                        /*else if (isWinter)
+                        {
+                            if (bot->GetDistance(safeX2, safeY2, safeZ) > 1.0f)
+                            {
+                                bot->GetMotionMaster()->MovePoint(8, safeX2, safeY2, safeZ);
+                            }
+                        }*/
+                        else if (bot->GetDistance(safeX, safeY, safeZ) > 15.0f)
+                        {
+                            // Daca nu are nicio capcana imediata, merge spre SafeX (ajustat)
+                            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                            {
+                                bot->GetMotionMaster()->MovePoint(6, safeX + 5.0f, safeY + 5.0f, safeZ);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Cand zona e curata, sta la Safe Point
+                        if (bot->GetDistance(safeX, safeY, safeZ) > 10.0f)
+                        {
+                            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                            {
+                                bot->GetMotionMaster()->MovePoint(6, safeX, safeY, safeZ);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // boss aura faza centru, faza armei, faza de final
+            // set icon
+            if (gr)
+            {
+                bool iconRezervat = false;
+                ObjectGuid bossGUID = bossLichK->GetGUID();
+
+
+                if (!iconRezervat && bossLichK->IsAlive() && bossLichK->IsInWorld())
+                {
+                    if (master && bot)
+                    {
+                        if (isWinter || bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter)
+                            || master->HasAura(spellHarvestSoulStartHC) || bot->HasAura(spellHarvestSoulStartHC)
+                            || master->HasAura(spellHarvestSouls) || bot->HasAura(spellHarvestSouls)
+                            || master->HasAura(spellFurryFrostNoRez) || bot->HasAura(spellFurryFrostNoRez))
+                        {
+                            // setam Diamond
+                            if (gr)
+                            {
+                                if (gr->GetTargetIcons()[2] != bossGUID)
+                                {
+                                    gr->SetTargetIcon(2, bot->GetGUID(), bossGUID);
+                                }
+                            }
+                            iconRezervat = true;
+                        }
+                    }
+                }
+
+                if (/*!iconRezervat && */ai->HasRole(BOT_ROLE_TANK) && bossLichK->IsAlive() && bossLichK->IsInWorld())
+                {
+                    if (master && bot)
+                    {
+                        if (master->HasAura(spellHarvestSoulStartN) || bot->HasAura(spellHarvestSoulStartN)
+                            || master->HasAura(spellHarvestSoul) || bot->HasAura(spellHarvestSoul))
+                        {
+                            Unit* victim = bossLichK->GetVictim();
+                            // setam Triunghi pe tank
+                            if (victim)
+                            {
+                                ObjectGuid victimGUID = victim->GetGUID();
+                                if (gr->GetTargetIcons()[3] != victimGUID)
+                                {
+                                    gr->SetTargetIcon(3, bot->GetGUID(), victimGUID);
+                                    triangleTargetGUID = victimGUID;
+                                    //iconRezervat = true;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Daca triunghi este inca pe cineva marcat de noi
+                            if (!triangleTargetGUID.IsEmpty())
+                            {
+                                if (gr->GetTargetIcons()[3] == triangleTargetGUID)
+                                {
+                                    gr->SetTargetIcon(3, bot->GetGUID(), ObjectGuid::Empty);
+                                }
+                                triangleTargetGUID = ObjectGuid::Empty;
+                            }
+                        }
+                    }
+                }
+
+                if (!iconRezervat)
+                {
+                    if (gr)
+                    {
+                        if (gr->GetTargetIcons()[2] == bossGUID)
+                        {
+                            gr->SetTargetIcon(2, bot->GetGUID(), ObjectGuid::Empty); // sterge intex vechi
+                            gr->SetTargetIcon(7, bot->GetGUID(), bossGUID); // set skull
+                        }
+                    }
+                }
+            }
         }
     }
 
