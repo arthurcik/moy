@@ -33,6 +33,10 @@
 #include "Weather.h"
 //#include "Log.h"
 
+//npcbot
+#include "botmgr.h"
+//end npcbot
+
 enum LichKingTexts
 {
     // The Lich King
@@ -474,6 +478,26 @@ class TriggerWickedSpirit : public BasicEvent
 };
 
 // 36597 - The Lich King
+// kitt start ----------------
+struct HarvestSoulTargetSelector
+{
+    // Important: operatorul trebuie sa fie exact asa pentru a fi recunoscut ca PREDICATE
+    bool operator()(Unit const* target) const
+    {
+        if (!target || !target->IsAlive())
+            return false;
+
+        // Daca e NPCBot, il excludem
+        if (target->GetTypeId() == TYPEID_UNIT)
+            if (target->ToCreature() && target->ToCreature()->IsNPCBotOrPet())
+                return false;
+
+        // Acceptam doar jucatori
+        return target->GetTypeId() == TYPEID_PLAYER;
+    }
+};
+// kitt end -----------------
+
 struct boss_the_lich_king : public BossAI
 {
     boss_the_lich_king(Creature* creature) : BossAI(creature, DATA_THE_LICH_KING)
@@ -867,9 +891,21 @@ struct boss_the_lich_king : public BossAI
         {
             if (me->IsInCombat() && me->GetPositionZ() < 839.0f)
             {
-                float const centerX = 505.28f;
-                float const centerY = -2124.19f;
+                float centerX = 505.28f;
+                float centerY = -2124.19f;
                 float const centerZ = 840.90f;
+                uint32 const npcDefileTrigger = 38757;
+                uint32 const npcShadowTrapTrigger = 39137;
+
+                
+
+                if (me->FindNearestCreature(npcShadowTrapTrigger, 10.0f, true) ||
+                    me->FindNearestCreature(npcDefileTrigger, 10.0f, true))
+                {
+                    // Dac? centrul e periculos, mut?m destina?ia 15 metri spre Nord-Est (decalat)
+                    centerX += 15.0f;
+                    centerY += 15.0f;
+                }
 
                 me->NearTeleportTo(centerX, centerY, centerZ, me->GetOrientation());
                 me->GetMotionMaster()->Clear();
@@ -998,8 +1034,10 @@ struct boss_the_lich_king : public BossAI
                     break;
                 case EVENT_HARVEST_SOUL:
                     Talk(SAY_LK_HARVEST_SOUL);
-                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, SpellTargetSelector(me, SPELL_HARVEST_SOUL)))
+                    if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, HarvestSoulTargetSelector()))
+                    {
                         DoCast(target, SPELL_HARVEST_SOUL);
+                    }
                     events.ScheduleEvent(EVENT_HARVEST_SOUL, 75s, 0, PHASE_THREE);
                     break;
                 case EVENT_PAIN_AND_SUFFERING:
