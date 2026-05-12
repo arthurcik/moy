@@ -416,7 +416,7 @@ namespace KittBotAI
                         }
                     }
 
-                    if (!iconExist)
+                    if (!iconExist && gr)
                     {
                         for (Creature* s : NpcList)
                         {
@@ -446,6 +446,8 @@ namespace KittBotAI
                             {
                                 bot->Attack(NpcTar, true);
                             }
+                            ai->AttackStart(NpcTar);
+                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
                         }
                         //return;
                     }
@@ -472,9 +474,15 @@ namespace KittBotAI
 
         uint32 const SpellFreez = 69705; // channel spell
 
+        uint32 NpcIGB = 0; // modular
+        uint32 NpcMage = 0; // modular
+        uint32 NpcMargine = 0; // Modular
+
+        uint32 const NpcIgbHighOverlordH = 36939; // IGB Horde
         uint32 const NpcMageH  = 37117; // Mage
         uint32 const NpcAxethH = 36968; // Margine
 
+        uint32 const NpcIgbMuradinA = 36948; // IGB Alliance
         uint32 const NpcSorcererA = 37116; // Mage
         uint32 const NpcRiflemanA = 36969; // margine
 
@@ -482,175 +490,188 @@ namespace KittBotAI
         uint32 const TransAlliance = 201580;
         uint32 const TransHorde    = 201812;
 
+        uint8 iconIndex4 = 4; // Luna
+        //uint8 iconIndex5 = 5; // patrat
+        uint8 iconIndex7 = 7; // skelet
+
         if (mTrans->GetEntry() != TransAlliance && mTrans->GetEntry() != TransHorde)
+            return;
+        if (master->GetTeamId() == TEAM_HORDE && mTrans->GetEntry() == TransAlliance)
+            return;
+        if (master->GetTeamId() == TEAM_ALLIANCE && mTrans->GetEntry() == TransHorde)
             return;
 
 
-        if (mTrans && mTrans->GetEntry() == TransAlliance) // alliance
+        if (master->GetTeamId() == TEAM_HORDE)
         {
-            if (master->GetTeamId() == TEAM_HORDE)
-                return;
-
-            if (!ai->HasRole(BOT_ROLE_HEAL) && !ai->HasRole(BOT_ROLE_TANK))
-            {
-                if (Creature* NpcAds1a = bot->FindNearestCreature(NpcMageH, 100.0f, true))
-                {
-                    if (NpcAds1a->IsInWorld() && NpcAds1a->IsAlive())
-                    {
-                        if (NpcAds1a && NpcAds1a->IsAlive() && NpcAds1a->GetChannelSpellId() == SpellFreez)
-                        {
-                            if (bot->GetVictim() != NpcAds1a)
-                            {
-                                bot->SetInCombatWith(NpcAds1a);
-                                //NpcAds1a->SetInCombatWith(bot);
-                                bot->GetThreatManager().FixateTarget(NpcAds1a);
-
-                                if (ai->HasRole(BOT_ROLE_RANGED))
-                                {
-                                    bot->Attack(NpcAds1a, false);
-                                }
-                                else
-                                {
-                                    bot->Attack(NpcAds1a, true);
-                                }
-                                ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1a);
-                            }
-                            return;
-                        }
-                    }
-                }
-                else if (Creature* NpcAds3a = bot->FindNearestCreature(NpcAxethH, 100.0f, true))
-                {
-                    if (NpcAds3a->IsInWorld() && NpcAds3a->IsAlive())
-                    {
-                        if (bot->GetVictim() != NpcAds3a)
-                        {
-                            bot->SetInCombatWith(NpcAds3a);
-                            //NpcAds2a->SetInCombatWith(bot);
-                            //bot->GetThreatManager().FixateTarget(NpcAds3a);
-                            if (ai->HasRole(BOT_ROLE_RANGED))
-                            {
-                                bot->Attack(NpcAds3a, false);
-                            }
-                            else
-                            {
-                                bot->Attack(NpcAds3a, true);
-                            }
-
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3a);
-                        }
-                        return;
-                    }
-                }
-
-                /*if (Creature* NpcAds2a = bot->FindNearestCreature(NpcSoketH, 100.0f, true))
-                {
-                    if (NpcAds2a && NpcAds2a->IsAlive() && NpcAds2a->IsInWorld())
-                    {
-                        ObjectGuid guid = NpcAds2a->GetGUID();
-
-                        if (!guid.IsCreature() || !NpcAds2a->IsAlive())
-                            return;
-
-                        bool isAlreadyInMemory = activatedRocketeers.find(guid) != activatedRocketeers.end();
-
-                        Spell* currentSpell = NpcAds2a ? NpcAds2a->GetCurrentSpell(CURRENT_GENERIC_SPELL) : nullptr;
-                        bool isCastingNow = (currentSpell != nullptr);
-
-                        if (isAlreadyInMemory)
-                        {
-                            //bot->GetThreatManager().AddThreat(NpcAds2a, 5000.0f);
-                            //NpcAds2a->GetThreatManager().AddThreat(bot, 5000.0f);
-
-                            if (bot->GetVictim() != NpcAds2a)
-                            {
-                                bot->SetInCombatWith(NpcAds2a);
-                                //NpcAds2a->SetInCombatWith(bot);
-                                //bot->GetThreatManager().FixateTarget(NpcAds2a);
-                                //bot->Attack(NpcAds2a, true);
-                                if (ai->HasRole(BOT_ROLE_RANGED))
-                                {
-                                    bot->Attack(NpcAds2a, false);
-                                }
-                                else
-                                {
-                                    bot->Attack(NpcAds2a, true);
-                                }
-
-                                ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds2a);
-                            }
-                            return;
-                        }
-
-                        if (isCastingNow)
-                        {
-                            activatedRocketeers.insert(guid);
-                            if (activatedRocketeers.size() > 200) activatedRocketeers.clear();
-
-                            return;
-                        }
-                    }
-                }*/
-            }
+            NpcIGB = NpcIgbHighOverlordH;
+            NpcMage = NpcSorcererA;
+            NpcMargine = NpcRiflemanA;
+        }
+        else // alliance
+        {
+            NpcIGB = NpcIgbMuradinA;
+            NpcMage = NpcMageH;
+            NpcMargine = NpcAxethH;
         }
 
-        if (mTrans && mTrans->GetEntry() == TransHorde) // horde
+        if (mTrans)
         {
-            if (master->GetTeamId() == TEAM_ALLIANCE)
-                return;
-
-            if (!ai->HasRole(BOT_ROLE_HEAL) && !ai->HasRole(BOT_ROLE_TANK))
+            if (ai->HasRole(BOT_ROLE_TANK))
             {
-                if (Creature* NpcAds1a = bot->FindNearestCreature(NpcSorcererA, 100.0f, true))
-                {
-                    if (NpcAds1a->IsInWorld() && NpcAds1a->IsAlive())
-                    {
-                        if (NpcAds1a && NpcAds1a->IsAlive() && NpcAds1a->GetChannelSpellId() == SpellFreez)
-                        {
-                            if (bot->GetVictim() != NpcAds1a)
-                            {
-                                bot->SetInCombatWith(NpcAds1a);
-                                //NpcAds1a->SetInCombatWith(bot);
-                                bot->GetThreatManager().FixateTarget(NpcAds1a);
+                std::list<Creature*> NpcList1; // lista generala
 
-                                if (ai->HasRole(BOT_ROLE_RANGED))
-                                {
-                                    bot->Attack(NpcAds1a, false);
-                                }
-                                else
-                                {
-                                    bot->Attack(NpcAds1a, true);
-                                }
-                                ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                                ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1a);
+                bot->GetCreatureListWithEntryInGrid(NpcList1, NpcIGB, 100.0f); // IGB
+
+                if (!NpcList1.empty())
+                {
+                    Creature* NpcTar1 = nullptr;
+                    bool iconExist1 = false;
+                    ObjectGuid currentIconGuid1 = gr->GetTargetIcons()[iconIndex7];
+
+                    NpcList1.sort([](Creature* a, Creature* b) {
+                        return a->GetGUID() < b->GetGUID();
+                        });
+
+                    for (Creature* s : NpcList1)
+                    {
+                        if (!s || !s->IsAlive()) continue;
+
+                        Unit* victim = s->GetVictim();
+                        if (victim && victim->IsAlive() && victim->GetGUID() == currentIconGuid1)
+                        {
+                            NpcTar1 = victim->ToCreature();
+                            if (NpcTar1)
+                            {
+                                iconExist1 = true;
+                                break;
                             }
-                            return;
                         }
                     }
-                }
-                else if (Creature* NpcAds3a = bot->FindNearestCreature(NpcRiflemanA, 100.0f, true))
-                {
-                    if (NpcAds3a->IsInWorld() && NpcAds3a->IsAlive())
+
+                    if (!iconExist1 && gr)
                     {
-                        if (bot->GetVictim() != NpcAds3a)
+                        for (Creature* s : NpcList1)
                         {
-                            bot->SetInCombatWith(NpcAds3a);
+                            if (!s || !s->IsAlive()) continue;
+
+                            Unit* victim = s->GetVictim();
+                            if (victim && victim->IsAlive() && victim->GetGUID() != bot->GetGUID())
+                            {
+                                Creature* posibileTar = victim->ToCreature();
+
+                                if (posibileTar)
+                                {
+                                    NpcTar1 = posibileTar;
+                                    if (gr && NpcTar1)
+                                    {
+                                        gr->SetTargetIcon(iconIndex7, bot->GetGUID(), NpcTar1->GetGUID());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (NpcTar1 && NpcTar1->IsAlive())
+                    {
+                        if (!bot->GetVictim() || bot->GetVictim()->GetGUID() != NpcTar1->GetGUID())
+                        {
+                            bot->GetThreatManager().AddThreat(NpcTar1, 1300300.0f);
+                            bot->SetInCombatWith(NpcTar1);
+                            bot->GetThreatManager().FixateTarget(NpcTar1);
+
+                            ai->AttackStart(NpcTar1);
+                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+
                             if (ai->HasRole(BOT_ROLE_RANGED))
                             {
-                                bot->Attack(NpcAds3a, false);
+                                bot->Attack(NpcTar1, false);
                             }
                             else
                             {
-                                bot->Attack(NpcAds3a, true);
+                                bot->Attack(NpcTar1, true);
                             }
-
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3a);
                         }
-                        return;
+                    }
+                }
+            }
+
+            if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+            {
+                std::list<Creature*> NpcList; // lista generala
+
+                bot->GetCreatureListWithEntryInGrid(NpcList, NpcMage, 100.0f); // prioritar
+                // stergem din lista mage-ii care nu dau cast la spell-ul
+                NpcList.remove_if([SpellFreez](Creature* npc) {
+                    return !npc->IsAlive() || npc->GetChannelSpellId() != SpellFreez;
+                    });
+                // --------------------------------------------
+
+                if (NpcList.empty())
+                {
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcMargine, 100.0f); // urmatorul
+                    NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
+                }
+
+                if (!NpcList.empty())
+                {
+                    Creature* NpcTar = nullptr;
+                    bool iconExist = false;
+                    ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex4];
+
+                    NpcList.sort([](Creature* a, Creature* b) {
+                        return a->GetGUID() < b->GetGUID();
+                        });
+
+                    for (Creature* s : NpcList)
+                    {
+                        if (!s->IsAlive()) continue;
+
+                        if (s->GetGUID() == currentIconGuid)
+                        {
+                            iconExist = true;
+                            NpcTar = s;
+                            break;
+                        }
+                    }
+
+                    if (!iconExist && gr)
+                    {
+                        for (Creature* s : NpcList)
+                        {
+                            if (s->IsAlive())
+                            {
+                                NpcTar = s;
+                                gr->SetTargetIcon(iconIndex4, bot->GetGUID(), NpcTar->GetGUID());
+                                break;
+                            }
+                        }
+                    }
+
+                    if (NpcTar && NpcTar->IsAlive())
+                    {
+                        if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
+                        {
+                            return;
+                        }
+
+                        if (bot->GetVictim() != NpcTar)
+                        {
+                            bot->GetThreatManager().AddThreat(NpcTar, 1300300.0f);
+                            bot->SetInCombatWith(NpcTar);
+                            bot->GetThreatManager().FixateTarget(NpcTar);
+                            if (ai->HasRole(BOT_ROLE_RANGED))
+                            {
+                                bot->Attack(NpcTar, false);
+                            }
+                            else
+                            {
+                                bot->Attack(NpcTar, true);
+                            }
+                            ai->AttackStart(NpcTar);
+                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                        }
                     }
                 }
             }
