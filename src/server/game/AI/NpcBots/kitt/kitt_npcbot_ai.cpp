@@ -259,9 +259,12 @@ namespace KittBotAI
             return;
 
         uint32 const BossLady = 36855;
-        uint32 const NpcCult  = 37949;
-        uint32 const NpcEmpow = 38136;
-        uint32 const NpcReani = 38010;
+        uint32 const NpcCultFan = 37890;
+        uint32 const NpcReanFan = 38009;
+        uint32 const NpcCultAdh  = 37949;
+        uint32 const NpcEmpowAdh = 38136;
+        uint32 const NpcReaniAdh = 38010; // pri 1
+        uint32 const NpcDefoFan = 38135; // pri 2
         uint32 const spellDominateMind = 71290; // Dominate Mind scale
 
 
@@ -367,76 +370,84 @@ namespace KittBotAI
 
             if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
             {
-                if (Creature* NpcAds1 = bot->FindNearestCreature(NpcCult, 40.0f, true))
+                std::list<Creature*> NpcList;
+                bot->GetCreatureListWithEntryInGrid(NpcList, NpcCultFan, 100.0f); // prioritar 
+                if (NpcList.empty())
                 {
-                    if (NpcAds1->IsInWorld() && NpcAds1->IsAlive())
-                    {
-                        if (bot->GetVictim() != NpcAds1)
-                        {
-                            bot->SetInCombatWith(NpcAds1);
-                            //NpcAds1->SetInCombatWith(bot);
-
-                            //bot->Attack(NpcAds1, true);
-                            if (ai->HasRole(BOT_ROLE_RANGED))
-                            {
-                                bot->Attack(NpcAds1, false);
-                            }
-                            else
-                            {
-                                bot->Attack(NpcAds1, true);
-                            }
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds1);
-                        }
-                        return;
-                    }
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcEmpowAdh, 100.0f); // urmatorul
                 }
-                else if (Creature* NpcAds2 = bot->FindNearestCreature(NpcEmpow, 40.0f, true))
+                if (NpcList.empty())
                 {
-                    if (NpcAds2->IsInWorld() && NpcAds2->IsAlive())
-                    {
-                        if (bot->GetVictim() != NpcAds2)
-                        {
-                            bot->SetInCombatWith(NpcAds2);
-                            //NpcAds2->SetInCombatWith(bot);
-
-                            //bot->Attack(NpcAds2, true);
-                            if (ai->HasRole(BOT_ROLE_RANGED))
-                            {
-                                bot->Attack(NpcAds2, false);
-                            }
-                            else
-                            {
-                                bot->Attack(NpcAds2, true);
-                            }
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds2);
-                        }
-                        return;
-                    }
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcReanFan, 100.0f); // urmatorul
                 }
-                else if (Creature* NpcAds3 = bot->FindNearestCreature(NpcReani, 40.0f, true))
+                if (NpcList.empty())
                 {
-                    if (NpcAds3->IsInWorld() && NpcAds3->IsAlive())
-                    {
-                        if (bot->GetVictim() != NpcAds3)
-                        {
-                            bot->SetInCombatWith(NpcAds3);
-                            //NpcAds3->SetInCombatWith(bot);
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcCultAdh, 100.0f); // urmatorul
+                }
+                if (NpcList.empty())
+                {
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcReaniAdh, 100.0f); // urmatorul
+                }
+                if (NpcList.empty())
+                {
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcDefoFan, 100.0f); // urmatorul
+                }
 
-                            //bot->Attack(NpcAds3, true);
+                if (!NpcList.empty())
+                {
+                    Creature* NpcTar = nullptr;
+                    bool iconExist = false;
+                    uint8 iconIndex = 5; // patrat
+                    ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex];
+
+                    NpcList.sort([](Creature* a, Creature* b) {
+                        return a->GetGUID() < b->GetGUID();
+                        });
+
+                    for (Creature* s : NpcList)
+                    {
+                        if (!s->IsAlive()) continue;
+
+                        if (s->GetGUID() == currentIconGuid)
+                        {
+                            iconExist = true;
+                            NpcTar = s;
+                            break;
+                        }
+                    }
+
+                    if (!iconExist)
+                    {
+                        for (Creature* s : NpcList)
+                        {
+                            if (s->IsAlive())
+                            {
+                                NpcTar = s;
+                                gr->SetTargetIcon(iconIndex, bot->GetGUID(), NpcTar->GetGUID());
+                                break;
+                            }
+                        }
+                    }
+
+                    if (NpcTar && NpcTar->IsAlive())
+                    {
+                        if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
+                        {
+                            return;
+                        }
+
+                        if (bot->GetVictim() != NpcTar)
+                        {
                             if (ai->HasRole(BOT_ROLE_RANGED))
                             {
-                                bot->Attack(NpcAds3, false);
+                                bot->Attack(NpcTar, false);
                             }
                             else
                             {
-                                bot->Attack(NpcAds3, true);
+                                bot->Attack(NpcTar, true);
                             }
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcAds3);
                         }
-                        return;
+                        //return;
                     }
                 }
             }
