@@ -192,32 +192,56 @@ namespace KittBotAI
 
         uint32 const NpcSpike = 36619;
 
-        if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
-        {
-            if (Creature* NpcSpikeTar = bot->FindNearestCreature(NpcSpike, 60.0f, true))
-            {
-                if (NpcSpikeTar->IsInWorld() && NpcSpikeTar->IsAlive())
-                {
-                    if (bot->GetVictim() != NpcSpikeTar)
-                    {
-                        bot->SetInCombatWith(NpcSpikeTar);
-                        bot->GetThreatManager().FixateTarget(NpcSpikeTar);
-                        //NpcSpikeTar->SetInCombatWith(bot);
+        if (ai->HasRole(BOT_ROLE_TANK) || ai->HasRole(BOT_ROLE_HEAL))
+            return;
 
-                        //bot->Attack(NpcSpikeTar, true);
-                        if (ai->HasRole(BOT_ROLE_RANGED))
-                        {
-                            bot->Attack(NpcSpikeTar, false);
-                        }
-                        else
-                        {
-                            bot->Attack(NpcSpikeTar, true);
-                        }
-                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                        ai->BotMovement(BOT_MOVE_CHASE, nullptr, NpcSpikeTar);
-                    }
-                    return;
+        std::list<Creature*> allSpikes;
+        bot->GetCreatureListWithEntryInGrid(allSpikes, NpcSpike, 60.0f);
+        if (allSpikes.empty())
+            return;
+
+        Creature* NpcSpikeTar = nullptr;
+        bool iconDejaExista = false;
+        ObjectGuid currentIconGuid = gr->GetTargetIcons()[4];
+
+        allSpikes.sort([](Creature* a, Creature* b) {
+            return a->GetGUID() < b->GetGUID();
+            });
+
+        for (Creature* s : allSpikes)
+        {
+            if (!s->IsAlive()) continue;
+
+            if (s->GetGUID() == currentIconGuid)
+            {
+                iconDejaExista = true;
+                NpcSpikeTar = s;
+                break;
+            }
+        }
+
+        if (!iconDejaExista)
+        {
+            for (Creature* s : allSpikes)
+            {
+                if (s->IsAlive())
+                {
+                    NpcSpikeTar = s;
+                    gr->SetTargetIcon(4, bot->GetGUID(), NpcSpikeTar->GetGUID());
+                    break;
                 }
+            }
+        }
+
+        if (NpcSpikeTar)
+        {
+            if (bot->GetVictim() != NpcSpikeTar)
+            {
+                bot->AttackStop();
+                bot->SetInCombatWith(NpcSpikeTar);
+                bot->GetThreatManager().FixateTarget(NpcSpikeTar);
+                bot->Attack(NpcSpikeTar, !ai->HasRole(BOT_ROLE_RANGED));
+                ai->AttackStart(NpcSpikeTar);
             }
         }
     }
