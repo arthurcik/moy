@@ -574,19 +574,19 @@ namespace KittBotAI
 
         uint32 const SpellFreez = 69705; // channel spell
 
-        uint32 NpcIGB = 0; // modular
+        //uint32 NpcIGB = 0; // modular
         uint32 NpcMage = 0; // modular
         uint32 NpcMargine = 0; // Modular
         uint32 NpcVizita1 = 0; // se duce in vizita
         uint32 NpcVizita2 = 0; // se duce in vizita
 
-        uint32 const NpcIgbHighOverlordH = 36939; // IGB Horde
+        //uint32 const NpcIgbHighOverlordH = 36939; // IGB Horde
         uint32 const NpcMageH            = 37117; // Mage
         uint32 const NpcAxethH           = 36968; // Margine
         uint32 const NpcKronReaverH      = 36957; // se duce in vizita
         uint32 const NpcKronSergeantH    = 36960; // se duce in vizita
 
-        uint32 const NpcIgbMuradinA   = 36948; // IGB Alliance
+        //uint32 const NpcIgbMuradinA   = 36948; // IGB Alliance
         uint32 const NpcSorcererA     = 37116; // Mage
         uint32 const NpcRiflemanA     = 36969; // margine
         uint32 const NpcSkybMarineA   = 36950; // se duce in vizita
@@ -604,7 +604,7 @@ namespace KittBotAI
 
         if (master->GetTeamId() == TEAM_HORDE)
         {
-            NpcIGB = NpcIgbHighOverlordH;
+            //NpcIGB = NpcIgbHighOverlordH;
             NpcMage = NpcSorcererA;
             NpcMargine = NpcRiflemanA;
             NpcVizita1 = NpcSkybMarineA;
@@ -613,7 +613,7 @@ namespace KittBotAI
         }
         else // alliance
         {
-            NpcIGB = NpcIgbMuradinA;
+            //NpcIGB = NpcIgbMuradinA;
             NpcMage = NpcMageH;
             NpcMargine = NpcAxethH;
             NpcVizita1 = NpcKronReaverH;
@@ -703,7 +703,7 @@ namespace KittBotAI
 
             bot->GetCreatureListWithEntryInGrid(NpcList, NpcMage, 100.0f); // prioritar
             // stergem din lista mage-ii care nu dau cast la spell-ul
-            NpcList.remove_if([SpellFreez](Creature* npc) {
+            NpcList.remove_if([](Creature* npc) {
                 return !npc->IsAlive() || npc->GetChannelSpellId() != SpellFreez;
                 });
             // --------------------------------------------
