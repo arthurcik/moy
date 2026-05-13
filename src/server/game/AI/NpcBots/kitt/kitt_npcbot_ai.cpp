@@ -149,9 +149,13 @@ namespace KittBotAI
         if (!instance)
             return;
 
-        uint32 LordMarrStart  = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
-        uint32 LadyDeathStart = static_cast<uint32>(instance->GetBossState(1)); //  DATA_LADY_DEATHWHISPER
-        uint32 GunshipStart   = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE
+        uint32 LordMarrStart      = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
+        uint32 LadyDeathStart     = static_cast<uint32>(instance->GetBossState(1)); //  DATA_LADY_DEATHWHISPER
+        uint32 GunshipStart       = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE
+        uint32 DeathSaurfangStart = static_cast<uint32>(instance->GetBossState(3)); //  NPC_DEATHBRINGER_SAURFANG
+        uint32 RotfaceStart       = static_cast<uint32>(instance->GetBossState(5)); //  DATA_ROTFACE
+
+
 
         if (mapId == 631)
         {
@@ -172,6 +176,16 @@ namespace KittBotAI
                     if (GunshipStart == IN_PROGRESS)
                     {
                         KittHandleGunship(bot, master, ai); // gunship
+                    }
+
+                    if (DeathSaurfangStart == IN_PROGRESS)
+                    {
+                        KittHandleDeathSaurfang(bot, master, ai); // Death Saurfang
+                    }
+
+                    if (RotfaceStart == IN_PROGRESS)
+                    {
+                        KittHandleRotface(bot, master, ai); // Rotface
                     }
 
                     KittHandleValithia(bot, master, ai); // Valithia
@@ -586,12 +600,6 @@ namespace KittBotAI
         //uint8 iconIndex5 = 5; // patrat
         uint8 iconIndex7 = 7; // skelet
 
-        /*if (mTrans->GetEntry() != TransAlliance && mTrans->GetEntry() != TransHorde)
-            return;
-        if (master->GetTeamId() == TEAM_HORDE && mTrans->GetEntry() == TransAlliance)
-            return;
-        if (master->GetTeamId() == TEAM_ALLIANCE && mTrans->GetEntry() == TransHorde)
-            return;*/
 
 
         if (master->GetTeamId() == TEAM_HORDE)
@@ -771,6 +779,141 @@ namespace KittBotAI
         }
     }
 
+    void KittHandleDeathSaurfang(Creature* bot, Player* master, bot_ai* ai)
+    {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
+            return;
+
+        uint32 NpcBloodDeast = 38508;
+        uint8 iconIndex5 = 5; // patrat
+
+
+        if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+        {
+            std::list<Creature*> NpcList; // lista generala
+
+            bot->GetCreatureListWithEntryInGrid(NpcList, NpcBloodDeast, 50.0f); // prioritar
+            NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
+
+            if (!NpcList.empty())
+            {
+                Creature* NpcTar = nullptr;
+                bool iconExist = false;
+                ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex5];
+
+                NpcList.sort([](Creature* a, Creature* b) {
+                    return a->GetGUID() < b->GetGUID();
+                    });
+
+                for (Creature* s : NpcList)
+                {
+                    if (!s->IsAlive()) continue;
+
+                    if (s->GetGUID() == currentIconGuid)
+                    {
+                        iconExist = true;
+                        NpcTar = s;
+                        break;
+                    }
+                }
+
+                if (!iconExist && gr)
+                {
+                    for (Creature* s : NpcList)
+                    {
+                        if (s->IsAlive())
+                        {
+                            NpcTar = s;
+                            gr->SetTargetIcon(iconIndex5, bot->GetGUID(), NpcTar->GetGUID());
+                            break;
+                        }
+                    }
+                }
+
+                if (NpcTar && NpcTar->IsAlive())
+                {
+                    if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
+                    {
+                        return;
+                    }
+
+                    if (bot->GetVictim() != NpcTar)
+                    {
+                        bot->GetThreatManager().AddThreat(NpcTar, 300300.0f);
+                        bot->SetInCombatWith(NpcTar);
+                        bot->GetThreatManager().FixateTarget(NpcTar);
+
+                        ai->AttackStart(NpcTar);
+                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+
+                        if (ai->HasRole(BOT_ROLE_RANGED))
+                        {
+                            bot->Attack(NpcTar, false);
+                        }
+                        else
+                        {
+                            bot->Attack(NpcTar, true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void KittHandleRotface(Creature* bot, Player* master, bot_ai* /*ai*/)
+    {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        /*Group* gr = master->GetGroup();
+        if (!gr)
+            return;*/
+
+        //uint32 NpcBloodDeast = 38508;
+        //uint8 iconIndex5 = 5; // patrat
+
+        uint32 SpellOozeFlood = 69785; // spell aura pata verde 25h
+        //uint32 SpellOozeFlood2 = 69788; // spell aura pata verde 25h
+
+        uint32 NpcPuddleStalker = 37013; //NPC_PUDDLE_STALKER
+
+        // pata verde
+        if (Creature* pataOoze = bot->FindNearestCreature(NpcPuddleStalker, 25.0f, true))
+        {
+            if (pataOoze->HasAura(SpellOozeFlood))
+            {
+                if (bot->IsNonMeleeSpellCast(true))
+                {
+                    bot->InterruptNonMeleeSpells(true);
+                }
+
+                bot->AttackStop();
+                bot->GetMotionMaster()->Clear();
+
+                float angle = pataOoze->GetOrientation();
+                float runDist = 33.0f;
+                float x = pataOoze->GetPositionX() + (runDist * std::cos(angle));
+                float y = pataOoze->GetPositionY() + (runDist * std::sin(angle));
+
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                {
+                    bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+                }
+                return;
+            }
+        }
+    }
+
     void KittHandlePutricide(Creature* bot, Player* master, bot_ai* ai)
     {
         if (!master || !master->IsInWorld() || !master->GetSession())
@@ -797,6 +940,10 @@ namespace KittBotAI
 
         uint32 const NpcVolatileOoze = 37697;    // NPC_VOLATILE_OOZE
         uint32 const NpcGasCloud = 37562;
+
+        // icon
+        uint8 iconIndex5 = 5; // patrat
+
 
         Map* map = master->GetMap();
         if (map)
@@ -865,7 +1012,7 @@ namespace KittBotAI
         }
 
         // final stage stack change tank
-        if (ai->HasRole(BOT_ROLE_TANK) || ai->HasRole(BOT_ROLE_TANK_OFF)) //|| ai->HasRole(BOT_ROLE_DPS))
+        if (ai->HasRole(BOT_ROLE_TANK) || ai->HasRole(BOT_ROLE_TANK_OFF))
         {
             if (Creature* putricide = bot->FindNearestCreature(NpcBossProfesor, 30.0f, true))
             {
@@ -890,9 +1037,6 @@ namespace KittBotAI
                             putricide->Attack(bot, true);
                             putricide->GetThreatManager().FixateTarget(bot);
 
-                            //putricide->GetThreatManager().ModifyThreatByPercent(currentVictim, -100);
-                            //putricide->GetThreatManager().ModifyThreatByPercent(bot, 100);
-
                             ai->SetBotCommandState(BOT_COMMAND_ATTACK);
                             ai->BotMovement(BOT_MOVE_CHASE, nullptr, putricide);
                             bot->Attack(putricide, true);
@@ -905,54 +1049,76 @@ namespace KittBotAI
         // ooze attack
         if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
         {
-            if (Creature* npcozeverde = bot->FindNearestCreature(NpcVolatileOoze, 60.0f, true))
-            {
-                if (npcozeverde->IsInWorld() && npcozeverde->IsAlive())
-                {
-                    if (bot->GetVictim() != npcozeverde)
-                    {
-                        bot->SetInCombatWith(npcozeverde);
-                        //npcozeverde->SetInCombatWith(bot);
+            std::list<Creature*> NpcList; // lista generala
 
-                        //bot->Attack(npcozeverde, true);
+            bot->GetCreatureListWithEntryInGrid(NpcList, NpcVolatileOoze, 100.0f); // prioritar
+            NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
+
+            if (NpcList.empty())
+            {
+                bot->GetCreatureListWithEntryInGrid(NpcList, NpcGasCloud, 100.0f); // urmatorul
+                NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
+            }
+
+            if (!NpcList.empty())
+            {
+                Creature* NpcTar = nullptr;
+                bool iconExist = false;
+                ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex5];
+
+                NpcList.sort([](Creature* a, Creature* b) {
+                    return a->GetGUID() < b->GetGUID();
+                    });
+
+                for (Creature* s : NpcList)
+                {
+                    if (!s->IsAlive()) continue;
+
+                    if (s->GetGUID() == currentIconGuid)
+                    {
+                        iconExist = true;
+                        NpcTar = s;
+                        break;
+                    }
+                }
+
+                if (!iconExist && gr)
+                {
+                    for (Creature* s : NpcList)
+                    {
+                        if (s->IsAlive())
+                        {
+                            NpcTar = s;
+                            gr->SetTargetIcon(iconIndex5, bot->GetGUID(), NpcTar->GetGUID());
+                            break;
+                        }
+                    }
+                }
+
+                if (NpcTar && NpcTar->IsAlive())
+                {
+                    if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
+                    {
+                        return;
+                    }
+
+                    if (bot->GetVictim() != NpcTar)
+                    {
+                        bot->GetThreatManager().AddThreat(NpcTar, 300300.0f);
+                        bot->SetInCombatWith(NpcTar);
+                        bot->GetThreatManager().FixateTarget(NpcTar);
+
+                        ai->AttackStart(NpcTar);
+                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+
                         if (ai->HasRole(BOT_ROLE_RANGED))
                         {
-                            bot->Attack(npcozeverde, false);
+                            bot->Attack(NpcTar, false);
                         }
                         else
                         {
-                            bot->Attack(npcozeverde, true);
+                            bot->Attack(NpcTar, true);
                         }
-                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                        ai->BotMovement(BOT_MOVE_CHASE, nullptr, npcozeverde);
-                    }
-                    return;
-                }
-            }
-            else
-            {
-                if (Creature* npcgasoze = bot->FindNearestCreature(NpcGasCloud, 60.0f, true))
-                {
-                    if (npcgasoze->IsInWorld() && npcgasoze->IsAlive())
-                    {
-                        if (bot->GetVictim() != npcgasoze)
-                        {
-                            bot->SetInCombatWith(npcgasoze);
-                            //npcgasoze->SetInCombatWith(bot);
-
-                            //bot->Attack(npcgasoze, true);
-                            if (ai->HasRole(BOT_ROLE_RANGED))
-                            {
-                                bot->Attack(npcgasoze, false);
-                            }
-                            else
-                            {
-                                bot->Attack(npcgasoze, true);
-                            }
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, npcgasoze);
-                        }
-                        return;
                     }
                 }
             }
@@ -1588,7 +1754,10 @@ namespace KittBotAI
                 float x = bot->GetPositionX() + (runDist * std::cos(angle));
                 float y = bot->GetPositionY() + (runDist * std::sin(angle));
 
-                bot->GetMotionMaster()->MovePoint(2, x, y, bot->GetPositionZ());
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                {
+                    bot->GetMotionMaster()->MovePoint(2, x, y, bot->GetPositionZ());
+                }
                 ShadowTrapPrez = true;
                 //return;
             }
@@ -1614,7 +1783,10 @@ namespace KittBotAI
                     float x = bot->GetPositionX() + (runDist * std::cos(angle));
                     float y = bot->GetPositionY() + (runDist * std::sin(angle));
 
-                    bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                    {
+                        bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+                    }
                     DefilesPrezent = true;
                     //return;
                 }
