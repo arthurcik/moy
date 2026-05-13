@@ -5,12 +5,14 @@
 
 #include "kitt_npcbot_ai.h"
 #include "Player.h"
+#include "Chat.h"
 #include "Creature.h"
 #include "bot_ai.h"
 #include "botmgr.h"
 #include "botspell.h"
 #include "GameTime.h"
 #include "Group.h"
+#include "InstanceScript.h"
 #include "Map.h"
 #include "Spell.h"
 #include "SpellAuras.h"
@@ -20,7 +22,6 @@
 #include "Vehicle.h"
 
 //#include "botcommon.h"
-
 
 
 namespace
@@ -144,15 +145,35 @@ namespace KittBotAI
         if (mapId != 631)
             return;
 
+        InstanceScript* instance = master->GetInstanceScript();
+        if (!instance)
+            return;
+
+        uint32 LordMarrStart  = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
+        uint32 LadyDeathStart = static_cast<uint32>(instance->GetBossState(1)); //  DATA_LADY_DEATHWHISPER
+        uint32 GunshipStart   = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE
+
         if (mapId == 631)
         {
             switch (areaId)
             {
                 case 4812: // Marrowgar
                 {
-                    KittHandleMarrowgar(bot, master, ai); // marrow
-                    KittHandleLadyDeathwhisper(bot, master, ai); // lady
-                    KittHandleGunship(bot, master, ai); // gunship
+                    if (LordMarrStart == IN_PROGRESS)
+                    {
+                        KittHandleMarrowgar(bot, master, ai); // marrow
+                    }
+
+                    if (LadyDeathStart == IN_PROGRESS)
+                    {
+                        KittHandleLadyDeathwhisper(bot, master, ai); // lady
+                    }
+
+                    if (GunshipStart == IN_PROGRESS)
+                    {
+                        KittHandleGunship(bot, master, ai); // gunship
+                    }
+
                     KittHandleValithia(bot, master, ai); // Valithia
                     break;
                 }
@@ -464,6 +485,68 @@ namespace KittBotAI
         if (!bot || !bot->IsInWorld() || !bot->IsAlive())
             return;
 
+        // --- block instance team > bots ---
+        InstanceScript* instance = master->GetInstanceScript();
+        if (!instance)
+            return;
+
+        uint32 instanceTeam = static_cast<uint32>(instance->GetData(27)); // icc DATA_TEAM_IN_INSTANCE
+        uint32 GunshipStart = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE       = 2,
+
+        if (GunshipStart != 1)
+        {
+            if (BotMgr* mgr = master->GetBotMgr())
+            {
+                // Verificam daca are boti
+                if (!master->HaveBot())
+                    return;
+
+                // Verificam daca este viu
+                if (!master->IsAlive())
+                    return;
+
+                // Daca sunt deja ascunsi, ii aducem inapoi
+                if (mgr->GetBotsHidden())
+                {
+                    mgr->SetBotsHidden(false);
+                }
+            }
+            return;
+        }
+
+        bool HideBots = false;
+
+        if (master->GetTeamId() == TEAM_HORDE && instanceTeam == ALLIANCE)
+        {
+            HideBots = true;
+        }
+
+        if (master->GetTeamId() == TEAM_ALLIANCE && instanceTeam == HORDE)
+        {
+            HideBots = true;
+        }
+
+        if (HideBots)
+        {
+            if (BotMgr* mgr = master->GetBotMgr())
+            {
+                // Verificam daca are boti
+                if (!master->HaveBot())
+                    return;
+
+                // Daca nu sunt deja ascunsi, ii ascundem
+                if (!mgr->GetBotsHidden())
+                {
+                    mgr->SetBotsHidden(true);
+                    ChatHandler(master->GetSession()).PSendSysMessage("|cffff0000[B0ts]:|r Partenerii tai nu sunt eligibili si au fost ascunsi pe durata luptei.");
+                    master->GetSession()->SendNotification("Partenerii tai nu sunt eligibili si au fost ascunsi pe durata luptei.");
+                }
+            }
+            return;
+        }
+        // --------- end block --------
+
+
         Group* gr = master->GetGroup();
         if (!gr)
             return;
@@ -479,7 +562,7 @@ namespace KittBotAI
         uint32 NpcMargine = 0; // Modular
 
         uint32 const NpcIgbHighOverlordH = 36939; // IGB Horde
-        uint32 const NpcMageH  = 37117; // Mage
+        uint32 const NpcMageH = 37117; // Mage
         uint32 const NpcAxethH = 36968; // Margine
 
         uint32 const NpcIgbMuradinA = 36948; // IGB Alliance
@@ -487,19 +570,19 @@ namespace KittBotAI
         uint32 const NpcRiflemanA = 36969; // margine
 
 
-        uint32 const TransAlliance = 201580;
-        uint32 const TransHorde    = 201812;
+        //uint32 const TransAlliance = 201580;
+        //uint32 const TransHorde = 201812;
 
         uint8 iconIndex4 = 4; // Luna
         //uint8 iconIndex5 = 5; // patrat
         uint8 iconIndex7 = 7; // skelet
 
-        if (mTrans->GetEntry() != TransAlliance && mTrans->GetEntry() != TransHorde)
+        /*if (mTrans->GetEntry() != TransAlliance && mTrans->GetEntry() != TransHorde)
             return;
         if (master->GetTeamId() == TEAM_HORDE && mTrans->GetEntry() == TransAlliance)
             return;
         if (master->GetTeamId() == TEAM_ALLIANCE && mTrans->GetEntry() == TransHorde)
-            return;
+            return;*/
 
 
         if (master->GetTeamId() == TEAM_HORDE)
@@ -515,163 +598,160 @@ namespace KittBotAI
             NpcMargine = NpcAxethH;
         }
 
-        if (mTrans)
+        if (ai->HasRole(BOT_ROLE_TANK))
         {
-            if (ai->HasRole(BOT_ROLE_TANK))
+            std::list<Creature*> NpcList1; // lista generala
+
+            bot->GetCreatureListWithEntryInGrid(NpcList1, NpcIGB, 100.0f); // IGB
+
+            if (!NpcList1.empty())
             {
-                std::list<Creature*> NpcList1; // lista generala
+                Creature* NpcTar1 = nullptr;
+                bool iconExist1 = false;
+                ObjectGuid currentIconGuid1 = gr->GetTargetIcons()[iconIndex7];
 
-                bot->GetCreatureListWithEntryInGrid(NpcList1, NpcIGB, 100.0f); // IGB
+                NpcList1.sort([](Creature* a, Creature* b) {
+                    return a->GetGUID() < b->GetGUID();
+                    });
 
-                if (!NpcList1.empty())
+                for (Creature* s : NpcList1)
                 {
-                    Creature* NpcTar1 = nullptr;
-                    bool iconExist1 = false;
-                    ObjectGuid currentIconGuid1 = gr->GetTargetIcons()[iconIndex7];
+                    if (!s || !s->IsAlive()) continue;
 
-                    NpcList1.sort([](Creature* a, Creature* b) {
-                        return a->GetGUID() < b->GetGUID();
-                        });
+                    Unit* victim = s->GetVictim();
+                    if (victim && victim->IsAlive() && victim->GetGUID() == currentIconGuid1)
+                    {
+                        NpcTar1 = victim->ToCreature();
+                        if (NpcTar1)
+                        {
+                            iconExist1 = true;
+                            break;
+                        }
+                    }
+                }
 
+                if (!iconExist1 && gr)
+                {
                     for (Creature* s : NpcList1)
                     {
                         if (!s || !s->IsAlive()) continue;
 
                         Unit* victim = s->GetVictim();
-                        if (victim && victim->IsAlive() && victim->GetGUID() == currentIconGuid1)
+                        if (victim && victim->IsAlive() && victim->GetGUID() != bot->GetGUID())
                         {
-                            NpcTar1 = victim->ToCreature();
-                            if (NpcTar1)
+                            Creature* posibileTar = victim->ToCreature();
+
+                            if (posibileTar)
                             {
-                                iconExist1 = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!iconExist1 && gr)
-                    {
-                        for (Creature* s : NpcList1)
-                        {
-                            if (!s || !s->IsAlive()) continue;
-
-                            Unit* victim = s->GetVictim();
-                            if (victim && victim->IsAlive() && victim->GetGUID() != bot->GetGUID())
-                            {
-                                Creature* posibileTar = victim->ToCreature();
-
-                                if (posibileTar)
+                                NpcTar1 = posibileTar;
+                                if (gr && NpcTar1)
                                 {
-                                    NpcTar1 = posibileTar;
-                                    if (gr && NpcTar1)
-                                    {
-                                        gr->SetTargetIcon(iconIndex7, bot->GetGUID(), NpcTar1->GetGUID());
-                                        break;
-                                    }
+                                    gr->SetTargetIcon(iconIndex7, bot->GetGUID(), NpcTar1->GetGUID());
+                                    break;
                                 }
                             }
                         }
                     }
+                }
 
-                    if (NpcTar1 && NpcTar1->IsAlive())
+                if (NpcTar1 && NpcTar1->IsAlive())
+                {
+                    if (!bot->GetVictim() || bot->GetVictim()->GetGUID() != NpcTar1->GetGUID())
                     {
-                        if (!bot->GetVictim() || bot->GetVictim()->GetGUID() != NpcTar1->GetGUID())
+                        bot->GetThreatManager().AddThreat(NpcTar1, 1300300.0f);
+                        bot->SetInCombatWith(NpcTar1);
+                        bot->GetThreatManager().FixateTarget(NpcTar1);
+
+                        ai->AttackStart(NpcTar1);
+                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+
+                        if (ai->HasRole(BOT_ROLE_RANGED))
                         {
-                            bot->GetThreatManager().AddThreat(NpcTar1, 1300300.0f);
-                            bot->SetInCombatWith(NpcTar1);
-                            bot->GetThreatManager().FixateTarget(NpcTar1);
-
-                            ai->AttackStart(NpcTar1);
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-
-                            if (ai->HasRole(BOT_ROLE_RANGED))
-                            {
-                                bot->Attack(NpcTar1, false);
-                            }
-                            else
-                            {
-                                bot->Attack(NpcTar1, true);
-                            }
+                            bot->Attack(NpcTar1, false);
+                        }
+                        else
+                        {
+                            bot->Attack(NpcTar1, true);
                         }
                     }
                 }
             }
+        }
 
-            if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+        if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+        {
+            std::list<Creature*> NpcList; // lista generala
+
+            bot->GetCreatureListWithEntryInGrid(NpcList, NpcMage, 100.0f); // prioritar
+            // stergem din lista mage-ii care nu dau cast la spell-ul
+            NpcList.remove_if([SpellFreez](Creature* npc) {
+                return !npc->IsAlive() || npc->GetChannelSpellId() != SpellFreez;
+                });
+            // --------------------------------------------
+
+            if (NpcList.empty())
             {
-                std::list<Creature*> NpcList; // lista generala
+                bot->GetCreatureListWithEntryInGrid(NpcList, NpcMargine, 100.0f); // urmatorul
+                NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
+            }
 
-                bot->GetCreatureListWithEntryInGrid(NpcList, NpcMage, 100.0f); // prioritar
-                // stergem din lista mage-ii care nu dau cast la spell-ul
-                NpcList.remove_if([SpellFreez](Creature* npc) {
-                    return !npc->IsAlive() || npc->GetChannelSpellId() != SpellFreez;
+            if (!NpcList.empty())
+            {
+                Creature* NpcTar = nullptr;
+                bool iconExist = false;
+                ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex4];
+
+                NpcList.sort([](Creature* a, Creature* b) {
+                    return a->GetGUID() < b->GetGUID();
                     });
-                // --------------------------------------------
 
-                if (NpcList.empty())
+                for (Creature* s : NpcList)
                 {
-                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcMargine, 100.0f); // urmatorul
-                    NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
+                    if (!s->IsAlive()) continue;
+
+                    if (s->GetGUID() == currentIconGuid)
+                    {
+                        iconExist = true;
+                        NpcTar = s;
+                        break;
+                    }
                 }
 
-                if (!NpcList.empty())
+                if (!iconExist && gr)
                 {
-                    Creature* NpcTar = nullptr;
-                    bool iconExist = false;
-                    ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex4];
-
-                    NpcList.sort([](Creature* a, Creature* b) {
-                        return a->GetGUID() < b->GetGUID();
-                        });
-
                     for (Creature* s : NpcList)
                     {
-                        if (!s->IsAlive()) continue;
-
-                        if (s->GetGUID() == currentIconGuid)
+                        if (s->IsAlive())
                         {
-                            iconExist = true;
                             NpcTar = s;
+                            gr->SetTargetIcon(iconIndex4, bot->GetGUID(), NpcTar->GetGUID());
                             break;
                         }
                     }
+                }
 
-                    if (!iconExist && gr)
+                if (NpcTar && NpcTar->IsAlive())
+                {
+                    if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
                     {
-                        for (Creature* s : NpcList)
-                        {
-                            if (s->IsAlive())
-                            {
-                                NpcTar = s;
-                                gr->SetTargetIcon(iconIndex4, bot->GetGUID(), NpcTar->GetGUID());
-                                break;
-                            }
-                        }
+                        return;
                     }
 
-                    if (NpcTar && NpcTar->IsAlive())
+                    if (bot->GetVictim() != NpcTar)
                     {
-                        if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
+                        bot->GetThreatManager().AddThreat(NpcTar, 1300300.0f);
+                        bot->SetInCombatWith(NpcTar);
+                        bot->GetThreatManager().FixateTarget(NpcTar);
+                        if (ai->HasRole(BOT_ROLE_RANGED))
                         {
-                            return;
+                            bot->Attack(NpcTar, false);
                         }
-
-                        if (bot->GetVictim() != NpcTar)
+                        else
                         {
-                            bot->GetThreatManager().AddThreat(NpcTar, 1300300.0f);
-                            bot->SetInCombatWith(NpcTar);
-                            bot->GetThreatManager().FixateTarget(NpcTar);
-                            if (ai->HasRole(BOT_ROLE_RANGED))
-                            {
-                                bot->Attack(NpcTar, false);
-                            }
-                            else
-                            {
-                                bot->Attack(NpcTar, true);
-                            }
-                            ai->AttackStart(NpcTar);
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                            bot->Attack(NpcTar, true);
                         }
+                        ai->AttackStart(NpcTar);
+                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
                     }
                 }
             }
