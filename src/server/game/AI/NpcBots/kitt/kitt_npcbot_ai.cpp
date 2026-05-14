@@ -154,6 +154,12 @@ namespace KittBotAI
         uint32 GunshipStart       = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE
         uint32 DeathSaurfangStart = static_cast<uint32>(instance->GetBossState(3)); //  NPC_DEATHBRINGER_SAURFANG
         uint32 RotfaceStart       = static_cast<uint32>(instance->GetBossState(5)); //  DATA_ROTFACE
+        uint32 PutricideStart     = static_cast<uint32>(instance->GetBossState(6)); // DATA_PROFESSOR_PUTRICIDE
+        uint32 PrinceCouncilStart = static_cast<uint32>(instance->GetBossState(7)); // DATA_BLOOD_PRINCE_COUNCIL
+
+        uint32 ValithiaStart      = static_cast<uint32>(instance->GetBossState(9)); // DATA_VALITHRIA_DREAMWALKER
+        uint32 SindragosaStart    = static_cast<uint32>(instance->GetBossState(10)); // DATA_SINDRAGOSA
+        uint32 LichKingStart      = static_cast<uint32>(instance->GetBossState(11)); // DATA_THE_LICH_KING
 
 
 
@@ -188,23 +194,44 @@ namespace KittBotAI
                         KittHandleRotface(bot, master, ai); // Rotface
                     }
 
-                    KittHandleValithia(bot, master, ai); // Valithia
+                    if (ValithiaStart == IN_PROGRESS)
+                    {
+                        KittHandleValithia(bot, master, ai); // Valithia
+                    }
+
+                    break;
+                }
+                case 4892: // Prince Council
+                {
+                    if (PrinceCouncilStart == IN_PROGRESS)
+                    {
+                        KittHandlePrinceCouncil(bot, master, ai);
+                    }
                     break;
                 }
                 case 4890: // profesor
                 {
-                    KittHandlePutricide(bot, master, ai);
+                    if (PutricideStart == IN_PROGRESS)
+                    {
+                        KittHandlePutricide(bot, master, ai);
+                    }
                     break;
                 }
 
                 case 4889: // sindragosa
                 {
-                    KittHandleSindragosa(bot, master, ai);
+                    if (SindragosaStart == IN_PROGRESS)
+                    {
+                        KittHandleSindragosa(bot, master, ai);
+                    }
                     break;
                 }
                 case 4859: // Lich King
                 {
-                    KittHandleLichKing(bot, master, ai);
+                    if (LichKingStart == IN_PROGRESS)
+                    {
+                        KittHandleLichKing(bot, master, ai);
+                    }
                     break;
                 }
 
@@ -322,7 +349,16 @@ namespace KittBotAI
                     {
                         if (member->HasAura(spellDominateMind))
                         {
-                            if (!member->HasUnitState(UNIT_STATE_LOST_CONTROL | UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED | UNIT_STATE_ROOT))
+                            bool areDejaCC = member->HasAura(10308) || // Hammer of Justice
+                                member->HasAura(118) || // Polymorph
+                                member->HasAura(2094) || // Blind
+                                member->HasAura(33786) || // Cyclone
+                                member->HasAura(5782) || // Fear
+                                member->HasAura(14311) || // Freezing Trap (debuff-ul Freezing)
+                                member->HasAura(8122) || // Psychic Scream
+                                member->HasAura(51514);    // Hex
+
+                            if (!areDejaCC && !member->HasUnitState(UNIT_STATE_LOST_CONTROL | UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED | UNIT_STATE_ROOT))
                             {
                                 float dist = bot->GetDistance(member);
                                 float razaCast = 8.0f; // 8 cast
@@ -332,7 +368,10 @@ namespace KittBotAI
                                     float x, y, z;
                                     member->GetContactPoint(bot, x, y, z, razaCast);
                                     //bot->GetMotionMaster()->Clear();
-                                    bot->GetMotionMaster()->MovePoint(1, x, y, z);
+                                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                                    {
+                                        bot->GetMotionMaster()->MovePoint(1, x, y, z);
+                                    }
                                 }
                                 else
                                 {
@@ -341,26 +380,61 @@ namespace KittBotAI
                                        case BOT_CLASS_PALADIN:
                                        {
                                            // Hammer of Justice (ID: 10308)
-                                           bot->CastSpell(member, 10308, true);
+                                           if (!areDejaCC)
+                                           {
+                                               if (bot->IsNonMeleeSpellCast(true))
+                                               {
+                                                   bot->InterruptNonMeleeSpells(true);
+                                               }
+                                               bot->AttackStop();
+
+                                               bot->CastSpell(member, 10308, true);
+                                           }
                                            break;
                                        }
                                        case BOT_CLASS_MAGE:
                                        {
                                            // Polymorph (ID: 118)
-                                           bot->CastSpell(member, 118, true);
+                                           if (!areDejaCC)
+                                           {
+                                               if (bot->IsNonMeleeSpellCast(true))
+                                               {
+                                                   bot->InterruptNonMeleeSpells(true);
+                                               }
+                                               bot->AttackStop();
+
+                                               bot->CastSpell(member, 118, true);
+                                           }
                                            break;
                                        }
                                        case BOT_CLASS_ROGUE:
                                        {
                                            // Blind (ID: 2094)
-                                           bot->CastSpell(member, 2094, true);
+                                           if (!areDejaCC)
+                                           {
+                                               if (bot->IsNonMeleeSpellCast(true))
+                                               {
+                                                   bot->InterruptNonMeleeSpells(true);
+                                               }
+                                               bot->AttackStop();
+
+                                               bot->CastSpell(member, 2094, true);
+                                           }
                                            break;
                                        }
                                        case BOT_CLASS_DRUID:
                                        {
                                            // Cyclone (ID: 33786)
-                                           bot->AttackStop();
-                                           bot->CastSpell(member, 33786, true);
+                                           if (!areDejaCC)
+                                           {
+                                               if (bot->IsNonMeleeSpellCast(true))
+                                               {
+                                                   bot->InterruptNonMeleeSpells(true);
+                                               }
+                                               bot->AttackStop();
+
+                                               bot->CastSpell(member, 33786, true);
+                                           }
                                            break;
                                        }
                                        case BOT_CLASS_WARRIOR:
@@ -370,23 +444,59 @@ namespace KittBotAI
                                        }
                                        case BOT_CLASS_WARLOCK:
                                        {
-                                           bot->CastSpell(member, 5782, true);  // Fear
+                                           if (!areDejaCC)
+                                           {
+                                               if (bot->IsNonMeleeSpellCast(true))
+                                               {
+                                                   bot->InterruptNonMeleeSpells(true);
+                                               }
+                                               bot->AttackStop();
+
+                                               bot->CastSpell(member, 5782, true);  // Fear
+                                           }
                                            break;
                                        }
                                        case BOT_CLASS_HUNTER:
                                        {
-                                           //bot->CastSpell(member, 19503, true); // Scatter Shot
-                                           bot->CastSpell(member, 14311, true); // Freezing Trap
+                                           if (!areDejaCC)
+                                           {
+                                               if (bot->IsNonMeleeSpellCast(true))
+                                               {
+                                                   bot->InterruptNonMeleeSpells(true);
+                                               }
+                                               bot->AttackStop();
+
+                                               //bot->CastSpell(member, 19503, true); // Scatter Shot
+                                               bot->CastSpell(member, 14311, true); // Freezing Trap
+                                           }
                                            break;
                                        }
                                        case BOT_CLASS_PRIEST:
                                        {
-                                           bot->CastSpell(member, 8122, true);  // Psychic Scream
+                                           if (!areDejaCC)
+                                           {
+                                               if (bot->IsNonMeleeSpellCast(true))
+                                               {
+                                                   bot->InterruptNonMeleeSpells(true);
+                                               }
+                                               bot->AttackStop();
+
+                                               bot->CastSpell(member, 8122, true);  // Psychic Scream
+                                           }
                                            break;
                                        }
                                        case BOT_CLASS_SHAMAN:
                                        {
-                                           bot->CastSpell(member, 51514, true); // Hex
+                                           if (!areDejaCC)
+                                           {
+                                               if (bot->IsNonMeleeSpellCast(true))
+                                               {
+                                                   bot->InterruptNonMeleeSpells(true);
+                                               }
+                                               bot->AttackStop();
+
+                                               bot->CastSpell(member, 51514, true); // Hex
+                                           }
                                            break;
                                        }
                                        case BOT_CLASS_DEATH_KNIGHT:
@@ -396,9 +506,10 @@ namespace KittBotAI
                                        }
                                     }
                                 }
+                                return;
                             }
                         }
-                        return;
+                        //return;
                     }
                 }
             }
@@ -596,8 +707,8 @@ namespace KittBotAI
         //uint32 const TransAlliance = 201580;
         //uint32 const TransHorde = 201812;
 
-        uint8 iconIndex4 = 4; // Luna
-        //uint8 iconIndex5 = 5; // patrat
+        //uint8 iconIndex4 = 4; // Luna
+        uint8 iconIndex5 = 5; // patrat
         uint8 iconIndex7 = 7; // skelet
 
 
@@ -624,12 +735,12 @@ namespace KittBotAI
         {
             std::list<Creature*> NpcList; // lista generala
 
-            bot->GetCreatureListWithEntryInGrid(NpcList, NpcVizita1, 50.0f); // prioritar
+            bot->GetCreatureListWithEntryInGrid(NpcList, NpcVizita1, 30.0f); // 50 prioritar
             NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
 
             if (NpcList.empty())
             {
-                bot->GetCreatureListWithEntryInGrid(NpcList, NpcVizita2, 50.0f); // urmatorul
+                bot->GetCreatureListWithEntryInGrid(NpcList, NpcVizita2, 30.0f); // urmatorul
                 NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
             }
 
@@ -718,7 +829,7 @@ namespace KittBotAI
             {
                 Creature* NpcTar = nullptr;
                 bool iconExist = false;
-                ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex4];
+                ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex5];
 
                 NpcList.sort([](Creature* a, Creature* b) {
                     return a->GetGUID() < b->GetGUID();
@@ -743,7 +854,7 @@ namespace KittBotAI
                         if (s->IsAlive())
                         {
                             NpcTar = s;
-                            gr->SetTargetIcon(iconIndex4, bot->GetGUID(), NpcTar->GetGUID());
+                            gr->SetTargetIcon(iconIndex5, bot->GetGUID(), NpcTar->GetGUID());
                             break;
                         }
                     }
@@ -882,34 +993,69 @@ namespace KittBotAI
         //uint32 NpcBloodDeast = 38508;
         //uint8 iconIndex5 = 5; // patrat
 
-        uint32 SpellOozeFlood = 69785; // spell aura pata verde 25h
-        //uint32 SpellOozeFlood2 = 69788; // spell aura pata verde 25h
+        uint32 SpellOozeFlood = 69785; // spell aura pata verde de pe margine 25h
+        uint32 SpellOozeFlood2 = 69788; // spell aura pata verde 25h
 
-        uint32 NpcPuddleStalker = 37013; //NPC_PUDDLE_STALKER
+        uint32 NpcPuddleStalker = 37013; // NPC_PUDDLE_STALKER
+        uint32 NpcOozeFlood = 37006; // sa fuga din ele, raza 6m
+
+        // petele mici aleatorii
+        if (Creature* npcOoze = bot->FindNearestCreature(NpcOozeFlood, 5.0f, true))
+        {
+            if (bot->IsNonMeleeSpellCast(true))
+            {
+                bot->InterruptNonMeleeSpells(true);
+            }
+
+            bot->AttackStop();
+            bot->GetMotionMaster()->Clear();
+            float angle = npcOoze->GetAbsoluteAngle(bot);
+            float runDist = 7.0f;
+            float x = bot->GetPositionX() + (runDist * std::cos(angle));
+            float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+            {
+                bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+            }
+        }
+
 
         // pata verde
-        if (Creature* pataOoze = bot->FindNearestCreature(NpcPuddleStalker, 25.0f, true))
+        float RangeDist = 25.0f;
+        std::list<Creature*> puddleList;
+        bot->GetCreatureListWithEntryInGrid(puddleList, NpcPuddleStalker, RangeDist);
+
+        puddleList.remove_if([SpellOozeFlood, SpellOozeFlood2](Creature* pataOoze) {
+            return !pataOoze || !pataOoze->IsAlive() || (!pataOoze->HasAura(SpellOozeFlood) && !pataOoze->HasAura(SpellOozeFlood2));
+            });
+
+        if (puddleList.empty())
+            return;
+
+        puddleList.sort([bot](Creature* a, Creature* b) {
+            return bot->GetDistance2d(a) < bot->GetDistance2d(b);
+            });
+
+        Creature* pataOoze = puddleList.front();
+        if (pataOoze)
         {
-            if (pataOoze->HasAura(SpellOozeFlood))
+            if (bot->IsNonMeleeSpellCast(true))
             {
-                if (bot->IsNonMeleeSpellCast(true))
-                {
-                    bot->InterruptNonMeleeSpells(true);
-                }
+                bot->InterruptNonMeleeSpells(true);
+            }
 
-                bot->AttackStop();
-                bot->GetMotionMaster()->Clear();
+            bot->AttackStop();
+            bot->GetMotionMaster()->Clear();
 
-                float angle = pataOoze->GetOrientation();
-                float runDist = 33.0f;
-                float x = pataOoze->GetPositionX() + (runDist * std::cos(angle));
-                float y = pataOoze->GetPositionY() + (runDist * std::sin(angle));
+            float angle = pataOoze->GetOrientation();
+            float runDist = RangeDist + 5.0f;
+            float x = bot->GetPositionX() + (runDist * std::cos(angle));
+            float y = bot->GetPositionY() + (runDist * std::sin(angle));
 
-                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
-                {
-                    bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
-                }
-                return;
+            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+            {
+                bot->GetMotionMaster()->MovePoint(2, x, y, bot->GetPositionZ());
             }
         }
     }
@@ -940,6 +1086,9 @@ namespace KittBotAI
 
         uint32 const NpcVolatileOoze = 37697;    // NPC_VOLATILE_OOZE
         uint32 const NpcGasCloud = 37562;
+        uint32 const NpcOozePuddle = 37690; // trigger pata verde aleatorie
+        //uint32 const spellGrowPuddle = 70347; // aura pe trigger ... stack 1=20%
+
 
         // icon
         uint8 iconIndex5 = 5; // patrat
@@ -1010,6 +1159,35 @@ namespace KittBotAI
                 bot->ClearUnitState(UNIT_STATE_ROOT);
             }
         }
+
+        // Ooze Puddle pata verde aleatorie
+        if (Creature* OozePuddle = bot->FindNearestCreature(NpcOozePuddle, 40.0f, true))
+        {
+            float currentScale = OozePuddle->GetObjectScale();
+            float safetyMargin = 1.0f;
+            float dynamicRadius = (1.0f * currentScale) + safetyMargin;
+
+            float distToOozePuddle = bot->GetDistance(OozePuddle);
+
+            if (distToOozePuddle < dynamicRadius)
+            {
+                if (bot->IsNonMeleeSpellCast(true))
+                    bot->InterruptNonMeleeSpells(true);
+
+                bot->AttackStop();
+
+                float angle = OozePuddle->GetAbsoluteAngle(bot);
+                float runDist = (dynamicRadius - distToOozePuddle);
+                float x = bot->GetPositionX() + (runDist * std::cos(angle));
+                float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                {
+                    bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+                }
+            }
+        }
+
 
         // final stage stack change tank
         if (ai->HasRole(BOT_ROLE_TANK) || ai->HasRole(BOT_ROLE_TANK_OFF))
@@ -1125,6 +1303,103 @@ namespace KittBotAI
         }
     }
 
+    void KittHandlePrinceCouncil(Creature* bot, Player* master, bot_ai* ai)
+    {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
+            return;
+
+        uint32 npcKineticBomb = 38454;
+
+        // icon
+        uint8 iconIndex4 = 4; // triunghi
+        //uint8 iconIndex5 = 5; // patrat
+
+        if (ai->HasRole(BOT_ROLE_RANGED))
+        {
+            std::list<Creature*> NpcList; // lista generala
+
+            bot->GetCreatureListWithEntryInGrid(NpcList, npcKineticBomb, 200.0f); // prioritar
+            NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); }); // stergem ce nu e in viata
+
+            if (!NpcList.empty())
+            {
+                NpcList.sort([](Creature* a, Creature* b) {
+                    return a->GetPositionZ() < b->GetPositionZ();
+                    });
+
+                Creature* absoluteLowest = NpcList.front();
+                Creature* NpcTar = absoluteLowest;
+
+                if (NpcTar && gr)
+                {
+                    ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex4];
+                    Creature* currentMarkedBomb = nullptr;
+
+                    if (!currentIconGuid.IsEmpty())
+                    {
+                        for (Creature* s : NpcList)
+                        {
+                            if (s->GetGUID() == currentIconGuid)
+                            {
+                                currentMarkedBomb = s;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (currentMarkedBomb && currentMarkedBomb != absoluteLowest)
+                    {
+                        float heightDifference = currentMarkedBomb->GetPositionZ() - absoluteLowest->GetPositionZ();
+                        float toleranceZ = 2.0f; // toleranta Z inaltime
+
+                        if (heightDifference < toleranceZ)
+                        {
+                            NpcTar = currentMarkedBomb;
+                        }
+                    }
+
+                    if (currentIconGuid != NpcTar->GetGUID())
+                    {
+                        gr->SetTargetIcon(iconIndex4, bot->GetGUID(), NpcTar->GetGUID());
+                    }
+                }
+
+                if (NpcTar && NpcTar->IsAlive())
+                {
+                    if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
+                    {
+                        return;
+                    }
+
+                    if (bot->GetVictim() != NpcTar)
+                    {
+                        bot->SetInCombatWith(NpcTar);
+
+                        ai->AttackStart(NpcTar);
+                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+
+                        if (ai->HasRole(BOT_ROLE_RANGED))
+                        {
+                            bot->Attack(NpcTar, false);
+                        }
+                        else
+                        {
+                            bot->Attack(NpcTar, true);
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
     void KittHandleValithia(Creature* bot, Player* master, bot_ai* ai)
     {
         if (!master || !master->IsInWorld() || !master->GetSession())
@@ -1159,10 +1434,9 @@ namespace KittBotAI
 
         // verificam daca cineva din raid are nevoie de heal
         bool raidNeedsUrgentHeal = false;
-        Group* group = master->GetGroup();
-        if (group)
+        if (gr)
         {
-            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            for (GroupReference* itr = gr->GetFirstMember(); itr != nullptr; itr = itr->next())
             {
                 Player* member = itr->GetSource();
                 if (!member || !member->IsInMap(bot) || !member->IsAlive())
@@ -1216,7 +1490,7 @@ namespace KittBotAI
         }
 
         // 2. daca raid e ok si boss se afla in raza a 20m
-        if (!raidNeedsUrgentHeal && bot->GetDistance(valithia) <= 10.0f)
+        if (!raidNeedsUrgentHeal && bot->GetDistance(valithia) <= 20.0f)
         {
             uint8 BotClass = bot->GetClass();
 
