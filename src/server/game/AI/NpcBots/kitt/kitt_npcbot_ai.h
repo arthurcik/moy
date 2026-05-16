@@ -25,8 +25,8 @@ namespace KittBotAI
     void KittHandleDeathSaurfang(Creature* bot, Player* master, bot_ai* ai);
     void KittHandleRotface(Creature* bot, Player* master, bot_ai* ai);
     void KittHandlePutricide(Creature* bot, Player* master, bot_ai* ai);
-
     void KittHandlePrinceCouncil(Creature* bot, Player* master, bot_ai* ai);
+    void KittHandleBloodQueen(Creature* bot, Player* master, bot_ai* ai);
 
     void KittHandleValithia(Creature* bot, Player* master, bot_ai* ai);
     void KittHandleSindragosa(Creature* bot, Player* master, bot_ai* ai);
