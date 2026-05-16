@@ -1905,14 +1905,6 @@ namespace KittBotAI
                 float z = tomb->GetPositionZ();
 
                 bot->NearTeleportTo(x, y, z, Position::NormalizeOrientation(angleTowardsTomb + M_PI));
-
-                //bot->AttackStop();
-                //bot->AddUnitState(UNIT_STATE_ROOT);
-
-                /*if (!ai->HasRole(BOT_ROLE_HEAL))
-                {
-                    ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
-                }*/
             }
         }
         else
@@ -1945,7 +1937,7 @@ namespace KittBotAI
 
             if (bot->HasUnitState(UNIT_STATE_ROOT))
             {
-                bot->AttackStop();
+                //bot->AttackStop();
                 float angleFromBombToTomb = activeBomb->GetAbsoluteAngle(tomb);
                 float distantaInSpate = 7.5f;
                 float x = tomb->GetPositionX() + (distantaInSpate * std::cos(angleFromBombToTomb));
@@ -2017,7 +2009,7 @@ namespace KittBotAI
                 ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
             }
 
-            if (!ai->HasRole(BOT_ROLE_TANK) && ai->HasRole(BOT_ROLE_DPS)/* && (distToSindra < 80.0f || zDiff < 18.0f)*/)
+            if (!ai->HasRole(BOT_ROLE_TANK) && ai->HasRole(BOT_ROLE_DPS))
             {
                 std::list<Creature*> NpcList;
                 bot->GetCreatureListWithEntryInGrid(NpcList, entryIceTomb, 200.0f);
@@ -2054,7 +2046,7 @@ namespace KittBotAI
                     {
                         float zDiffTomb = bot->GetDistance(NpcTar);
 
-                        if (zDiffTomb < 3.0f && ai->HasRole(BOT_ROLE_RANGED))
+                        if (zDiffTomb < 3.0f && ai->HasRole(BOT_ROLE_RANGED)) // 3
                         {
                             bot->GetMotionMaster()->Clear();
                             float angle = NpcTar->GetAbsoluteAngle(bot);
@@ -2070,23 +2062,24 @@ namespace KittBotAI
 
                         if (bot->GetVictim() != NpcTar)
                         {
-                            bot->GetThreatManager().ClearAllThreat();
-                            bot->GetThreatManager().AddThreat(NpcTar, 1300300.0f);
+                            //bot->GetThreatManager().ClearAllThreat();
+                            bot->GetThreatManager().AddThreat(NpcTar, + 1300300.0f);
 
                             bot->SetInCombatWith(NpcTar);
                             NpcTar->SetInCombatWith(bot);
 
                             ai->AttackStart(NpcTar);
+                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
 
                             if (ai->HasRole(BOT_ROLE_RANGED))
                             {
                                 bot->Attack(NpcTar, false);
-                                //bot->GetMotionMaster()->MoveChase(NpcTar, 8.0f); // 15
+                                bot->GetMotionMaster()->MoveChase(NpcTar, 15.0f); // 15
                             }
                             else
                             {
                                 bot->Attack(NpcTar, true);
-                                //bot->GetMotionMaster()->MoveChase(NpcTar);
+                                bot->GetMotionMaster()->MoveChase(NpcTar);
                             }
                         }
                     }
@@ -2249,10 +2242,8 @@ namespace KittBotAI
                 float x = bot->GetPositionX() + (runDist * std::cos(angle));
                 float y = bot->GetPositionY() + (runDist * std::sin(angle));
 
-                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
-                {
-                    bot->GetMotionMaster()->MovePoint(2, x, y, bot->GetPositionZ());
-                }
+                bot->GetMotionMaster()->MovePoint(2, x, y, bot->GetPositionZ());
+
                 ShadowTrapPrez = true;
                 //return;
             }
@@ -2278,10 +2269,8 @@ namespace KittBotAI
                     float x = bot->GetPositionX() + (runDist * std::cos(angle));
                     float y = bot->GetPositionY() + (runDist * std::sin(angle));
 
-                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
-                    {
-                        bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
-                    }
+                    bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+
                     DefilesPrezent = true;
                     //return;
                 }
