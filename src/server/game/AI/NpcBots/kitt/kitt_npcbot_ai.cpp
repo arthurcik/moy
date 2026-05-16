@@ -26,7 +26,7 @@
 
 namespace
 {
-    // Lich King
+    // Lich King.
     static std::map<ObjectGuid, uint32> teleportCooldownMap; // map for cd
     static uint32 const TELEPORT_CD = 1000; // in ms / 1 secunde intre teleportari pentru acelasi obiect
     static ObjectGuid triangleTargetGUID = ObjectGuid::Empty; // icon set faza sabiei normal mode

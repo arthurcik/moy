@@ -120,6 +120,7 @@ enum SindragosaEvents
     EVENT_THIRD_PHASE_CHECK         = 22,
     EVENT_AIR_MOVEMENT_FAR          = 23,
     EVENT_LAND_GROUND               = 24,
+    EVENT_START_DESCENDING          = 25,
 
     // Spinestalker
     EVENT_BELLOWING_ROAR            = 13,
@@ -542,6 +543,13 @@ struct boss_sindragosa : public BossAI
                 case EVENT_LAND:
                 {
                     events.CancelEvent(EVENT_FROST_BOMB);
+                    //me->GetMotionMaster()->MovePoint(POINT_LAND, SindragosaFlyInPos);
+
+                    events.ScheduleEvent(EVENT_START_DESCENDING, 8000ms); // kitt intarziere
+                    break;
+                }
+                case EVENT_START_DESCENDING:
+                {
                     me->GetMotionMaster()->MovePoint(POINT_LAND, SindragosaFlyInPos);
                     break;
                 }
