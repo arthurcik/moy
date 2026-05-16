@@ -1771,13 +1771,22 @@ namespace KittBotAI
             return;
 
         Map* map = master->GetMap();
+        if (!map)
+            return;
+
+        uint32 currentInstanceId = bot->GetMap()->GetInstanceId();
+        if (!currentInstanceId)
+            return;
+
+        time_t currentTimeMS = GameTime::GetGameTimeMS();
 
 
         uint32 const spellFrostBeacon = 70126; // mark
         uint32 const spellAuraIceTomb = 70157; // SPELL_ICE_TOMB_DAMAGE
-        uint32 const entryIceTomb   = 36980;  // id cub gheata
+        uint32 const spellAuraIceBomb = 70022; // aura pe npc la bomb visual
+        uint32 const entryIceTomb = 36980;  // id cub gheata
         uint32 const entryFrostBomb = 37186; // frost bomb
-        uint32 const NpcSindragosa  = 36853; // boss sindra
+        uint32 const NpcSindragosa = 36853; // boss sindra
 
         //uint8 iconIndex2 = 2; // diamant
         uint8 iconIndex5 = 5; // patrat
@@ -1839,52 +1848,76 @@ namespace KittBotAI
         float distToSindra = bot->GetDistance(sindra);
         float zDiff = std::abs(sindra->GetPositionZ() - bot->GetPositionZ());
 
-        if (zDiff > 18.0f || distToSindra > 80.0f)
+        Creature* tomb = bot->FindNearestCreature(entryIceTomb, 200.0f, true);
+        //Creature* activeBomb = bot->FindNearestCreature(entryFrostBomb, 200.0f, true);
+
+        // bomb list
+        std::list<Creature*> bombList;
+        bot->GetCreatureListWithEntryInGrid(bombList, entryFrostBomb, 200.0f);
+        bombList.remove_if([](Creature* bomb) {
+            return !bomb || !bomb->IsAlive() || !bomb->IsInWorld() || !bomb->HasAura(spellAuraIceBomb);
+            });
+
+        bool bombeInAer = !bombList.empty();
+        Creature* activeBomb = bombeInAer ? bombList.front() : nullptr;
+        // bomb end ----
+
+
+        static std::map<uint32, uint32> instanceBombTimers;
+        uint32 instanceBombaCooldownTimer = instanceBombTimers[currentInstanceId];
+
+        static std::map<uint32, bool> fazaBombaApornit;
+
+        bool tombIce = (tomb && tomb->IsAlive());
+        bool bossInAer = (zDiff > 18.0f || distToSindra > 80.0f);
+        //bool bombeInAer = (activeBomb && activeBomb->HasAura(spellAuraIceBomb));
+
+        if (bombeInAer)
         {
-            if (Creature* tomb = bot->FindNearestCreature(entryIceTomb, 200.0f, true))
+            fazaBombaApornit[currentInstanceId] = true;
+            instanceBombaCooldownTimer = currentTimeMS + 2500; // cd intre bombe
+            instanceBombTimers[currentInstanceId] = instanceBombaCooldownTimer;
+        }
+        
+        if (!bossInAer)
+        {
+            fazaBombaApornit[currentInstanceId] = false;
+        }
+
+        bool pericolBombeInAer = (bombeInAer || currentTimeMS < instanceBombaCooldownTimer || (bossInAer && !fazaBombaApornit[currentInstanceId]));
+
+
+        if (tombIce && bossInAer && !fazaBombaApornit[currentInstanceId])
+        {
+            if (!bot->HasUnitState(UNIT_STATE_ROOT))
             {
-                if (!bot->HasUnitState(UNIT_STATE_ROOT))
+                bot->AttackStop();
+                bot->AddUnitState(UNIT_STATE_ROOT);
+                if (!ai->HasRole(BOT_ROLE_HEAL))
                 {
-                    float angleTowardsTomb = sindra->GetAbsoluteAngle(tomb);
-                    float distantaInSpate = 5.0f;
-                    float x = tomb->GetPositionX() + (distantaInSpate * cos(angleTowardsTomb));
-                    float y = tomb->GetPositionY() + (distantaInSpate * sin(angleTowardsTomb));
-                    float z = tomb->GetPositionZ();
-
-                    bot->NearTeleportTo(x, y, z, Position::NormalizeOrientation(angleTowardsTomb + M_PI));
-
-                    bot->AddUnitState(UNIT_STATE_ROOT);
-
-                    if (map && !ai->HasRole(BOT_ROLE_HEAL))
-                    {
-                        ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
-                    }
+                    ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
                 }
-            }
 
-            if (Creature* tomb = bot->FindNearestCreature(entryIceTomb, 10.0f, true))
-            {
-                if (bot->HasUnitState(UNIT_STATE_ROOT))
+                float angleTowardsTomb = sindra->GetAbsoluteAngle(tomb);
+                float distantaInSpate = 5.0f;
+                float x = tomb->GetPositionX() + (distantaInSpate * cos(angleTowardsTomb));
+                float y = tomb->GetPositionY() + (distantaInSpate * sin(angleTowardsTomb));
+                float z = tomb->GetPositionZ();
+
+                bot->NearTeleportTo(x, y, z, Position::NormalizeOrientation(angleTowardsTomb + M_PI));
+
+                //bot->AttackStop();
+                //bot->AddUnitState(UNIT_STATE_ROOT);
+
+                /*if (!ai->HasRole(BOT_ROLE_HEAL))
                 {
-                    if (Creature* bomb = bot->FindNearestCreature(entryFrostBomb, 200.0f, true))
-                    {
-                        bot->AttackStop();
-                        float angleFromBombToTomb = bomb->GetAbsoluteAngle(tomb);
-                        float distantaInSpate = 0.5f;
-                        float x = tomb->GetPositionX() + (distantaInSpate * std::cos(angleFromBombToTomb));
-                        float y = tomb->GetPositionY() + (distantaInSpate * std::sin(angleFromBombToTomb));
-                        float z = tomb->GetPositionZ();
-
-                        bot->NearTeleportTo(x, y, z, Position::NormalizeOrientation(angleFromBombToTomb + M_PI));
-                    }
-                }
+                    ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
+                }*/
             }
-            return;
         }
         else
         {
-            // tank tele to sindra
-            if (bot->HasUnitState(UNIT_STATE_ROOT) && ai->HasRole(BOT_ROLE_TANK) && zDiff < 2)
+            if (!bossInAer)
             {
                 if (bot->HasUnitState(UNIT_STATE_ROOT))
                 {
@@ -1895,28 +1928,83 @@ namespace KittBotAI
                 {
                     ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
                 }
+            }
+        }
 
-                //bot->SetInCombatWith(sindra);
-                //ai->AttackStart(sindra);
+        if (tombIce && pericolBombeInAer && activeBomb)
+        {
+            /*if (!bot->HasUnitState(UNIT_STATE_ROOT))
+            {
+                bot->AddUnitState(UNIT_STATE_ROOT);
+            }
 
-                float distanta = 5.0f;
-                float angleInFata = sindra->GetOrientation();
+            if (!ai->HasBotCommandState(BOT_COMMAND_FULLSTOP))
+            {
+                ai->SetBotCommandState(BOT_COMMAND_FULLSTOP);
+            }*/
 
-                float x = sindra->GetPositionX() + (distanta * cos(angleInFata));
-                float y = sindra->GetPositionY() + (distanta * sin(angleInFata));
-                float z = sindra->GetPositionZ();
+            if (bot->HasUnitState(UNIT_STATE_ROOT))
+            {
+                bot->AttackStop();
+                float angleFromBombToTomb = activeBomb->GetAbsoluteAngle(tomb);
+                float distantaInSpate = 7.5f;
+                float x = tomb->GetPositionX() + (distantaInSpate * std::cos(angleFromBombToTomb));
+                float y = tomb->GetPositionY() + (distantaInSpate * std::sin(angleFromBombToTomb));
+                float z = tomb->GetPositionZ();
 
-                bot->NearTeleportTo(x, y, z, angleInFata + M_PI);
-                bot->GetMotionMaster()->Clear();
+                bot->NearTeleportTo(x, y, z, Position::NormalizeOrientation(angleFromBombToTomb + M_PI));
+            }
+            return;
+        }
 
-                if (gr)
+        if (tombIce && !pericolBombeInAer)
+        {
+            // tank tele to sindra
+            /*if (ai->HasRole(BOT_ROLE_TANK))
+            /*{
+                if (gr && sindra)
                 {
                     if (gr->GetTargetIcons()[iconIndex7] != sindra->GetGUID())
                     {
                         gr->SetTargetIcon(iconIndex7, bot->GetGUID(), sindra->GetGUID());
                     }
                 }
+            }*/
+            if (ai->HasRole(BOT_ROLE_TANK) && zDiff >= 2 && zDiff <= 4)
+            {
+                if (bot->GetVictim() != sindra)
+                {
+                    if (bot->HasUnitState(UNIT_STATE_ROOT))
+                    {
+                        bot->ClearUnitState(UNIT_STATE_ROOT);
+                    }
 
+                    if (ai->HasBotCommandState(BOT_COMMAND_FULLSTOP))
+                    {
+                        ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
+                    }
+
+                    bot->SetInCombatWith(sindra);
+                    ai->AttackStart(sindra);
+
+                    float distanta = 5.0f;
+                    float angleInFata = sindra->GetOrientation();
+
+                    float x = sindra->GetPositionX() + (distanta * cos(angleInFata));
+                    float y = sindra->GetPositionY() + (distanta * sin(angleInFata));
+                    float z = sindra->GetPositionZ();
+
+                    bot->NearTeleportTo(x, y, z, angleInFata + M_PI);
+                    bot->GetMotionMaster()->Clear();
+
+                    if (gr)
+                    {
+                        if (gr->GetTargetIcons()[iconIndex7] != sindra->GetGUID())
+                        {
+                            gr->SetTargetIcon(iconIndex7, bot->GetGUID(), sindra->GetGUID());
+                        }
+                    }
+                }
             }
 
             if (bot->HasUnitState(UNIT_STATE_ROOT))
@@ -1929,7 +2017,7 @@ namespace KittBotAI
                 ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
             }
 
-            if (!ai->HasRole(BOT_ROLE_TANK) && ai->HasRole(BOT_ROLE_DPS) && (distToSindra < 80.0f || zDiff < 18.0f))
+            if (!ai->HasRole(BOT_ROLE_TANK) && ai->HasRole(BOT_ROLE_DPS)/* && (distToSindra < 80.0f || zDiff < 18.0f)*/)
             {
                 std::list<Creature*> NpcList;
                 bot->GetCreatureListWithEntryInGrid(NpcList, entryIceTomb, 200.0f);
@@ -1949,43 +2037,17 @@ namespace KittBotAI
 
                     NpcTar = NpcList.front();
 
-                    /*if (gr)
-                    {
-                        //ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex5];
-                        if (currentIconGuid != NpcTar->GetGUID())
-                        {
-                            gr->SetTargetIcon(iconIndex5, bot->GetGUID(), NpcTar->GetGUID());
-                        }
-                    }*/
-
-
                     if (!currentIconGuid.IsEmpty())
                     {
-                        for (Creature* s : NpcList)
+                        if (currentIconGuid == NpcTar->GetGUID())
                         {
-                            if (!s->IsAlive()) continue;
-
-                            if (s->GetGUID() == currentIconGuid)
-                            {
-                                iconExist = true;
-                                NpcTar = s;
-                                break;
-                            }
+                            iconExist = true;
                         }
                     }
 
-                    if (!iconExist && gr)
+                    if (!iconExist && gr && NpcTar)
                     {
-                        for (Creature* s : NpcList)
-                        {
-                            s = NpcList.front();
-                            if (s && s->IsAlive())
-                            {
-                                NpcTar = s;
-                                gr->SetTargetIcon(iconIndex5, bot->GetGUID(), NpcTar->GetGUID());
-                            }
-                            break;
-                        }
+                        gr->SetTargetIcon(iconIndex5, bot->GetGUID(), NpcTar->GetGUID());
                     }
 
                     if (NpcTar && NpcTar->IsAlive())
@@ -2008,6 +2070,9 @@ namespace KittBotAI
 
                         if (bot->GetVictim() != NpcTar)
                         {
+                            bot->GetThreatManager().ClearAllThreat();
+                            bot->GetThreatManager().AddThreat(NpcTar, 1300300.0f);
+
                             bot->SetInCombatWith(NpcTar);
                             NpcTar->SetInCombatWith(bot);
 
