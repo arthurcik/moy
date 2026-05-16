@@ -1953,7 +1953,7 @@ namespace KittBotAI
         {
             // tank tele to sindra
             /*if (ai->HasRole(BOT_ROLE_TANK))
-            /*{
+            {
                 if (gr && sindra)
                 {
                     if (gr->GetTargetIcons()[iconIndex7] != sindra->GetGUID())
