@@ -2227,11 +2227,20 @@ ObjectGuid WorldObject::GetCharmerOrOwnerOrOwnGUID() const
 
 Unit* WorldObject::GetOwner() const
 {
+    // kitt - protectie de baza daca obiectul curent e corupt
+    if (!this || (uintptr_t)this < 0x1000)
+        return nullptr;
+    // ---- end
     return ObjectAccessor::GetUnit(*this, GetOwnerGUID());
 }
 
 Unit* WorldObject::GetCharmerOrOwner() const
 {
+    // kitt - protectie impotriva adreselor invalide
+    if (!this || (uintptr_t)this < 0x1000)
+        return nullptr;
+    // --- end
+
     if (Unit const* unit = ToUnit())
         return unit->GetCharmerOrOwner();
     else if (GameObject const* go = ToGameObject())
@@ -2242,22 +2251,37 @@ Unit* WorldObject::GetCharmerOrOwner() const
 
 Unit* WorldObject::GetCharmerOrOwnerOrSelf() const
 {
+    // kitt - protectie initiala
+    if (!this || (uintptr_t)this < 0x1000)
+        return nullptr;
+    // --- end
+
     if (Unit* u = GetCharmerOrOwner())
+    {
+        // kitt - ne asiguram ca si proprietarul returnat este o adresa valida inainte de a-l trimite mai departe
+        if ((uintptr_t)u >= 0x1000)
+        // --- end
         return u;
+    }
 
     return const_cast<WorldObject*>(this)->ToUnit();
 }
 
 Player* WorldObject::GetCharmerOrOwnerPlayerOrPlayerItself() const
 {
+    // kitt
+    if (!this || (uintptr_t)this < 0x1000)
+        return nullptr;
+    // --- end
     ObjectGuid guid = GetCharmerOrOwnerGUID();
     if (guid.IsPlayer())
         return ObjectAccessor::GetPlayer(*this, guid);
 
     //npcbot
-    if (GetTypeId() == TYPEID_UNIT && ToCreature()->IsNPCBotOrPet())
+    if (GetTypeId() == TYPEID_UNIT && ToCreature() && ToCreature()->IsNPCBotOrPet())
         if (Unit* creator = ToUnit()->GetCreator())
-            return creator->ToPlayer();
+            if (creator && (uintptr_t)creator >= 0x1000) // kitt
+                return creator->ToPlayer();
     //end npcbot
 
     return const_cast<WorldObject*>(this)->ToPlayer();
@@ -2265,10 +2289,16 @@ Player* WorldObject::GetCharmerOrOwnerPlayerOrPlayerItself() const
 
 Player* WorldObject::GetAffectingPlayer() const
 {
+    // kitt
+    if (!this || (uintptr_t)this < 0x1000)
+        return nullptr;
+    // --- end
+
     //npcbot: affecting player is creator
-    if (GetTypeId() == TYPEID_UNIT && ToCreature()->IsNPCBotOrPet())
+    if (GetTypeId() == TYPEID_UNIT && ToCreature() && ToCreature()->IsNPCBotOrPet())
         if (Unit* creator = ToUnit()->GetCreator())
-            return creator->ToPlayer();
+            if (creator && (uintptr_t)creator >= 0x1000) // kitt
+                return creator->ToPlayer();
     //end npcbot
 
     if (!GetCharmerOrOwnerGUID())

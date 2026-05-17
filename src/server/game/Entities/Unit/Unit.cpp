@@ -12579,7 +12579,7 @@ bool Unit::IsInPartyWith(Unit const* unit) const
 bool Unit::IsInRaidWith(Unit const* unit) const
 {
     // kitt
-    if (!unit || (uintptr_t)this < 0x1000 || (uintptr_t)unit < 0x1000)
+    if (!this || !unit || (uintptr_t)this < 0x1000 || (uintptr_t)unit < 0x1000)
         return this == unit;
     // ---------
 
@@ -12587,6 +12587,14 @@ bool Unit::IsInRaidWith(Unit const* unit) const
         return true;
 
     // kitt
+    Unit const* u1 = GetCharmerOrOwnerOrSelf();
+    Unit const* u2 = unit->GetCharmerOrOwnerOrSelf();
+
+    if (!u1 || !u2 || (uintptr_t)u1 < 0x1000 || (uintptr_t)u2 < 0x1000)
+        return false;
+    // ------
+
+    /*// kitt
     if (!unit)
         return false;
     // ---------
@@ -12597,29 +12605,56 @@ bool Unit::IsInRaidWith(Unit const* unit) const
     // kitt
     if (!u1 || !u2 || (uintptr_t)u1 < 0x1000 || (uintptr_t)u2 < 0x1000)
         return false;
-    // ----------
+    // ----------*/
 
     if (u1 == u2)
         return true;
 
-    if (u1->GetTypeId() == TYPEID_PLAYER && u2->GetTypeId() == TYPEID_PLAYER)
+    /*if (u1->GetTypeId() == TYPEID_PLAYER && u2->GetTypeId() == TYPEID_PLAYER)
         return u1->ToPlayer()->IsInSameRaidWith(u2->ToPlayer());
     else if ((u2->GetTypeId() == TYPEID_PLAYER && u1->GetTypeId() == TYPEID_UNIT && u1->ToCreature()->GetCreatureTemplate()->type_flags & CREATURE_TYPE_FLAG_TREAT_AS_RAID_UNIT) ||
             (u1->GetTypeId() == TYPEID_PLAYER && u2->GetTypeId() == TYPEID_UNIT && u2->ToCreature()->GetCreatureTemplate()->type_flags & CREATURE_TYPE_FLAG_TREAT_AS_RAID_UNIT))
-        return true;
+        return true;*/
+    if (u1->GetTypeId() == TYPEID_PLAYER && u2->GetTypeId() == TYPEID_PLAYER)
+    {
+        return u1->ToPlayer()->IsInSameRaidWith(u2->ToPlayer());
+    }
+    else if (u2->GetTypeId() == TYPEID_PLAYER && u1->GetTypeId() == TYPEID_UNIT)
+    {
+        if (auto const* c1 = u1->ToCreature())
+            if (c1->GetCreatureTemplate() && (c1->GetCreatureTemplate()->type_flags & CREATURE_TYPE_FLAG_TREAT_AS_RAID_UNIT))
+                return true;
+    }
+    else if (u1->GetTypeId() == TYPEID_PLAYER && u2->GetTypeId() == TYPEID_UNIT)
+    {
+        if (auto const* c2 = u2->ToCreature())
+            if (c2->GetCreatureTemplate() && (c2->GetCreatureTemplate()->type_flags & CREATURE_TYPE_FLAG_TREAT_AS_RAID_UNIT))
+                return true;
+    }
+
     //npcbot
     Player const* pla = u1->IsPlayer() ? u1->ToPlayer() : u2->IsPlayer() ? u2->ToPlayer() : nullptr;
     Creature const* bot = u1->IsNPCBot() ? u1->ToCreature() : u2->IsNPCBot() ? u2->ToCreature() : nullptr;
     if (pla && bot)
     {
         // kitt fix
-        if ((uintptr_t)pla < 0x1000 || !pla->GetBotMgr())
+        if ((uintptr_t)pla < 0x1000 || (uintptr_t)bot < 0x1000 || !pla->GetBotMgr())
             return false;
         // ---------
         return (pla->GetGroup() && pla->GetGroup() == bot->GetBotGroup()) ? true : !!pla->GetBotMgr()->GetBot(bot->GetGUID());
     }
-    if (u1->IsNPCBot() && u2->IsNPCBot() && u1->ToCreature()->GetBotGroup())
-        return  u1->ToCreature()->GetBotGroup() == u2->ToCreature()->GetBotGroup();
+    /*if (u1->IsNPCBot() && u2->IsNPCBot() && u1->ToCreature()->GetBotGroup())
+        return  u1->ToCreature()->GetBotGroup() == u2->ToCreature()->GetBotGroup();*/
+    if (u1->IsNPCBot() && u2->IsNPCBot())
+    {
+        auto const* bot1 = u1->ToCreature();
+        auto const* bot2 = u2->ToCreature();
+        if (!bot1 || !bot2 || (uintptr_t)bot1 < 0x1000 || (uintptr_t)bot2 < 0x1000)
+            return false;
+
+        if (bot1->GetBotGroup())
+            return bot1->GetBotGroup() == bot2->GetBotGroup();
+    }
     if (u1->IsNPCBot() && u2->IsNPCBot() && u1->IsFFAPvP() && u2->IsFFAPvP())
         return false;
     //end npcbot
