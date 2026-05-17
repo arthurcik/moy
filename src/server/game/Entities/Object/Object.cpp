@@ -2228,7 +2228,7 @@ ObjectGuid WorldObject::GetCharmerOrOwnerOrOwnGUID() const
 Unit* WorldObject::GetOwner() const
 {
     // kitt - protectie de baza daca obiectul curent e corupt
-    if (!this || (uintptr_t)this < 0x1000)
+    if ((uintptr_t)this < 0x1000)
         return nullptr;
     // ---- end
     return ObjectAccessor::GetUnit(*this, GetOwnerGUID());
@@ -2237,7 +2237,7 @@ Unit* WorldObject::GetOwner() const
 Unit* WorldObject::GetCharmerOrOwner() const
 {
     // kitt - protectie impotriva adreselor invalide
-    if (!this || (uintptr_t)this < 0x1000)
+    if ((uintptr_t)this < 0x1000)
         return nullptr;
     // --- end
 
@@ -2252,7 +2252,7 @@ Unit* WorldObject::GetCharmerOrOwner() const
 Unit* WorldObject::GetCharmerOrOwnerOrSelf() const
 {
     // kitt - protectie initiala
-    if (!this || (uintptr_t)this < 0x1000)
+    if ((uintptr_t)this < 0x1000)
         return nullptr;
     // --- end
 
@@ -2270,7 +2270,7 @@ Unit* WorldObject::GetCharmerOrOwnerOrSelf() const
 Player* WorldObject::GetCharmerOrOwnerPlayerOrPlayerItself() const
 {
     // kitt
-    if (!this || (uintptr_t)this < 0x1000)
+    if ((uintptr_t)this < 0x1000)
         return nullptr;
     // --- end
     ObjectGuid guid = GetCharmerOrOwnerGUID();
@@ -2290,7 +2290,7 @@ Player* WorldObject::GetCharmerOrOwnerPlayerOrPlayerItself() const
 Player* WorldObject::GetAffectingPlayer() const
 {
     // kitt
-    if (!this || (uintptr_t)this < 0x1000)
+    if ((uintptr_t)this < 0x1000)
         return nullptr;
     // --- end
 

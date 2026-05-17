@@ -12579,7 +12579,7 @@ bool Unit::IsInPartyWith(Unit const* unit) const
 bool Unit::IsInRaidWith(Unit const* unit) const
 {
     // kitt
-    if (!this || !unit || (uintptr_t)this < 0x1000 || (uintptr_t)unit < 0x1000)
+    if (!unit || (uintptr_t)this < 0x1000 || (uintptr_t)unit < 0x1000)
         return this == unit;
     // ---------
 
