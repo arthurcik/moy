@@ -1180,9 +1180,6 @@ namespace KittBotAI
             }
         }
 
-        if (spellUnboundPlague == 0)
-            return;
-
         if (bot->HasAura(spellUnboundPlague) && !ai->HasRole(BOT_ROLE_TANK))
         {
             if (!bot->HasUnitState(UNIT_STATE_ROOT))
@@ -1221,7 +1218,7 @@ namespace KittBotAI
         if (Creature* OozePuddle = bot->FindNearestCreature(NpcOozePuddle, 40.0f, true))
         {
             float currentScale = OozePuddle->GetObjectScale();
-            float safetyMargin = 1.0f;
+            float safetyMargin = 1.5f;
             float dynamicRadius = (1.0f * currentScale) + safetyMargin;
 
             float distToOozePuddle = bot->GetDistance(OozePuddle);
@@ -1240,7 +1237,7 @@ namespace KittBotAI
 
                 if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
                 {
-                    bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+                    bot->GetMotionMaster()->MovePoint(101, x, y, bot->GetPositionZ());
                 }
             }
         }
