@@ -574,26 +574,32 @@ namespace KittBotAI
             if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
             {
                 std::list<Creature*> NpcList;
-                bot->GetCreatureListWithEntryInGrid(NpcList, NpcCultFan, 100.0f); // prioritar 
+                bot->GetCreatureListWithEntryInGrid(NpcList, NpcCultFan, 80.0f); // prioritar
+                NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
                 if (NpcList.empty())
                 {
-                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcEmpowAdh, 100.0f); // urmatorul
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcEmpowAdh, 80.0f); // urmatorul
+                    NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
                 }
                 if (NpcList.empty())
                 {
-                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcReanFan, 100.0f); // urmatorul
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcReanFan, 80.0f); // urmatorul
+                    NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
                 }
                 if (NpcList.empty())
                 {
-                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcCultAdh, 100.0f); // urmatorul
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcCultAdh, 80.0f); // urmatorul
+                    NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
                 }
                 if (NpcList.empty())
                 {
-                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcReaniAdh, 100.0f); // urmatorul
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcReaniAdh, 80.0f); // urmatorul
+                    NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
                 }
                 if (NpcList.empty())
                 {
-                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcDefoFan, 100.0f); // urmatorul
+                    bot->GetCreatureListWithEntryInGrid(NpcList, NpcDefoFan, 80.0f); // urmatorul
+                    NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
                 }
 
                 if (!NpcList.empty())
