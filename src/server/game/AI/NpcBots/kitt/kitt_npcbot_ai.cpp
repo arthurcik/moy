@@ -292,14 +292,14 @@ namespace KittBotAI
         if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
         {
             std::list<Creature*> allSpikes;
-            bot->GetCreatureListWithEntryInGrid(allSpikes, NpcSpike1, 80.0f);
+            bot->GetCreatureListWithEntryInGrid(allSpikes, NpcSpike1, 100.0f);
             if (allSpikes.empty())
             {
-                bot->GetCreatureListWithEntryInGrid(allSpikes, NpcSpike2, 80.0f);
+                bot->GetCreatureListWithEntryInGrid(allSpikes, NpcSpike2, 100.0f);
             }
             if (allSpikes.empty())
             {
-                bot->GetCreatureListWithEntryInGrid(allSpikes, NpcSpike3, 80.0f);
+                bot->GetCreatureListWithEntryInGrid(allSpikes, NpcSpike3, 100.0f);
             }
 
             allSpikes.remove_if([](Creature* npc) {
@@ -349,7 +349,16 @@ namespace KittBotAI
                     bot->AttackStop();
                     bot->SetInCombatWith(NpcSpikeTar);
                     //bot->GetThreatManager().FixateTarget(NpcSpikeTar);
-                    bot->Attack(NpcSpikeTar, !ai->HasRole(BOT_ROLE_RANGED));
+                    if (ai->HasRole(BOT_ROLE_RANGED))
+                    {
+                        bot->Attack(NpcSpikeTar, false);
+                        bot->GetMotionMaster()->MoveChase(NpcSpikeTar, 15.0f);
+                    }
+                    else
+                    {
+                        bot->Attack(NpcSpikeTar, true);
+                        bot->GetMotionMaster()->MoveChase(NpcSpikeTar);
+                    }
                     ai->AttackStart(NpcSpikeTar);
                 }
             }
@@ -844,7 +853,7 @@ namespace KittBotAI
                     {
                         bot->GetThreatManager().AddThreat(NpcTar, 300300.0f);
                         bot->SetInCombatWith(NpcTar);
-                        bot->GetThreatManager().FixateTarget(NpcTar);
+                        //bot->GetThreatManager().FixateTarget(NpcTar);
 
                         ai->AttackStart(NpcTar);
                         ai->SetBotCommandState(BOT_COMMAND_ATTACK);
@@ -852,10 +861,12 @@ namespace KittBotAI
                         if (ai->HasRole(BOT_ROLE_RANGED))
                         {
                             bot->Attack(NpcTar, false);
+                            bot->GetMotionMaster()->MoveChase(NpcTar, 15.0f);
                         }
                         else
                         {
                             bot->Attack(NpcTar, true);
+                            bot->GetMotionMaster()->MoveChase(NpcTar);
                         }
                     }
                 }
@@ -925,7 +936,7 @@ namespace KittBotAI
                     {
                         bot->GetThreatManager().AddThreat(NpcTar, 1300300.0f);
                         bot->SetInCombatWith(NpcTar);
-                        bot->GetThreatManager().FixateTarget(NpcTar);
+                        //bot->GetThreatManager().FixateTarget(NpcTar);
 
                         ai->AttackStart(NpcTar);
                         ai->SetBotCommandState(BOT_COMMAND_ATTACK);
@@ -933,10 +944,12 @@ namespace KittBotAI
                         if (ai->HasRole(BOT_ROLE_RANGED))
                         {
                             bot->Attack(NpcTar, false);
+                            bot->GetMotionMaster()->MoveChase(NpcTar, 15.0f);
                         }
                         else
                         {
                             bot->Attack(NpcTar, true);
+                            bot->GetMotionMaster()->MoveChase(NpcTar);
                         }
                     }
                 }
@@ -1016,7 +1029,7 @@ namespace KittBotAI
                     {
                         bot->GetThreatManager().AddThreat(NpcTar, 300300.0f);
                         bot->SetInCombatWith(NpcTar);
-                        bot->GetThreatManager().FixateTarget(NpcTar);
+                        //bot->GetThreatManager().FixateTarget(NpcTar);
 
                         ai->AttackStart(NpcTar);
                         ai->SetBotCommandState(BOT_COMMAND_ATTACK);
@@ -1024,10 +1037,12 @@ namespace KittBotAI
                         if (ai->HasRole(BOT_ROLE_RANGED))
                         {
                             bot->Attack(NpcTar, false);
+                            bot->GetMotionMaster()->MoveChase(NpcTar, 15.0f);
                         }
                         else
                         {
                             bot->Attack(NpcTar, true);
+                            bot->GetMotionMaster()->MoveChase(NpcTar);
                         }
                     }
                 }
@@ -1122,7 +1137,7 @@ namespace KittBotAI
         if (!master || !master->IsInWorld() || !master->GetSession())
             return;
 
-        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+        if (!bot || !bot->IsInWorld()/* || !bot->IsAlive()*/)
             return;
 
         Group* gr = master->GetGroup();
@@ -1180,7 +1195,7 @@ namespace KittBotAI
             }
         }
 
-        if (bot->HasAura(spellUnboundPlague) && !ai->HasRole(BOT_ROLE_TANK))
+        if (bot->HasAura(spellUnboundPlague) && !ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
         {
             if (!bot->HasUnitState(UNIT_STATE_ROOT))
             {
@@ -1263,14 +1278,13 @@ namespace KittBotAI
                         {
                             float currentVictimThreat = putricide->GetThreatManager().GetThreat(currentVictim);
 
-                            putricide->GetThreatManager().AddThreat(bot, currentVictimThreat + 10.0f);
+                            putricide->GetThreatManager().AddThreat(bot, (currentVictimThreat * 1.3f) + 100.0f);
 
                             putricide->SetInCombatWith(bot);
+                            //putricide->GetThreatManager().FixateTarget(bot);
                             putricide->Attack(bot, true);
-                            putricide->GetThreatManager().FixateTarget(bot);
+                            putricide->GetMotionMaster()->MoveChase(bot);
 
-                            ai->SetBotCommandState(BOT_COMMAND_ATTACK);
-                            ai->BotMovement(BOT_MOVE_CHASE, nullptr, putricide);
                             bot->Attack(putricide, true);
                         }
                     }
@@ -1341,7 +1355,7 @@ namespace KittBotAI
                     {
                         bot->GetThreatManager().AddThreat(NpcTar, 300300.0f);
                         bot->SetInCombatWith(NpcTar);
-                        bot->GetThreatManager().FixateTarget(NpcTar);
+                        //bot->GetThreatManager().FixateTarget(NpcTar);
 
                         ai->AttackStart(NpcTar);
                         ai->SetBotCommandState(BOT_COMMAND_ATTACK);
@@ -1349,10 +1363,12 @@ namespace KittBotAI
                         if (ai->HasRole(BOT_ROLE_RANGED))
                         {
                             bot->Attack(NpcTar, false);
+                            bot->GetMotionMaster()->MoveChase(NpcTar, 15.0f);
                         }
                         else
                         {
                             bot->Attack(NpcTar, true);
+                            bot->GetMotionMaster()->MoveChase(NpcTar);
                         }
                     }
                 }
