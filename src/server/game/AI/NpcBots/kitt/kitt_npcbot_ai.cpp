@@ -2178,6 +2178,12 @@ namespace KittBotAI
         uint32 static const npcRacingSpirit = 36701;
         uint32 static const npcDrudgeGhoul = 37695;
 
+        // faza sabiei
+        uint32 static const npcTerenasHeroic = 39217;
+        uint32 static const npcSpiritWarden = 36824;
+        uint32 static const nbcWickedSpirit = 39190;
+        uint32 static const spellDestroySoul = 72596;
+        // ----------
 
         // harvest souls aura 74297(main)
         uint32 static const spellHarvestSouls = 73655; // 25hc/10hc // in camera
@@ -2218,11 +2224,11 @@ namespace KittBotAI
         uint32 static const spell2Winter10HC = 74274;
         uint32 static const spell2Winter25HC = 74275;
 
-        uint8 static const iconIndex2 = 2;
-        uint8 static const iconIndex3 = 3;
-        uint8 static const iconIndex4 = 4;
+        uint8 static const iconIndex2 = 2; // diamond
+        uint8 static const iconIndex3 = 3; // triunghi
+        uint8 static const iconIndex4 = 4; // moon
         uint8 static const iconIndex5 = 5; // patrat
-        uint8 static const iconIndex6 = 6;
+        uint8 static const iconIndex6 = 6; // cross
         uint8 static const iconIndex7 = 7; // skelet
 
         Creature* NpcTar = nullptr;
@@ -2279,6 +2285,7 @@ namespace KittBotAI
         if (Creature* bossLichK = bot->FindNearestCreature(npcBossLichKing, 150.0f, true))
         {
             bool isWinter = (bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter));
+            bool isInFrostmourneRoom = (bot->GetPositionZ() > 1049.0f);
 
             // cand face cast sa fuga toti
             if (bossLichK->HasUnitState(UNIT_STATE_CASTING))
@@ -2781,12 +2788,6 @@ namespace KittBotAI
                                 bot->RemoveAura(spellHarvestSouls);
                             }
 
-                            // stay daca esti in sabie
-                            if (bot->HasAura(spellHarvestSouls))
-                            {
-                                ai->SetBotCommandState(BOT_COMMAND_STAY);
-                            }
-
                             // setam Diamond
                             if (gr)
                             {
@@ -2801,13 +2802,6 @@ namespace KittBotAI
                             {
                                 bot->GetMotionMaster()->Clear();
                                 bot->StopMoving();
-                            }
-                        }
-                        else // stergem stay
-                        {
-                            if (ai->HasBotCommandState(BOT_COMMAND_STAY))
-                            {
-                                ai->RemoveBotCommandState(BOT_COMMAND_STAY);
                             }
                         }
                     }
@@ -2858,6 +2852,122 @@ namespace KittBotAI
                             gr->SetTargetIcon(iconIndex7, bot->GetGUID(), bossGUID); // set skull
                         }
                     }
+                }
+            }
+
+            // faza sabiei heroic
+            if (isInFrostmourneRoom)
+            {
+                // Scoatem STAY ca s? se poat? mi?ca tactic în sabie
+                /*if (ai->HasBotCommandState(BOT_COMMAND_STAY))
+                {
+                    ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+                }*/
+
+                Creature* terenasAnchor = bot->FindNearestCreature(npcTerenasHeroic, 80.0f, true);
+                Unit* moveTarget = nullptr;
+
+                if (master && master->IsAlive() && master->GetPositionZ() > 1049.0f)
+                    moveTarget = master;
+                else if (terenasAnchor)
+                    moveTarget = terenasAnchor;
+
+                if (moveTarget)
+                {
+                    float distToTarget = bot->GetDistance(moveTarget);
+                    if (distToTarget > 4.0f)
+                    {
+                        if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                        {
+                            float followDist = (moveTarget == terenasAnchor) ? 3.0f : 1.5f;
+                            bot->GetMotionMaster()->MoveFollow(moveTarget, followDist, bot->GetFollowAngle());
+                        }
+                    }
+                }
+                else
+                {
+                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
+                    {
+                        bot->GetMotionMaster()->Clear();
+                        bot->StopMoving();
+                    }
+                }
+
+                // Atac Ranged pe Wicked Spirits
+                if (ai->HasRole(BOT_ROLE_RANGED) && ai->HasRole(BOT_ROLE_DPS))
+                {
+                    if (Creature* wickedSpirit = bot->FindNearestCreature(nbcWickedSpirit, 45.0f, true))
+                    {
+                        if (bot->GetVictim() != wickedSpirit)
+                        {
+                            bot->AttackStop();
+                            bot->SetInCombatWith(wickedSpirit);
+                            ai->AttackStart(wickedSpirit);
+                            bot->Attack(wickedSpirit, false);
+                        }
+                    }
+                    else if (Creature* warden = bot->FindNearestCreature(npcSpiritWarden, 60.0f, true))
+                    {
+                        if (bot->GetVictim() != warden)
+                        {
+                            bot->SetInCombatWith(warden);
+                            ai->AttackStart(warden);
+                            bot->Attack(warden, false);
+                        }
+                    }
+                }
+
+                // Atac Melee + Interrupt pe Spirit Warden
+                if (ai->HasRole(BOT_ROLE_TANK) || (ai->HasRole(BOT_ROLE_DPS) && !ai->HasRole(BOT_ROLE_RANGED)))
+                {
+                    if (Creature* warden = bot->FindNearestCreature(npcSpiritWarden, 60.0f, true))
+                    {
+                        if (bot->GetVictim() != warden)
+                        {
+                            bot->SetInCombatWith(warden);
+                            ai->AttackStart(warden);
+                            bot->Attack(warden, true);
+                        }
+
+                        if (warden->HasUnitState(UNIT_STATE_CASTING))
+                        {
+                            if (Spell const* wardenSpell = warden->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                            {
+                                if (wardenSpell->GetSpellInfo()->Id == spellDestroySoul)
+                                {
+                                    ai->UpdateAI(currentTimeMS);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Healerii pe Terenas
+                if (ai->HasRole(BOT_ROLE_HEAL))
+                {
+                    if (terenasAnchor && terenasAnchor->GetHealthPct() < 75.0f)
+                    {
+                        bot->SetInCombatWith(terenasAnchor);
+                    }
+                }
+
+                // Evitare Wicked Spirit aproape (Fug? individual?)
+                if (Creature* nearSpirit = bot->FindNearestCreature(nbcWickedSpirit, 6.0f, true))
+                {
+                    if (bot->IsNonMeleeSpellCast(true))
+                        bot->InterruptNonMeleeSpells(true);
+
+                    bot->AttackStop();
+                    float escapeAngle = nearSpirit->GetAbsoluteAngle(bot);
+                    float escapeDist = 8.0f;
+                    float ex = bot->GetPositionX() + (escapeDist * std::cos(escapeAngle));
+                    float ey = bot->GetPositionY() + (escapeDist * std::sin(escapeAngle));
+
+                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                    {
+                        bot->GetMotionMaster()->MovePoint(89, ex, ey, bot->GetPositionZ());
+                    }
+                    return;
                 }
             }
         }
