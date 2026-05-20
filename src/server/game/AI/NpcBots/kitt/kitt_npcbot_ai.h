@@ -14,7 +14,7 @@ class bot_ai;
 
 namespace KittBotAI
 {
-    bool IsSafeToCure(Unit* target); // for dispell
+    bool IsSafeToCure(Unit* target, Creature* bot); // for dispell
 
     void KittUpdateRaidStrategies(Creature* bot, Player* master); // main start
 

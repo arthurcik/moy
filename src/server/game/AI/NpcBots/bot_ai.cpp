@@ -2008,7 +2008,7 @@ bool bot_ai::_canCureTarget(Unit const* target, uint32 cureSpell) const
 
     if (!dispel_list.empty())
     {
-        if (!KittBotAI::IsSafeToCure(const_cast<Unit*>(target)))
+        if (!KittBotAI::IsSafeToCure(const_cast<Unit*>(target), const_cast<Creature*>(me)))
         {
             return false;
         }

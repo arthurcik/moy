@@ -35,12 +35,21 @@ namespace
 namespace KittBotAI
 {
     // daca vrem sa blocam dispell undeva
-    bool IsSafeToCure(Unit* target)
+    bool IsSafeToCure(Unit* target, Creature* bot)
     {
         if (!target || !target->GetMap())
         {
             return true;
         }
+
+        uint32 currentInstanceId = target->GetMap()->GetInstanceId();
+        if (!currentInstanceId)
+            return true;
+
+        time_t currentTimeMS = GameTime::GetGameTimeMS();
+
+        static std::map<uint32, uint32> instancePlagueStartTime;
+
 
         uint32 mapId = target->GetMapId();
         uint32 areaId = target->GetAreaId();
@@ -69,10 +78,17 @@ namespace KittBotAI
                {
                    uint32 const npcShamblingHorror = 37698;
                    uint32 spellNecroticPlague = 0;
-                   uint32 const spellNecroticPlague10N = 70337;
-                   uint32 const spellNecroticPlague10HC = 73913;
-                   uint32 const spellNecroticPlague25N = 73912;
-                   uint32 const spellNecroticPlague25HC = 73914;
+                   uint32 static const spellNecroticPlague10N = 70337;
+                   uint32 static const spellNecroticPlague25N = 73912;
+                   uint32 static const spellNecroticPlague10HC = 73913;
+                   uint32 static const spellNecroticPlague25HC = 73914;
+
+                   // 70338, 73785, 73786, 73787 - Necrotic Plague (Jump)
+                   uint32 jumpNecroticPlague = 0;
+                   uint32 static const jumpNecroticPlague10N = 70338;
+                   uint32 static const jumpNecroticPlague25N = 73785;
+                   uint32 static const jumpNecroticPlague10HC = 73786;
+                   uint32 static const jumpNecroticPlague25HC = 73787;
 
                    Map* map = target->GetMap();
                    if (map)
@@ -82,10 +98,12 @@ namespace KittBotAI
                            if (map->Is25ManRaid())
                            {
                                spellNecroticPlague = spellNecroticPlague25HC;
+                               jumpNecroticPlague = jumpNecroticPlague25HC;
                            }
                            else
                            {
                                spellNecroticPlague = spellNecroticPlague10HC;
+                               jumpNecroticPlague = jumpNecroticPlague10HC;
                            }
                        }
                        else
@@ -93,31 +111,58 @@ namespace KittBotAI
                            if (map->Is25ManRaid())
                            {
                                spellNecroticPlague = spellNecroticPlague25N;
+                               jumpNecroticPlague = jumpNecroticPlague25N;
                            }
                            else
                            {
                                spellNecroticPlague = spellNecroticPlague10N;
+                               jumpNecroticPlague = jumpNecroticPlague10N;
                            }
                        }
                    }
 
-                   if (spellNecroticPlague == 0)
+                   if (spellNecroticPlague == 0 || jumpNecroticPlague == 0)
                        break;
 
 
 
                    // Necrotic Plague block
-                   if (target->HasAura(spellNecroticPlague))
+                   if (target->HasAura(spellNecroticPlague) || target->HasAura(jumpNecroticPlague))
                    {
+                       if (instancePlagueStartTime[currentInstanceId] == 0)
+                       {
+                           instancePlagueStartTime[currentInstanceId] = currentTimeMS;
+
+                           if (bot)
+                           {
+                               std::ostringstream msg;
+                               msg << "Atentie! |cffFFFFFF" << target->GetName() << "|r are Necrotic Plague! Incep monitorizarea (4.5s) pentru dispell!";
+                               bot->Yell(msg.str(), LANG_UNIVERSAL);
+                           }
+                       }
+
+                       time_t startTime = instancePlagueStartTime[currentInstanceId];
+                       bool auTrecut4500ms = (currentTimeMS - startTime) >= 4500;
+
                        if (Creature* horror = target->FindNearestCreature(npcShamblingHorror, 100.0f, true))
                        {
-                           if (target->GetDistance(horror) > 5.0f)
+                           if (target->GetDistance(horror) <= 5.0f)
                            {
-                               return false;
+                               instancePlagueStartTime[currentInstanceId] = 0;
+                               return true;
                            }
+
+                           if (auTrecut4500ms)
+                           {
+                               instancePlagueStartTime[currentInstanceId] = 0;
+                               return true;
+                           }
+
+                           return false;
                        }
                        else
                        {
+                           instancePlagueStartTime[currentInstanceId] = 0;
                            return true;
                        }
                    }
@@ -2124,47 +2169,64 @@ namespace KittBotAI
 
         time_t currentTimeMS = GameTime::GetGameTimeMS();
 
-        uint32 const npcBossLichKing = 36597;
-        uint32 const npcDefileTrigger = 38757;
-        uint32 const npcShadowTrapTrigger = 39137;
-        uint32 const npcIceSphere = 36633;
-        uint32 const npcValkyr = 36609;
-        uint32 const npcShamblingHorror = 37698;
-        uint32 const npcRacingSpirit = 36701;
-        uint32 const npcDrudgeGhoul = 37695;
+        uint32 static const npcBossLichKing = 36597;
+        uint32 static const npcDefileTrigger = 38757;
+        uint32 static const npcShadowTrapTrigger = 39137;
+        uint32 static const npcIceSphere = 36633;
+        uint32 static const npcValkyr = 36609;
+        uint32 static const npcShamblingHorror = 37698;
+        uint32 static const npcRacingSpirit = 36701;
+        uint32 static const npcDrudgeGhoul = 37695;
 
 
         // harvest souls aura 74297(main)
-        uint32 const spellHarvestSouls = 73655; // 25hc/10hc // in camera
-        uint32 const spellHarvestSoul = 72546; // 25n/10n // in camera
-        uint32 const spellFurryFrostNoRez = 72351; // aura no rez
+        uint32 static const spellHarvestSouls = 73655; // 25hc/10hc // in camera
+        uint32 static const spellHarvestSoul = 72546; // 25n/10n // in camera
+        uint32 static const spellFurryFrostNoRez = 72351; // aura no rez
 
         // buff inainte de teleportare
         uint32 spellHarvestSoulStartHC = 0; // heroic
         uint32 spellHarvestSoulStartN = 0; // normal
-        uint32 const spellHarvestSouls25HC = 74297; // 25 heroic
-        uint32 const spellHarvestSouls10HC = 74296; // 10 heroic
-        uint32 const spellHarvestSoul25N = 74325; // 25 normal
-        uint32 const spellHarvestSoul10N = 68980; // 10 normal
+        uint32 static const spellHarvestSouls25HC = 74297; // 25 heroic
+        uint32 static const spellHarvestSouls10HC = 74296; // 10 heroic
+        uint32 static const spellHarvestSoul25N = 74325; // 25 normal
+        uint32 static const spellHarvestSoul10N = 68980; // 10 normal
 
         uint32 spellNecroticPlague = 0;
-        uint32 const spellNecroticPlague10N = 70337;
-        uint32 const spellNecroticPlague10HC = 73913;
-        uint32 const spellNecroticPlague25N = 73912;
-        uint32 const spellNecroticPlague25HC = 73914;
+        uint32 static const spellNecroticPlague10N = 70337;
+        uint32 static const spellNecroticPlague10HC = 73913;
+        uint32 static const spellNecroticPlague25N = 73912;
+        uint32 static const spellNecroticPlague25HC = 73914;
+
+        // 70338, 73785, 73786, 73787 - Necrotic Plague (Jump)
+        uint32 jumpNecroticPlague = 0;
+        uint32 static const jumpNecroticPlague10N = 70338;
+        uint32 static const jumpNecroticPlague25N = 73785;
+        uint32 static const jumpNecroticPlague10HC = 73786;
+        uint32 static const jumpNecroticPlague25HC = 73787;
 
         // intre faze aura
         uint32 spell1Winter = 0; // 74272 25hc // 74271 10hc // 74270 25N // 68981 10N
-        uint32 const spell1Winter10N = 68981;
-        uint32 const spell1Winter25N = 74270;
-        uint32 const spell1Winter10HC = 74271;
-        uint32 const spell1Winter25HC = 74272;
+        uint32 static const spell1Winter10N = 68981;
+        uint32 static const spell1Winter25N = 74270;
+        uint32 static const spell1Winter10HC = 74271;
+        uint32 static const spell1Winter25HC = 74272;
 
         uint32 spell2Winter = 0; // 74275 25hc // 74274 10hc // 74273 25N  // 72259 10N
-        uint32 const spell2Winter10N = 72259;
-        uint32 const spell2Winter25N = 74273;
-        uint32 const spell2Winter10HC = 74274;
-        uint32 const spell2Winter25HC = 74275;
+        uint32 static const spell2Winter10N = 72259;
+        uint32 static const spell2Winter25N = 74273;
+        uint32 static const spell2Winter10HC = 74274;
+        uint32 static const spell2Winter25HC = 74275;
+
+        uint8 static const iconIndex2 = 2;
+        uint8 static const iconIndex3 = 3;
+        uint8 static const iconIndex4 = 4;
+        uint8 static const iconIndex5 = 5; // patrat
+        uint8 static const iconIndex6 = 6;
+        uint8 static const iconIndex7 = 7; // skelet
+
+        Creature* NpcTar = nullptr;
+
 
 
         bool DefilesPrezent = false;
@@ -2178,6 +2240,7 @@ namespace KittBotAI
                 if (map->Is25ManRaid())
                 {
                     spellNecroticPlague = spellNecroticPlague25HC;
+                    jumpNecroticPlague = jumpNecroticPlague25HC;
                     spell1Winter = spell1Winter25HC;
                     spell2Winter = spell2Winter25HC;
                     spellHarvestSoulStartHC = spellHarvestSouls25HC;
@@ -2186,6 +2249,7 @@ namespace KittBotAI
                 else
                 {
                     spellNecroticPlague = spellNecroticPlague10HC;
+                    jumpNecroticPlague = jumpNecroticPlague10HC;
                     spell1Winter = spell1Winter10HC;
                     spell2Winter = spell2Winter10HC;
                     spellHarvestSoulStartHC = spellHarvestSouls10HC;
@@ -2196,6 +2260,7 @@ namespace KittBotAI
                 if (map->Is25ManRaid())
                 {
                     spellNecroticPlague = spellNecroticPlague25N;
+                    jumpNecroticPlague = jumpNecroticPlague25N;
                     spell1Winter = spell1Winter25N;
                     spell2Winter = spell2Winter25N;
                     spellHarvestSoulStartN = spellHarvestSoul25N;
@@ -2203,6 +2268,7 @@ namespace KittBotAI
                 else
                 {
                     spellNecroticPlague = spellNecroticPlague10N;
+                    jumpNecroticPlague = jumpNecroticPlague10N;
                     spell1Winter = spell1Winter10N;
                     spell2Winter = spell2Winter10N;
                     spellHarvestSoulStartN = spellHarvestSoul10N;
@@ -2210,7 +2276,7 @@ namespace KittBotAI
             }
         }
 
-        if (Creature* bossLichK = bot->FindNearestCreature(npcBossLichKing, 80.0f, true))
+        if (Creature* bossLichK = bot->FindNearestCreature(npcBossLichKing, 150.0f, true))
         {
             bool isWinter = (bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter));
 
@@ -2231,7 +2297,7 @@ namespace KittBotAI
             if (isWinter)
             {
                 float angle = bossLichK->GetOrientation() + 1.57f;
-                float dist = 55.0f; // distanta de siguranta
+                float dist = 60.0f; // 55 distanta de siguranta
 
                 float targetX = bossLichK->GetPositionX() + (dist * std::cos(angle));
                 float targetY = bossLichK->GetPositionY() + (dist * std::sin(angle));
@@ -2239,10 +2305,7 @@ namespace KittBotAI
 
                 if (bot->GetDistance(targetX, targetY, targetZ) > 5.0f)
                 {
-                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
-                    {
-                        bot->GetMotionMaster()->MovePoint(9, targetX, targetY, targetZ);
-                    }
+                    bot->GetMotionMaster()->MovePoint(109, targetX, targetY + 5.0f, targetZ);
                 }
             }
 
@@ -2311,9 +2374,9 @@ namespace KittBotAI
 
                         if (gr)
                         {
-                            if (sphere && gr->GetTargetIcons()[4] != sphere->GetGUID())
+                            if (sphere && gr->GetTargetIcons()[iconIndex4] != sphere->GetGUID())
                             {
-                                gr->SetTargetIcon(4, bot->GetGUID(), sphere->GetGUID());
+                                gr->SetTargetIcon(iconIndex4, bot->GetGUID(), sphere->GetGUID());
                             }
                         }
                         bot->SetInCombatWith(sphere);
@@ -2324,56 +2387,86 @@ namespace KittBotAI
             }
 
             // 5. valkyr, faza 2
-            if (Creature* valkyr = bot->FindNearestCreature(npcValkyr, 40.0f, true))
+            if (ai->HasRole(BOT_ROLE_DPS) && !ai->HasRole(BOT_ROLE_HEAL) && !ai->HasRole(BOT_ROLE_TANK))
             {
-                //bool arePasager = valkyr->GetVehicleKit() && valkyr->GetVehicleKit()->GetPassenger(0);
-                if (valkyr->IsAlive() && !valkyr->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE)/* && valkyr->GetHealthPct() > 48.0f*/)
-                {
-                    if (ai->HasRole(BOT_ROLE_DPS) && !ai->HasRole(BOT_ROLE_HEAL) && !ai->HasRole(BOT_ROLE_TANK))
+                std::list<Creature*> NpcList;
+                bot->GetCreatureListWithEntryInGrid(NpcList, npcValkyr, 80.0f);
+                bool valkyriPrezenti = !NpcList.empty();
+
+                NpcList.remove_if([](Creature* npc) {
+                    if (!npc || !npc->IsAlive() || !npc->IsInWorld() || npc->HasUnitFlag(UNIT_FLAG_UNINTERACTIBLE))
                     {
-                        if (bot->GetVictim() != valkyr)
+                        return true;
+                    }
+                    bool arePasager = npc->GetVehicleKit() && npc->GetVehicleKit()->GetPassenger(0);
+                    return !arePasager;
+                    });
+
+                if (!NpcList.empty())
+                {
+                    bool iconExist = false;
+                    ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex5];
+
+                    NpcList.sort([](Creature* a, Creature* b) {
+                        return a->GetGUID() < b->GetGUID();
+                        });
+
+                    NpcTar = NpcList.front();
+
+                    if (!currentIconGuid.IsEmpty())
+                    {
+                        if (currentIconGuid == NpcTar->GetGUID())
                         {
-                            bot->AttackStop();
-                            //bot->GetMotionMaster()->Clear();
-                            if (bot->IsNonMeleeSpellCast(true))
-                            {
-                                bot->InterruptNonMeleeSpells(true);
-                            }
+                            iconExist = true;
+                        }
+                    }
 
-                            if (gr)
-                            {
-                                if (valkyr && gr->GetTargetIcons()[5] != valkyr->GetGUID())
-                                {
-                                    gr->SetTargetIcon(5, bot->GetGUID(), valkyr->GetGUID());
-                                }
-                            }
+                    if (!iconExist && gr && NpcTar)
+                    {
+                        gr->SetTargetIcon(iconIndex5, bot->GetGUID(), NpcTar->GetGUID());
+                    }
 
-                            bot->SetInCombatWith(valkyr);
-                            ai->AttackStart(valkyr);
+                    /*if (NpcTar && NpcTar->IsAlive())
+                    {
+                        if (bot->GetVictim() != NpcTar)
+                        {
+                            bot->SetInCombatWith(NpcTar);
 
-                            if (bot->GetBotAI()->HasRole(BOT_ROLE_RANGED))
+                            if (ai->HasRole(BOT_ROLE_RANGED))
                             {
-                                bot->Attack(valkyr, false);
+                                bot->Attack(NpcTar, false);
+                                bot->GetMotionMaster()->MoveChase(NpcTar, 15.0f); // 15
                             }
                             else
                             {
-                                bot->Attack(valkyr, true);
+                                //bot->Attack(NpcTar, true);
+                                //bot->GetMotionMaster()->MoveChase(NpcTar);
                             }
                         }
-                    }
+                    }*/
                 }
                 else
                 {
-                    if (bot->GetVictim() == valkyr)
+                    if (valkyriPrezenti)
                     {
-                        if (gr)
+                        Unit* victim = bot->GetVictim();
+                        if (victim && victim->GetEntry() == npcValkyr)
+                            //if (bot->GetVictim() == NpcTar)
                         {
-                            if (valkyr && gr->GetTargetIcons()[5] == valkyr->GetGUID())
+                            if (gr)
                             {
-                                gr->SetTargetIcon(5, bot->GetGUID(), ObjectGuid::Empty);
+                                ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex5];
+
+                                if (!currentIconGuid.IsEmpty())
+                                    //if (NpcTar && gr->GetTargetIcons()[iconIndex5] == NpcTar->GetGUID())
+                                {
+                                    gr->SetTargetIcon(iconIndex2, bot->GetGUID(), victim->GetGUID());
+                                }
                             }
+                            bot->AttackStop();
+                            bot->GetThreatManager().GetLastVictim();
+                            bot->GetMotionMaster()->Clear();
                         }
-                        bot->AttackStop();
                     }
                 }
             }
@@ -2480,10 +2573,15 @@ namespace KittBotAI
             float const safeZ = 840.90f;
 
             // 1. LOGICA PENTRU NECROTIC PLAGUE (Dinamica)
-            if (bot->HasAura(spellNecroticPlague))
+            if (bot->HasAura(spellNecroticPlague) || bot->HasAura(jumpNecroticPlague))
             {
-                if (Creature* horror = bot->FindNearestCreature(npcShamblingHorror, 50.0f, true))
+                if (Creature* horror = bot->FindNearestCreature(npcShamblingHorror, 100.0f, true))
                 {
+                    float x, y, z;
+                    // Raza dorit? (5 metri în fa?a lui)
+                    float distantaInFata = 5.0f;
+                    horror->GetClosePoint(x, y, z, horror->GetObjectScale(), distantaInFata);
+
                     if (bot->GetDistance(horror) > 3.0f)
                     {
                         if (bot->IsNonMeleeSpellCast(true))
@@ -2496,6 +2594,7 @@ namespace KittBotAI
                         if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
                         {
                             bot->GetMotionMaster()->MovePoint(4, horror->GetPositionX(), horror->GetPositionY(), horror->GetPositionZ());
+                            bot->NearTeleportTo(x, y, z, horror->GetOrientation() + M_PI);
                         }
                     }
                     else
@@ -2585,25 +2684,25 @@ namespace KittBotAI
                         if (gr)
                         {
                             // CROSS (6) pe Shambling Horror.
-                            if (!iconAlreadyOnAHorror && gr->GetTargetIcons()[6] != nearhorror->GetGUID())
+                            if (!iconAlreadyOnAHorror && gr->GetTargetIcons()[iconIndex6] != nearhorror->GetGUID())
                             {
-                                gr->SetTargetIcon(6, bot->GetGUID(), nearhorror->GetGUID());
+                                gr->SetTargetIcon(iconIndex6, bot->GetGUID(), nearhorror->GetGUID());
                             }
 
                             if (bossLichK && !bossLichK->HasAura(spell1Winter) && !bossLichK->HasAura(spell2Winter))
                             {
                                 if (bot->GetHealthPct() < 90.0f)
                                 {
-                                    if (gr->GetTargetIcons()[3] != bot->GetGUID())
+                                    if (gr->GetTargetIcons()[iconIndex3] != bot->GetGUID())
                                     {
-                                        gr->SetTargetIcon(3, bot->GetGUID(), bot->GetGUID());
+                                        gr->SetTargetIcon(iconIndex3, bot->GetGUID(), bot->GetGUID());
                                     }
                                 }
                                 else
                                 {
-                                    if (gr->GetTargetIcons()[3] == bot->GetGUID())
+                                    if (gr->GetTargetIcons()[iconIndex3] == bot->GetGUID())
                                     {
-                                        gr->SetTargetIcon(3, bot->GetGUID(), ObjectGuid::Empty);
+                                        gr->SetTargetIcon(iconIndex3, bot->GetGUID(), ObjectGuid::Empty);
                                     }
                                 }
                             }
@@ -2636,13 +2735,6 @@ namespace KittBotAI
                                 bot->GetMotionMaster()->MovePoint(7, ax, ay, bot->GetPositionZ());
                             }
                         }
-                        /*else if (isWinter)
-                        {
-                            if (bot->GetDistance(safeX2, safeY2, safeZ) > 1.0f)
-                            {
-                                bot->GetMotionMaster()->MovePoint(8, safeX2, safeY2, safeZ);
-                            }
-                        }*/
                         else if (bot->GetDistance(safeX, safeY, safeZ) > 15.0f)
                         {
                             // Daca nu are nicio capcana imediata, merge spre SafeX (ajustat)
@@ -2683,15 +2775,40 @@ namespace KittBotAI
                             || master->HasAura(spellHarvestSouls) || bot->HasAura(spellHarvestSouls)
                             || master->HasAura(spellFurryFrostNoRez) || bot->HasAura(spellFurryFrostNoRez))
                         {
+                            if (bossLichK->GetHealthPct() > 95.0f)
+                            {
+                                bot->RemoveAura(spellHarvestSoulStartHC);
+                                bot->RemoveAura(spellHarvestSouls);
+                            }
+
+                            // stay daca esti in sabie
+                            if (bot->HasAura(spellHarvestSouls))
+                            {
+                                ai->SetBotCommandState(BOT_COMMAND_STAY);
+                            }
+
                             // setam Diamond
                             if (gr)
                             {
-                                if (gr->GetTargetIcons()[2] != bossGUID)
+                                if (gr->GetTargetIcons()[iconIndex2] != bossGUID)
                                 {
-                                    gr->SetTargetIcon(2, bot->GetGUID(), bossGUID);
+                                    gr->SetTargetIcon(iconIndex2, bot->GetGUID(), bossGUID);
                                 }
                             }
                             iconRezervat = true;
+
+                            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
+                            {
+                                bot->GetMotionMaster()->Clear();
+                                bot->StopMoving();
+                            }
+                        }
+                        else // stergem stay
+                        {
+                            if (ai->HasBotCommandState(BOT_COMMAND_STAY))
+                            {
+                                ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+                            }
                         }
                     }
                 }
@@ -2708,9 +2825,9 @@ namespace KittBotAI
                             if (victim)
                             {
                                 ObjectGuid victimGUID = victim->GetGUID();
-                                if (gr->GetTargetIcons()[3] != victimGUID)
+                                if (gr->GetTargetIcons()[iconIndex3] != victimGUID)
                                 {
-                                    gr->SetTargetIcon(3, bot->GetGUID(), victimGUID);
+                                    gr->SetTargetIcon(iconIndex3, bot->GetGUID(), victimGUID);
                                     triangleTargetGUID = victimGUID;
                                     //iconRezervat = true;
                                 }
@@ -2721,9 +2838,9 @@ namespace KittBotAI
                             // Daca triunghi este inca pe cineva marcat de noi
                             if (!triangleTargetGUID.IsEmpty())
                             {
-                                if (gr->GetTargetIcons()[3] == triangleTargetGUID)
+                                if (gr->GetTargetIcons()[iconIndex3] == triangleTargetGUID)
                                 {
-                                    gr->SetTargetIcon(3, bot->GetGUID(), ObjectGuid::Empty);
+                                    gr->SetTargetIcon(iconIndex3, bot->GetGUID(), ObjectGuid::Empty);
                                 }
                                 triangleTargetGUID = ObjectGuid::Empty;
                             }
@@ -2735,10 +2852,10 @@ namespace KittBotAI
                 {
                     if (gr)
                     {
-                        if (gr->GetTargetIcons()[2] == bossGUID)
+                        if (gr->GetTargetIcons()[iconIndex2] == bossGUID)
                         {
-                            gr->SetTargetIcon(2, bot->GetGUID(), ObjectGuid::Empty); // sterge intex vechi
-                            gr->SetTargetIcon(7, bot->GetGUID(), bossGUID); // set skull
+                            gr->SetTargetIcon(iconIndex2, bot->GetGUID(), ObjectGuid::Empty); // sterge intex vechi
+                            gr->SetTargetIcon(iconIndex7, bot->GetGUID(), bossGUID); // set skull
                         }
                     }
                 }
