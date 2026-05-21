@@ -20,6 +20,7 @@
 #include "Transport.h"
 #include "MotionMaster.h"
 #include "Vehicle.h"
+#include "G3D/Vector3.h"
 
 //#include "botcommon.h"
 
@@ -2237,6 +2238,7 @@ namespace KittBotAI
 
         bool DefilesPrezent = false;
         bool ShadowTrapPrez = false;
+        bool isInFrostmourneRoom = (bot->GetPositionZ() > 940.0f); // 1049
 
         Map* map = master->GetMap();
         if (map)
@@ -2285,8 +2287,7 @@ namespace KittBotAI
         if (Creature* bossLichK = bot->FindNearestCreature(npcBossLichKing, 150.0f, true))
         {
             bool isWinter = (bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter));
-            bool isInFrostmourneRoom = (bot->GetPositionZ() > 1049.0f);
-
+            bool isWinterStart = false;
             // cand face cast sa fuga toti
             if (bossLichK->HasUnitState(UNIT_STATE_CASTING))
             {
@@ -2296,46 +2297,221 @@ namespace KittBotAI
 
                     if (spellcast == spell1Winter || spellcast == spell2Winter)
                     {
-                        isWinter = true;
+                        //isWinter = true;
+                        isWinterStart = true;
                     }
+                }
+            }
+
+            if (isWinterStart)
+            {
+                float angle = bossLichK->GetOrientation() + 1.57f;
+                float dist = 40.0f; // 40 distanta la margine
+
+                float targetX = bossLichK->GetPositionX()/* + (dist * std::cos(angle))*/;
+                float targetY = bossLichK->GetPositionY() + (dist * std::sin(angle));
+                float targetZ = bossLichK->GetPositionZ();
+
+                //bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
+                {
+                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                    bot->StopMoving();
+                }
+
+                if ((bot->GetPositionY() - targetY) < 1.0f) // 5
+                {
+                    if (bot->IsNonMeleeSpellCast(true))
+                    {
+                        bot->InterruptNonMeleeSpells(true);
+                    }
+                    bot->AttackStop();
+
+                    bot->GetMotionMaster()->MovePoint(110, targetX, targetY, targetZ + 2.0f);
                 }
             }
 
             if (isWinter)
             {
                 float angle = bossLichK->GetOrientation() + 1.57f;
-                float dist = 60.0f; // 55 distanta de siguranta
+                float dist = 55.0f; // 55 distanta de siguranta
 
-                float targetX = bossLichK->GetPositionX() + (dist * std::cos(angle));
+                float targetX = bot->GetPositionX()/* + (dist * std::cos(angle))*/;
                 float targetY = bossLichK->GetPositionY() + (dist * std::sin(angle));
                 float targetZ = bossLichK->GetPositionZ();
 
-                if (bot->GetDistance(targetX, targetY, targetZ) > 5.0f)
+                //bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
                 {
-                    bot->GetMotionMaster()->MovePoint(109, targetX, targetY + 5.0f, targetZ);
+                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                    bot->StopMoving();
+                }
+
+                if ((bot->GetPositionY() - targetY) < 1.0f) // 5
+                {
+                    bot->GetMotionMaster()->MovePoint(109, targetX, targetY + 7.0f, targetZ + 2.0f);
                 }
             }
 
             // 1. shadow trap, faza 1
-            if (Creature* trap = bot->FindNearestCreature(npcShadowTrapTrigger, 8.0f, true)) // 5
+            if (!ai->HasRole(BOT_ROLE_TANK) || ai->HasRole(BOT_ROLE_TANK_OFF) || bossLichK->GetVictim() != bot)
             {
-                if (bot->IsNonMeleeSpellCast(true))
+                if (Creature* trap = bot->FindNearestCreature(npcShadowTrapTrigger, 8.0f, true)) // 5
                 {
-                    bot->InterruptNonMeleeSpells(true);
+                    if (bot->IsNonMeleeSpellCast(true))
+                    {
+                        bot->InterruptNonMeleeSpells(true);
+                    }
+
+                    bot->AttackStop();
+                    bot->GetMotionMaster()->Clear();
+                    float angle = trap->GetAbsoluteAngle(bot);
+                    float runDist = 11.0f; // 8
+                    float x = bot->GetPositionX() + (runDist * std::cos(angle));
+                    float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+                    bot->GetMotionMaster()->MovePoint(2, x, y, bot->GetPositionZ());
+
+                    ShadowTrapPrez = true;
+                    //return;
                 }
-
-                bot->AttackStop();
-                bot->GetMotionMaster()->Clear();
-                float angle = trap->GetAbsoluteAngle(bot);
-                float runDist = 11.0f; // 8
-                float x = bot->GetPositionX() + (runDist * std::cos(angle));
-                float y = bot->GetPositionY() + (runDist * std::sin(angle));
-
-                bot->GetMotionMaster()->MovePoint(2, x, y, bot->GetPositionZ());
-
-                ShadowTrapPrez = true;
-                //return;
             }
+
+            // main tank faza 1
+            if ((!isWinter && !isWinterStart && bossLichK->GetHealthPct() > 69) && ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_TANK_OFF) && bossLichK->GetVictim() == bot)
+            {
+                float centerX = 491.05f;
+                float centerY = -2109.92f;
+                float const centerZ = 840.90f;
+                float runDist = 11.0f;
+
+                if (Creature* nearTrap = bot->FindNearestCreature(npcShadowTrapTrigger, 8.0f, true))
+                {
+                    if (bot->IsNonMeleeSpellCast(true))
+                        bot->InterruptNonMeleeSpells(true);
+
+                    bot->AttackStop();
+
+                    float avoidAngle = nearTrap->GetAbsoluteAngle(bot) + 1.57f;
+                    float nextX = bot->GetPositionX() + (runDist * std::cos(avoidAngle));
+                    float nextY = bot->GetPositionY() + (runDist * std::sin(avoidAngle));
+
+                    G3D::Vector3 nextPos(nextX, nextY, centerZ);
+
+                    bool idealPointBlocked = false;
+                    std::list<Creature*> nearbyTraps;
+                    bot->GetCreatureListWithEntryInGrid(nearbyTraps, npcShadowTrapTrigger, 40.0f);
+
+                    for (Creature* t : nearbyTraps)
+                    {
+                        if (!t || !t->IsAlive()) continue;
+                        G3D::Vector3 trapPos(t->GetPositionX(), t->GetPositionY(), t->GetPositionZ());
+                        if ((nextPos - trapPos).length() < 9.0f)
+                        {
+                            idealPointBlocked = true;
+                            break;
+                        }
+                    }
+
+                    float dxNext = nextX - centerX;
+                    float dyNext = nextY - centerY;
+                    float distFromNextPointToCenter = std::sqrt(dxNext * dxNext + dyNext * dyNext);
+
+                    if (!idealPointBlocked && distFromNextPointToCenter <= 15.0f)
+                    {
+                        if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                        {
+                            bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                            bot->GetMotionMaster()->MovePoint(77, nextX, nextY, centerZ);
+                        }
+                    }
+                    else
+                    {
+                        bool escapeFound = false;
+                        float escapeX = bot->GetPositionX();
+                        float escapeY = bot->GetPositionY();
+
+                        for (int i = 0; i < 8; ++i)
+                        {
+                            float scanAngle = (i * M_PI / 4);
+                            float checkX = bot->GetPositionX() + (runDist * std::cos(scanAngle));
+                            float checkY = bot->GetPositionY() + (runDist * std::sin(scanAngle));
+
+                            G3D::Vector3 checkPos(checkX, checkY, centerZ);
+                            bool checkPointBlocked = false;
+
+                            for (Creature* t : nearbyTraps)
+                            {
+                                if (!t || !t->IsAlive()) continue;
+                                G3D::Vector3 trapPos(t->GetPositionX(), t->GetPositionY(), t->GetPositionZ());
+                                if ((checkPos - trapPos).length() < 9.0f)
+                                {
+                                    checkPointBlocked = true;
+                                    break;
+                                }
+                            }
+
+                            if (!checkPointBlocked)
+                            {
+                                escapeX = checkX;
+                                escapeY = checkY;
+                                escapeFound = true;
+                                break;
+                            }
+                        }
+
+                        if (escapeFound)
+                        {
+                            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                            {
+                                bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                bot->GetMotionMaster()->MovePoint(77, escapeX, escapeY, centerZ);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    float currentDistToCenter = bot->GetDistance2d(centerX, centerY);
+
+                    if (currentDistToCenter > 6.0f)
+                    {
+                        bool pathToCenterBlocked = false;
+                        std::list<Creature*> centerTraps;
+                        bot->GetCreatureListWithEntryInGrid(centerTraps, npcShadowTrapTrigger, 45.0f);
+
+                        float angleToCenter = bot->GetAbsoluteAngle(centerX, centerY);
+                        for (float d = 3.0f; d < currentDistToCenter; d += 3.0f)
+                        {
+                            float checkX = bot->GetPositionX() + (d * std::cos(angleToCenter));
+                            float checkY = bot->GetPositionY() + (d * std::sin(angleToCenter));
+                            G3D::Vector3 checkPos(checkX, checkY, centerZ);
+
+                            for (Creature* t : centerTraps)
+                            {
+                                if (!t || !t->IsAlive()) continue;
+                                G3D::Vector3 trapPos(t->GetPositionX(), t->GetPositionY(), t->GetPositionZ());
+                                if ((checkPos - trapPos).length() < 9.0f)
+                                {
+                                    pathToCenterBlocked = true;
+                                    break;
+                                }
+                            }
+                            if (pathToCenterBlocked) break;
+                        }
+
+                        if (!pathToCenterBlocked)
+                        {
+                            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                            {
+                                bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                bot->GetMotionMaster()->MovePoint(76, centerX, centerY, centerZ);
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // 2. Defile, faza 2
             if (Creature* defile = bot->FindNearestCreature(npcDefileTrigger, 40.0f, true))
@@ -2458,14 +2634,12 @@ namespace KittBotAI
                     {
                         Unit* victim = bot->GetVictim();
                         if (victim && victim->GetEntry() == npcValkyr)
-                            //if (bot->GetVictim() == NpcTar)
                         {
                             if (gr)
                             {
                                 ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex5];
 
                                 if (!currentIconGuid.IsEmpty())
-                                    //if (NpcTar && gr->GetTargetIcons()[iconIndex5] == NpcTar->GetGUID())
                                 {
                                     gr->SetTargetIcon(iconIndex2, bot->GetGUID(), victim->GetGUID());
                                 }
@@ -2585,7 +2759,7 @@ namespace KittBotAI
                 if (Creature* horror = bot->FindNearestCreature(npcShamblingHorror, 100.0f, true))
                 {
                     float x, y, z;
-                    // Raza dorit? (5 metri în fa?a lui)
+                    // Raza dorit? (5 metri ?n fa?a lui)
                     float distantaInFata = 5.0f;
                     horror->GetClosePoint(x, y, z, horror->GetObjectScale(), distantaInFata);
 
@@ -2854,121 +3028,140 @@ namespace KittBotAI
                     }
                 }
             }
+        }
 
-            // faza sabiei heroic
-            if (isInFrostmourneRoom)
+        // faza sabiei heroic
+        if (isInFrostmourneRoom)
+        {
+            Creature* terenasAnchor = bot->FindNearestCreature(npcTerenasHeroic, 80.0f, true);
+
+            if (!bot->IsFlying())
             {
-                // Scoatem STAY ca s? se poat? mi?ca tactic în sabie
-                /*if (ai->HasBotCommandState(BOT_COMMAND_STAY))
+                bot->SetCanFly(true);
+            }
+
+            if (terenasAnchor)
+            {
+                float distToTarget = bot->GetDistance(terenasAnchor);
+                if (distToTarget > 20.0f)
                 {
-                    ai->RemoveBotCommandState(BOT_COMMAND_STAY);
-                }*/
-
-                Creature* terenasAnchor = bot->FindNearestCreature(npcTerenasHeroic, 80.0f, true);
-                Unit* moveTarget = nullptr;
-
-                if (master && master->IsAlive() && master->GetPositionZ() > 1049.0f)
-                    moveTarget = master;
-                else if (terenasAnchor)
-                    moveTarget = terenasAnchor;
-
-                if (moveTarget)
-                {
-                    float distToTarget = bot->GetDistance(moveTarget);
-                    if (distToTarget > 4.0f)
+                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
                     {
-                        if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
-                        {
-                            float followDist = (moveTarget == terenasAnchor) ? 3.0f : 1.5f;
-                            bot->GetMotionMaster()->MoveFollow(moveTarget, followDist, bot->GetFollowAngle());
-                        }
+                        bot->GetMotionMaster()->MovePoint(111, terenasAnchor->GetPositionX(), terenasAnchor->GetPositionY(), bot->GetPositionZ());
                     }
                 }
-                else
+                else if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
                 {
-                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
+                    if (distToTarget < 15.0f)
                     {
-                        bot->GetMotionMaster()->Clear();
+                        bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
                         bot->StopMoving();
                     }
                 }
-
-                // Atac Ranged pe Wicked Spirits
-                if (ai->HasRole(BOT_ROLE_RANGED) && ai->HasRole(BOT_ROLE_DPS))
+            }
+            else
+            {
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
                 {
-                    if (Creature* wickedSpirit = bot->FindNearestCreature(nbcWickedSpirit, 45.0f, true))
-                    {
-                        if (bot->GetVictim() != wickedSpirit)
-                        {
-                            bot->AttackStop();
-                            bot->SetInCombatWith(wickedSpirit);
-                            ai->AttackStart(wickedSpirit);
-                            bot->Attack(wickedSpirit, false);
-                        }
-                    }
-                    else if (Creature* warden = bot->FindNearestCreature(npcSpiritWarden, 60.0f, true))
-                    {
-                        if (bot->GetVictim() != warden)
-                        {
-                            bot->SetInCombatWith(warden);
-                            ai->AttackStart(warden);
-                            bot->Attack(warden, false);
-                        }
-                    }
+                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                    bot->StopMoving();
+                }
+            }
+
+            // ========================================================
+            // Faza Armei mod heroic
+            // ========================================================
+            if (terenasAnchor)
+            {
+                static uint32 attackCooldownTimer = 0;
+                bool canUpdateAttack = false;
+
+                if (attackCooldownTimer <= currentTimeMS)
+                {
+                    canUpdateAttack = true;
+                    attackCooldownTimer = currentTimeMS + 800; // cd la scanare anti flood
                 }
 
-                // Atac Melee + Interrupt pe Spirit Warden
-                if (ai->HasRole(BOT_ROLE_TANK) || (ai->HasRole(BOT_ROLE_DPS) && !ai->HasRole(BOT_ROLE_RANGED)))
+                if (canUpdateAttack)
                 {
-                    if (Creature* warden = bot->FindNearestCreature(npcSpiritWarden, 60.0f, true))
+                    if (ai->HasRole(BOT_ROLE_DPS))
                     {
-                        if (bot->GetVictim() != warden)
+                        if (Creature* targetSpirit = bot->FindNearestCreature(nbcWickedSpirit, 65.0f, true))
                         {
-                            bot->SetInCombatWith(warden);
-                            ai->AttackStart(warden);
-                            bot->Attack(warden, true);
-                        }
-
-                        if (warden->HasUnitState(UNIT_STATE_CASTING))
-                        {
-                            if (Spell const* wardenSpell = warden->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                            if (bot->GetVictim() != targetSpirit)
                             {
-                                if (wardenSpell->GetSpellInfo()->Id == spellDestroySoul)
+                                bot->SetInCombatWith(targetSpirit);
+                                ai->AttackStart(targetSpirit);
+
+                                bool chargeInAir = !ai->HasRole(BOT_ROLE_RANGED);
+                                bot->Attack(targetSpirit, chargeInAir);
+                                if (ai->HasRole(BOT_ROLE_RANGED))
                                 {
-                                    ai->UpdateAI(currentTimeMS);
+                                    bot->GetMotionMaster()->MoveChase(targetSpirit, 15.0f);
+                                }
+                                else
+                                {
+                                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                    bot->GetMotionMaster()->MovePoint(112, targetSpirit->GetPositionX(), targetSpirit->GetPositionY(), targetSpirit->GetPositionZ());
+                                }
+                            }
+
+                            if (targetSpirit->GetDistance(bot) < 20.0f)
+                            {
+                                ai->UpdateAI(currentTimeMS);
+                            }
+                        }
+                        else if (Creature* warden = bot->FindNearestCreature(npcSpiritWarden, 60.0f, true))
+                        {
+                            if (bot->GetVictim() != warden)
+                            {
+                                bot->SetInCombatWith(warden);
+                                ai->AttackStart(warden);
+
+                                bool chargeInAir = !ai->HasRole(BOT_ROLE_RANGED);
+                                bot->Attack(warden, chargeInAir);
+                                if (ai->HasRole(BOT_ROLE_RANGED))
+                                {
+                                    bot->GetMotionMaster()->MoveChase(warden, 15.0f);
+                                }
+                                else
+                                {
+                                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                    bot->GetMotionMaster()->MovePoint(114, warden->GetPositionX(), warden->GetPositionY(), warden->GetPositionZ());
+
+                                }
+                            }
+
+                            if (warden->HasUnitState(UNIT_STATE_CASTING))
+                            {
+                                if (Spell const* wardenSpell = warden->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                                {
+                                    if (wardenSpell->GetSpellInfo()->Id == spellDestroySoul)
+                                    {
+                                        ai->UpdateAI(currentTimeMS);
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+        else
+        {
+            if (bot->IsFlying())
+            {
+                bot->SetCanFly(false);
+            }
 
-                // Healerii pe Terenas
-                if (ai->HasRole(BOT_ROLE_HEAL))
-                {
-                    if (terenasAnchor && terenasAnchor->GetHealthPct() < 75.0f)
-                    {
-                        bot->SetInCombatWith(terenasAnchor);
-                    }
-                }
+            if (ai->HasBotCommandState(BOT_COMMAND_STAY))
+            {
+                ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+            }
 
-                // Evitare Wicked Spirit aproape (Fug? individual?)
-                if (Creature* nearSpirit = bot->FindNearestCreature(nbcWickedSpirit, 6.0f, true))
-                {
-                    if (bot->IsNonMeleeSpellCast(true))
-                        bot->InterruptNonMeleeSpells(true);
-
-                    bot->AttackStop();
-                    float escapeAngle = nearSpirit->GetAbsoluteAngle(bot);
-                    float escapeDist = 8.0f;
-                    float ex = bot->GetPositionX() + (escapeDist * std::cos(escapeAngle));
-                    float ey = bot->GetPositionY() + (escapeDist * std::sin(escapeAngle));
-
-                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
-                    {
-                        bot->GetMotionMaster()->MovePoint(89, ex, ey, bot->GetPositionZ());
-                    }
-                    return;
-                }
+            if (ai->HasBotCommandState(BOT_COMMAND_FULLSTOP))
+            {
+                ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
             }
         }
     }
