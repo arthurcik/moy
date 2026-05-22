@@ -19,6 +19,7 @@
 #include "SpellHistory.h"
 #include "Transport.h"
 #include "MotionMaster.h"
+#include "PointMovementGenerator.h"
 #include "Vehicle.h"
 #include "G3D/Vector3.h"
 
@@ -2286,6 +2287,26 @@ namespace KittBotAI
 
         if (Creature* bossLichK = bot->FindNearestCreature(npcBossLichKing, 150.0f, true))
         {
+            // debug movement
+            /*if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
+            {
+                if (MovementGenerator* currentGen = bot->GetMotionMaster()->GetCurrentMovementGenerator())
+                {
+                    if (auto* pointGen = dynamic_cast<PointMovementGenerator<Creature>*>(currentGen))
+                    {
+                        TC_LOG_INFO("server.loading", ">>> [DEBUG] BOT {} are POINT_MOTION_TYPE activ cu ID-ul: {}",
+                            bot->GetName().c_str(),
+                            pointGen->GetId());
+                    }
+                }
+            }
+            else
+            {
+                TC_LOG_INFO("server.loading", ">>> [DEBUG] BOT {} are alt tip de miscare: {}",
+                    bot->GetName().c_str(),
+                    uint32(bot->GetMotionMaster()->GetCurrentMovementGeneratorType()));
+            }*/
+
             bool isWinter = (bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter));
             bool isWinterStart = false;
             // cand face cast sa fuga toti
@@ -2303,8 +2324,22 @@ namespace KittBotAI
                 }
             }
 
-            if (isWinterStart)
+            if (isWinterStart && !isWinter)
             {
+                // anti fall
+                float const centerZ = 841.90f;
+
+                if (bot->GetPositionZ() < 839.0f)
+                {
+                    if (teleportCooldownMap[bot->GetGUID()] <= currentTimeMS)
+                    {
+                        bot->NearTeleportTo(bot->GetPositionX(), bot->GetPositionY(), centerZ, bot->GetOrientation());
+                        teleportCooldownMap[bot->GetGUID()] = currentTimeMS + TELEPORT_CD;
+
+                        //bot->GetMotionMaster()->Clear();
+                    }
+                }
+
                 float angle = bossLichK->GetOrientation() + 1.57f;
                 float dist = 40.0f; // 40 distanta la margine
 
@@ -2313,11 +2348,6 @@ namespace KittBotAI
                 float targetZ = bossLichK->GetPositionZ();
 
                 //bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
-                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
-                {
-                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
-                    bot->StopMoving();
-                }
 
                 if ((bot->GetPositionY() - targetY) < 1.0f) // 5
                 {
@@ -2327,12 +2357,28 @@ namespace KittBotAI
                     }
                     bot->AttackStop();
 
-                    bot->GetMotionMaster()->MovePoint(110, targetX, targetY, targetZ + 2.0f);
+                    bot->NearTeleportTo(targetX, targetY, targetZ, bot->GetOrientation());
+                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                    bot->GetMotionMaster()->MovePoint(110, targetX, targetY, targetZ);
                 }
             }
 
             if (isWinter)
             {
+                // anti fall
+                float const centerZ = 841.90f;
+
+                if (bot->GetPositionZ() < 839.0f)
+                {
+                    if (teleportCooldownMap[bot->GetGUID()] <= currentTimeMS)
+                    {
+                        bot->NearTeleportTo(bot->GetPositionX(), bot->GetPositionY(), centerZ, bot->GetOrientation());
+                        teleportCooldownMap[bot->GetGUID()] = currentTimeMS + TELEPORT_CD;
+
+                        //bot->GetMotionMaster()->Clear();
+                    }
+                }
+
                 float angle = bossLichK->GetOrientation() + 1.57f;
                 float dist = 55.0f; // 55 distanta de siguranta
 
@@ -2340,16 +2386,52 @@ namespace KittBotAI
                 float targetY = bossLichK->GetPositionY() + (dist * std::sin(angle));
                 float targetZ = bossLichK->GetPositionZ();
 
-                //bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
-                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
+                if ((bot->GetPositionY() - targetY) < 3.0f) // 5
                 {
-                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
-                    bot->StopMoving();
-                }
+                    bool areDejaPunctul110 = false;
 
-                if ((bot->GetPositionY() - targetY) < 1.0f) // 5
+                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
+                    {
+                        if (MovementGenerator* currentGen = bot->GetMotionMaster()->GetCurrentMovementGenerator())
+                        {
+                            if (auto* pointGen = dynamic_cast<PointMovementGenerator<Creature>*>(currentGen))
+                            {
+                                if (pointGen->GetId() == 110)
+                                {
+                                    areDejaPunctul110 = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!areDejaPunctul110)
+                    {
+                        if (bot->IsNonMeleeSpellCast(true))
+                        {
+                            bot->InterruptNonMeleeSpells(true);
+                        }
+                        bot->AttackStop();
+
+                        bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                        bot->GetMotionMaster()->MovePoint(110, targetX, targetY + 5.0f, targetZ + 1.0f);
+                    }
+                }
+                else
                 {
-                    bot->GetMotionMaster()->MovePoint(109, targetX, targetY + 7.0f, targetZ + 2.0f);
+                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
+                    {
+                        if (MovementGenerator* currentGen = bot->GetMotionMaster()->GetCurrentMovementGenerator())
+                        {
+                            if (auto* pointGen = dynamic_cast<PointMovementGenerator<Creature>*>(currentGen))
+                            {
+                                if (pointGen->GetId() == 1)
+                                {
+                                    bot->StopMoving();
+                                    bot->GetMotionMaster()->MoveIdle();
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -3043,11 +3125,32 @@ namespace KittBotAI
             if (terenasAnchor)
             {
                 float distToTarget = bot->GetDistance(terenasAnchor);
-                if (distToTarget > 20.0f)
+                if (distToTarget > 30.0f)
                 {
-                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                    float posTerenasX = terenasAnchor->GetPositionX();
+                    float posTerenasY = terenasAnchor->GetPositionY();
+                    float posTerenasZ = terenasAnchor->GetPositionY();
+                    bool areDejaPunctul111 = false;
+
+                    if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
                     {
-                        bot->GetMotionMaster()->MovePoint(111, terenasAnchor->GetPositionX(), terenasAnchor->GetPositionY(), bot->GetPositionZ());
+                        if (MovementGenerator* currentGen = bot->GetMotionMaster()->GetCurrentMovementGenerator())
+                        {
+                            if (auto* pointGen = dynamic_cast<PointMovementGenerator<Creature>*>(currentGen))
+                            {
+                                if (pointGen->GetId() == 111)
+                                {
+                                    areDejaPunctul111 = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!areDejaPunctul111)
+                    {
+                        bot->NearTeleportTo(posTerenasX, posTerenasY, posTerenasZ, bot->GetOrientation());
+                        bot->GetMotionMaster()->MovePoint(111, posTerenasX, posTerenasY, posTerenasZ);
+                        //TC_LOG_ERROR("kitt", "[faza armei] bot teleportat");
                     }
                 }
                 else if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
@@ -3061,10 +3164,20 @@ namespace KittBotAI
             }
             else
             {
-                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
                 {
-                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
-                    bot->StopMoving();
+                    if (MovementGenerator* currentGen = bot->GetMotionMaster()->GetCurrentMovementGenerator())
+                    {
+                        if (auto* pointGen = dynamic_cast<PointMovementGenerator<Creature>*>(currentGen))
+                        {
+                            if (pointGen->GetId() == 1)
+                            {
+                                //bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                bot->StopMoving();
+                                bot->GetMotionMaster()->MoveIdle();
+                            }
+                        }
+                    }
                 }
             }
 
