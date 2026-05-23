@@ -137,9 +137,9 @@ namespace KittBotAI
 
                            if (bot)
                            {
-                               std::ostringstream msg;
+                               /*std::ostringstream msg;
                                msg << "Atentie! |cffFFFFFF" << target->GetName() << "|r are Necrotic Plague! Incep monitorizarea (4.5s) pentru dispell!";
-                               bot->Yell(msg.str(), LANG_UNIVERSAL);
+                               bot->Yell(msg.str(), LANG_UNIVERSAL);*/
                            }
                        }
 
@@ -2185,6 +2185,7 @@ namespace KittBotAI
         uint32 static const npcSpiritWarden = 36824;
         uint32 static const nbcWickedSpirit = 39190;
         uint32 static const spellDestroySoul = 72596;
+        uint32 static const spellRestoreSouls = 73650;
         // ----------
 
         // harvest souls aura 74297(main)
@@ -3033,9 +3034,10 @@ namespace KittBotAI
                 {
                     if (master && bot)
                     {
-                        if (isWinter || bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter)
+                        if (isInFrostmourneRoom || isWinter
+                            || bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter)
                             || master->HasAura(spellHarvestSoulStartHC) || bot->HasAura(spellHarvestSoulStartHC)
-                            || master->HasAura(spellHarvestSouls) || bot->HasAura(spellHarvestSouls)
+                            //|| master->HasAura(spellHarvestSouls) || bot->HasAura(spellHarvestSouls)
                             || master->HasAura(spellFurryFrostNoRez) || bot->HasAura(spellFurryFrostNoRez))
                         {
                             if (bossLichK->GetHealthPct() > 95.0f)
@@ -3115,21 +3117,66 @@ namespace KittBotAI
         // faza sabiei heroic
         if (isInFrostmourneRoom)
         {
-            Creature* terenasAnchor = bot->FindNearestCreature(npcTerenasHeroic, 80.0f, true);
+            bool InProgressFrostmourne = true;
+            bool MasterIsInFrostmourne = (master->GetPositionZ() > 940.0f); // 1049
 
-            if (!bot->IsFlying())
+            Creature* terenasAnchor = bot->FindNearestCreature(npcTerenasHeroic, 80.0f, true); // apare dupa 2 sec
+
+            if (terenasAnchor && terenasAnchor->HasUnitState(UNIT_STATE_CASTING))
             {
-                bot->SetCanFly(true);
+                if (Spell const* spell = terenasAnchor->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                {
+                    uint32 spellcast = spell->GetSpellInfo()->Id;
+
+                    if (spellcast == spellRestoreSouls)
+                    {
+                        int32 remainingTime = spell->GetTimer();
+
+                        // cand spell are sub 1 secunda de cast
+                        if (remainingTime <= 1000 && remainingTime > 0)
+                        {
+                            InProgressFrostmourne = false;
+                        }
+                    }
+                }
             }
 
-            if (terenasAnchor)
+            if (!InProgressFrostmourne)
+            {
+                float centerX = 505.28f;
+                float centerY = -2124.19f;
+                float const centerZ = 840.90f;
+
+                bot->RemoveAura(spellHarvestSoulStartHC);
+                bot->RemoveAura(spellHarvestSouls);
+                bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+
+                bot->NearTeleportTo(centerX, centerY, centerZ, bot->GetOrientation());
+
+                return;
+            }
+
+            if (bot->GetHealthPct() < 65.0f)
+            {
+                bot->SetFullHealth();
+            }
+
+            if (master->IsAlive() && MasterIsInFrostmourne)
+            {
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
+                {
+                    bot->GetMotionMaster()->MoveFollow(master, 1.0f, bot->GetFollowAngle());
+                }
+            }
+
+            if (InProgressFrostmourne && !MasterIsInFrostmourne)
             {
                 float distToTarget = bot->GetDistance(terenasAnchor);
                 if (distToTarget > 30.0f)
                 {
                     float posTerenasX = terenasAnchor->GetPositionX();
                     float posTerenasY = terenasAnchor->GetPositionY();
-                    float posTerenasZ = terenasAnchor->GetPositionY();
+                    float posTerenasZ = terenasAnchor->GetPositionZ();
                     bool areDejaPunctul111 = false;
 
                     if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
@@ -3155,16 +3202,13 @@ namespace KittBotAI
                 }
                 else if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
                 {
-                    if (distToTarget < 15.0f)
+                    if (distToTarget < 25.0f)
                     {
                         bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
                         bot->StopMoving();
                     }
                 }
-            }
-            else
-            {
-                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
+                else if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
                 {
                     if (MovementGenerator* currentGen = bot->GetMotionMaster()->GetCurrentMovementGenerator())
                     {
@@ -3179,102 +3223,6 @@ namespace KittBotAI
                         }
                     }
                 }
-            }
-
-            // ========================================================
-            // Faza Armei mod heroic
-            // ========================================================
-            if (terenasAnchor)
-            {
-                static uint32 attackCooldownTimer = 0;
-                bool canUpdateAttack = false;
-
-                if (attackCooldownTimer <= currentTimeMS)
-                {
-                    canUpdateAttack = true;
-                    attackCooldownTimer = currentTimeMS + 800; // cd la scanare anti flood
-                }
-
-                if (canUpdateAttack)
-                {
-                    if (ai->HasRole(BOT_ROLE_DPS))
-                    {
-                        if (Creature* targetSpirit = bot->FindNearestCreature(nbcWickedSpirit, 65.0f, true))
-                        {
-                            if (bot->GetVictim() != targetSpirit)
-                            {
-                                bot->SetInCombatWith(targetSpirit);
-                                ai->AttackStart(targetSpirit);
-
-                                bool chargeInAir = !ai->HasRole(BOT_ROLE_RANGED);
-                                bot->Attack(targetSpirit, chargeInAir);
-                                if (ai->HasRole(BOT_ROLE_RANGED))
-                                {
-                                    bot->GetMotionMaster()->MoveChase(targetSpirit, 15.0f);
-                                }
-                                else
-                                {
-                                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
-                                    bot->GetMotionMaster()->MovePoint(112, targetSpirit->GetPositionX(), targetSpirit->GetPositionY(), targetSpirit->GetPositionZ());
-                                }
-                            }
-
-                            if (targetSpirit->GetDistance(bot) < 20.0f)
-                            {
-                                ai->UpdateAI(currentTimeMS);
-                            }
-                        }
-                        else if (Creature* warden = bot->FindNearestCreature(npcSpiritWarden, 60.0f, true))
-                        {
-                            if (bot->GetVictim() != warden)
-                            {
-                                bot->SetInCombatWith(warden);
-                                ai->AttackStart(warden);
-
-                                bool chargeInAir = !ai->HasRole(BOT_ROLE_RANGED);
-                                bot->Attack(warden, chargeInAir);
-                                if (ai->HasRole(BOT_ROLE_RANGED))
-                                {
-                                    bot->GetMotionMaster()->MoveChase(warden, 15.0f);
-                                }
-                                else
-                                {
-                                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
-                                    bot->GetMotionMaster()->MovePoint(114, warden->GetPositionX(), warden->GetPositionY(), warden->GetPositionZ());
-
-                                }
-                            }
-
-                            if (warden->HasUnitState(UNIT_STATE_CASTING))
-                            {
-                                if (Spell const* wardenSpell = warden->GetCurrentSpell(CURRENT_GENERIC_SPELL))
-                                {
-                                    if (wardenSpell->GetSpellInfo()->Id == spellDestroySoul)
-                                    {
-                                        ai->UpdateAI(currentTimeMS);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (bot->IsFlying())
-            {
-                bot->SetCanFly(false);
-            }
-
-            if (ai->HasBotCommandState(BOT_COMMAND_STAY))
-            {
-                ai->RemoveBotCommandState(BOT_COMMAND_STAY);
-            }
-
-            if (ai->HasBotCommandState(BOT_COMMAND_FULLSTOP))
-            {
-                ai->RemoveBotCommandState(BOT_COMMAND_FULLSTOP);
             }
         }
     }
