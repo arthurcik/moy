@@ -2182,9 +2182,9 @@ namespace KittBotAI
 
         // faza sabiei
         uint32 static const npcTerenasHeroic = 39217;
-        uint32 static const npcSpiritWarden = 36824;
-        uint32 static const nbcWickedSpirit = 39190;
-        uint32 static const spellDestroySoul = 72596;
+        //uint32 static const npcSpiritWarden = 36824;
+        //uint32 static const nbcWickedSpirit = 39190;
+        //uint32 static const spellDestroySoul = 72596;
         uint32 static const spellRestoreSouls = 73650;
         // ----------
 
