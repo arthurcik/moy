@@ -331,24 +331,48 @@ namespace KittBotAI
             return;
 
         uint32 static const bossLeviathan = 33113; //LEVIATHAN
+        uint32 static const npcUlduarColossus = 33237;
+        bool ColossusPrezent = true;
 
-        Creature* bossLeviathanTar = bot->FindNearestCreature(bossLeviathan, 5.0f, true);
+        Creature* bossLevi = bot->FindNearestCreature(bossLeviathan, 100.0f, true);
 
-        if (bossLeviathanTar && bossLeviathanTar->IsAlive())
+        std::list<Creature*> NpcList;
+        bot->GetCreatureListWithEntryInGrid(NpcList, npcUlduarColossus, 150.0f);
+        NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
+
+        if (NpcList.empty())
         {
-            if (bot->GetVehicle())
-                return;
+            ColossusPrezent = false;
+        }
 
-            if (bossLeviathanTar->GetHealth() > 1000)
+        BotMgr* mgr = master->GetBotMgr();
+
+        // Verificam daca are boti
+        if (!master->HaveBot())
+            return;
+
+        if (bossLevi && !ColossusPrezent)
+        {
+            if (bossLevi->IsAlive() && bossLevi->GetHealth() > 100000)
             {
-                bossLeviathanTar->SetMaxHealth(1000);
-                bossLeviathanTar->SetHealth(1000);
-                bot->Yell("haha hp 1k.", LANG_UNIVERSAL);
-                bossLeviathanTar->SetInCombatWith(bot);
-                bot->SetInCombatWith(bossLeviathanTar);
-                bot->Attack(bossLeviathanTar, true);
+                bossLevi->SetMaxHealth(100000);
+                bossLevi->SetHealth(100000);
+                bot->Yell("haha 100k hp.", LANG_UNIVERSAL);
+            }
+
+            if (mgr)
+            {
+                // Daca nu sunt deja ascunsi, ii ascundem
+                if (!mgr->GetBotsHidden())
+                {
+                    mgr->SetBotsHidden(true);
+                    ChatHandler(master->GetSession()).PSendSysMessage("|cffff0000[B0ts]:|r Partenerii tai nu sunt eligibili si au fost ascunsi pe durata luptei.");
+                    master->GetSession()->SendNotification("Partenerii tai nu sunt eligibili si au fost ascunsi pe durata luptei.");
+                }
             }
         }
+
+        
     }
     // ulduar end
 
