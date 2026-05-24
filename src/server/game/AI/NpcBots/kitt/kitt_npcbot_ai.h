@@ -18,7 +18,11 @@ namespace KittBotAI
 
     void KittUpdateRaidStrategies(Creature* bot, Player* master); // main start
 
+    // ulduar start
+    void KittHandleFlameLeviathan(Creature* bot, Player* master, bot_ai* ai);
+    // ulduar end
 
+    // icc start
     void KittHandleMarrowgar(Creature* bot, Player* master, bot_ai* ai);
     void KittHandleLadyDeathwhisper(Creature* bot, Player* master, bot_ai* ai);
     void KittHandleGunship(Creature* bot, Player* master, bot_ai* ai);
@@ -31,7 +35,7 @@ namespace KittBotAI
     void KittHandleValithia(Creature* bot, Player* master, bot_ai* ai);
     void KittHandleSindragosa(Creature* bot, Player* master, bot_ai* ai);
     void KittHandleLichKing(Creature* bot, Player* master, bot_ai* ai);
-
+    // icc end
 
 }
 

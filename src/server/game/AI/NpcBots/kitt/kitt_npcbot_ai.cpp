@@ -189,13 +189,17 @@ namespace KittBotAI
         uint32 mapId = master->GetMapId();
         uint32 areaId = master->GetAreaId();
 
-        if (mapId != 631)
+        if (mapId != 603 && mapId != 631)
             return;
 
         InstanceScript* instance = master->GetInstanceScript();
         if (!instance)
             return;
 
+        // ulduar
+        uint32 FlameLeviathan     = static_cast<uint32>(instance->GetBossState(0)); //  DATA_FLAME_LEVIATHAN
+
+        // icc
         uint32 LordMarrStart      = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
         uint32 LadyDeathStart     = static_cast<uint32>(instance->GetBossState(1)); //  DATA_LADY_DEATHWHISPER
         uint32 GunshipStart       = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE
@@ -209,6 +213,21 @@ namespace KittBotAI
         uint32 LichKingStart      = static_cast<uint32>(instance->GetBossState(11)); // DATA_THE_LICH_KING
 
 
+        if (mapId == 603) // ulduar
+        {
+            switch (areaId)
+            {
+                case 4652: // Flame Leviathan
+                {
+                    if (FlameLeviathan == IN_PROGRESS)
+                    {
+                        //KittHandleFlameLeviathan(bot, master, ai); // Flame Leviathan
+                    }
+                    KittHandleFlameLeviathan(bot, master, ai);
+                    break;
+                }
+            }
+        }
 
         if (mapId == 631)
         {
@@ -298,7 +317,42 @@ namespace KittBotAI
         }
     }
 
+    // ulduar start
+    void KittHandleFlameLeviathan(Creature* bot, Player* master, bot_ai* /*ai*/)
+    {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
 
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
+            return;
+
+        uint32 static const bossLeviathan = 33113; //LEVIATHAN
+
+        Creature* bossLeviathanTar = bot->FindNearestCreature(bossLeviathan, 5.0f, true);
+
+        if (bossLeviathanTar && bossLeviathanTar->IsAlive())
+        {
+            if (bot->GetVehicle())
+                return;
+
+            if (bossLeviathanTar->GetHealth() > 1000)
+            {
+                bossLeviathanTar->SetMaxHealth(1000);
+                bossLeviathanTar->SetHealth(1000);
+                bot->Yell("haha hp 1k.", LANG_UNIVERSAL);
+                bossLeviathanTar->SetInCombatWith(bot);
+                bot->SetInCombatWith(bossLeviathanTar);
+                bot->Attack(bossLeviathanTar, true);
+            }
+        }
+    }
+    // ulduar end
+
+    // icc start
     void KittHandleMarrowgar(Creature* bot, Player* master, bot_ai* ai)
     {
         if (!master || !master->IsInWorld() || !master->GetSession())
@@ -3226,6 +3280,6 @@ namespace KittBotAI
             }
         }
     }
-
+    // icc end
 
 }
