@@ -90,8 +90,12 @@ namespace
     static const uint32 EmblemValor    = 40753;
     static const uint32 EmblemReqCount = 100;
     static const uint32 EmblemRewCount = 90;
+    static const uint32 TriumphReqCount = 75;
+    static const uint32 FrostRewCount   = 50;
     static const std::string sEmblemReqCount = std::to_string(EmblemReqCount);
     static const std::string sEmblemRewCount = std::to_string(EmblemRewCount);
+    static const std::string sTriumphReqCount = std::to_string(TriumphReqCount);
+    static const std::string sFrostRewCount = std::to_string(FrostRewCount);
     static const uint32 JetonConquest  = 230020;
     static const uint32 JetonFrost     = 230021;
     static const uint32 JetonHeroism   = 230022;
@@ -207,7 +211,7 @@ enum KittAction
     KITT_ACTION_JETON_H_TO_HEROISM      = 135,   // Jeton to heroism
     KITT_ACTION_JETON_T_TO_TRIUMPH      = 136,   // Jeton to triumph
     KITT_ACTION_JETON_V_TO_VALOR        = 137,   // Jeton to valor
-
+    KITT_ACTION_TRIUMPH_TO_FROST        = 138,   // Convert triumph to frost
 
 
     KITT_ACTION_TFC_ENCHANT_MENU        = 286,
@@ -310,7 +314,8 @@ static const std::array<MainMenuOptionConfirm, 9> KittFunZone = { {
 } };
 
 // exange emblem menu
-static const std::array<MainMenuOptionConfirm, 10> KittExangeEmblem = { {
+static const std::array<MainMenuOptionConfirm, 11> KittExangeEmblem = { {
+        { GOSSIP_ICON_CHAT, "Triumph " + sTriumphReqCount + "x to Frost " + sFrostRewCount + "x",  KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_TRIUMPH_TO_FROST, "Convert?", 0, false},
         { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Conquest",  KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_CONQUEST_TO_JETON_C, "Conquest to Jeton", 0, false},
         { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Frost",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_FROST_TO_JETON_F, "Frost to Jeton", 0, false},
         { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Heroism",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_HEROISM_TO_JETON_H, "Heroism to Jeton", 0, false},
@@ -2809,6 +2814,36 @@ public:
 
                     switch (action)
                     {
+                        // conversie Triumph to Frost
+                        case KITT_ACTION_TRIUMPH_TO_FROST:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(EmblemTriumph) < TriumphReqCount)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai destule Embleme! Ai nevoie de minim %u.", TriumphReqCount);
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, EmblemFrost, FrostRewCount);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, EmblemFrost);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(EmblemTriumph, TriumphReqCount, true);
+                            player->AddItem(EmblemFrost, FrostRewCount);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %ux Triumph pentru %ux Frost!", TriumphReqCount, FrostRewCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
                         // emblems to jeton
                         case KITT_ACTION_CONQUEST_TO_JETON_C:
                         {
