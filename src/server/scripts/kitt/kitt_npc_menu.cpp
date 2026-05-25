@@ -81,6 +81,24 @@ namespace
     // acc kitt for enchant enquip and bags
     static const uint32 kittAcc1 = 2;
     static const uint32 kittAcc2 = 5;
+
+    // exange emblem
+    static const uint32 EmblemConquest = 45624;
+    static const uint32 EmblemFrost    = 49426;
+    static const uint32 EmblemHeroism  = 40752;
+    static const uint32 EmblemTriumph  = 47241;
+    static const uint32 EmblemValor    = 40753;
+    static const uint32 EmblemReqCount = 100;
+    static const uint32 EmblemRewCount = 90;
+    static const std::string sEmblemReqCount = std::to_string(EmblemReqCount);
+    static const std::string sEmblemRewCount = std::to_string(EmblemRewCount);
+    static const uint32 JetonConquest  = 230020;
+    static const uint32 JetonFrost     = 230021;
+    static const uint32 JetonHeroism   = 230022;
+    static const uint32 JetonTriumph   = 230023;
+    static const uint32 JetonValor     = 230024;
+
+
 }
 // stocare valori temporare
 std::map<ObjectGuid, uint32> kitt_select_drop_cooldowns;
@@ -123,7 +141,8 @@ enum KittSender
     KITT_SENDER_TFC_APPLY_ENCHANT_TANK  = 8,
     KITT_SENDER_TFC_APPLY_ENCHANT_CDPS  = 9,
     KITT_SENDER_TFC_APPLY_ENCHANT_HEAL  = 10,
-    KITT_SENDER_TFC_APPLY_ENCHANT_RDPS  = 11
+    KITT_SENDER_TFC_APPLY_ENCHANT_RDPS  = 11,
+    KITT_SENDER_MENU_EXANGE_EMBLEM      = 12
 };
 
 enum KittAutoSender
@@ -177,6 +196,19 @@ enum KittAction
     KITT_ACTION_TFC_BOT_FIX             = 124,   // Reparare bot
     KITT_ACTION_DB_DROP_SHOW            = 125,   // Afiseaza rata de drop
     KITT_ACTION_TFC_BOT_OWNER           = 126,   // Seteaza un nou proprietar
+    KITT_ACTION_MENU_EXANGE_EMBLEM      = 127,   // Menu Exange emblems
+    KITT_ACTION_CONQUEST_TO_JETON_C     = 128,   // emblem of conquest to Jeton
+    KITT_ACTION_FROST_TO_JETON_F        = 129,   // emblem of Frost to Jeton
+    KITT_ACTION_HEROISM_TO_JETON_H      = 130,   // emblem of heroism to Jeton
+    KITT_ACTION_TRIUMPH_TO_JETON_T      = 131,   // emblem of triumph to Jeton
+    KITT_ACTION_VALOR_TO_JETON_V        = 132,   // emblem of valor to Jeton
+    KITT_ACTION_JETON_C_TO_CONQUEST     = 133,   // Jeton to conquest
+    KITT_ACTION_JETON_F_TO_FROST        = 134,   // Jeton to frost
+    KITT_ACTION_JETON_H_TO_HEROISM      = 135,   // Jeton to heroism
+    KITT_ACTION_JETON_T_TO_TRIUMPH      = 136,   // Jeton to triumph
+    KITT_ACTION_JETON_V_TO_VALOR        = 137,   // Jeton to valor
+
+
 
     KITT_ACTION_TFC_ENCHANT_MENU        = 286,
     KITT_ACTION_TFC_ENCHANT_DISMISS     = 287,
@@ -263,7 +295,7 @@ static const std::array<MainMenuOption, 8> KittTeleportTo = { {
     { GOSSIP_ICON_CHAT, "Raid Teleports",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_RAID }
 } };
 // Meniu Fun Zone
-static const std::array<MainMenuOptionConfirm, 8> KittFunZone = { {
+static const std::array<MainMenuOptionConfirm, 9> KittFunZone = { {
     { GOSSIP_ICON_TALK, "Fun Zone (Teleports)",                                    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TELE_FUN_ZONE },
     { GOSSIP_ICON_TAXI, "Fly baby! Fly...",                                        KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_FLY_BABY_FLY },
     { GOSSIP_ICON_BATTLE, "Do Not Press!!! (" + sNuApasaPret + " g)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Are you sure?", NuApasaPret, true},
@@ -271,9 +303,25 @@ static const std::array<MainMenuOptionConfirm, 8> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Clear All Auras & Buffs (" + sResetAllAura + " g)",       KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_RESET_ALL_BUFF, "Clear all spell buffs & auras", ResetAllAura, false},
     { GOSSIP_ICON_CHAT, "Reset All Spell Cooldowns (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all spell cooldowns", ResetAllSpellCd, false},
     { GOSSIP_ICON_CHAT, "Fix b0t (" + sKittBotFix + " g)",                         KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TFC_BOT_FIX, "1. Select the problematic B0t and click 'Accept'. \n2. After repair: use normal cast/fly mount abilities.", KittBotFix, false},
-    { GOSSIP_ICON_CHAT, "Transfer b0t Owner (" + sKittBotNewOwner + " g)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TFC_BOT_OWNER, "To transfer the SELECTED b0t:\n1. Type the receiver's Character Name.\n2. Both characters must be on YOUR account.\n3. Click 'Accept' to pay fee and transfer.", KittBotNewOwner, true},
+    { GOSSIP_ICON_CHAT, "Transfer b0t Owner (" + sKittBotNewOwner + " g)",         KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TFC_BOT_OWNER, "To transfer the SELECTED b0t:\n1. Type the receiver's Character Name.\n2. Both characters must be on YOUR account.\n3. Click 'Accept' to pay fee and transfer.", KittBotNewOwner, true},
+    { GOSSIP_ICON_CHAT, "Exchange Emblems",                                           KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_MENU_EXANGE_EMBLEM},
 
  //   { GOSSIP_ICON_CHAT, "Check Item Drop Location (" + sKittSelectDrop + " g)",    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_DB_DROP_SHOW, "Enter Item ID \nYou will only be charged if results are found.", KittSelectDrop, true}
+} };
+
+// exange emblem menu
+static const std::array<MainMenuOptionConfirm, 10> KittExangeEmblem = { {
+        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Conquest",  KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_CONQUEST_TO_JETON_C, "Conquest to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Frost",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_FROST_TO_JETON_F, "Frost to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Heroism",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_HEROISM_TO_JETON_H, "Heroism to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Triumph",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_TRIUMPH_TO_JETON_T, "Triumph to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Valor",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_VALOR_TO_JETON_V, "Valor to Jeton", 0, false},
+
+        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Conquest",  KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_C_TO_CONQUEST, "Jeton to Conquest", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Frost",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_F_TO_FROST, "Jeton to Frost", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Heroism",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_H_TO_HEROISM, "Jeton to Heroism", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Triumph",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_T_TO_TRIUMPH, "Jeton to Triumph", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Valor",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_V_TO_VALOR, "Jeton to Valor", 0, false},
 } };
 
 // Meniu Instance Reset Cooldown cu confirmare.
@@ -2566,6 +2614,16 @@ public:
                             break;
                         }
 
+                        case KITT_ACTION_MENU_EXANGE_EMBLEM:
+                        {
+                            for (auto const& option : KittExangeEmblem)
+                            {
+                                AddGossipItemFor(player, option.icon, option.name, option.sender, option.action, option.ctext, option.money, option.confirm);
+                            }
+
+                            break;
+                        }
+
                         case KITT_ACTION_NU_APASA:
                         {
                             if (!player->HasEnoughMoney(NuApasaPret))
@@ -2734,6 +2792,315 @@ public:
 
                             return true;
                         }
+
+                        default:
+                            break;
+                    }
+
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<<< Back <<<", KITT_SENDER_OPEN_SUBMENU, KITT_ACTION_MENU_FUN_ZONE);
+                    SendGossipMenuFor(player, KittNpcText::KITT_NPC_HELLO, me->GetGUID());
+                    return true; // Returnam true pentru a confirma afisarea meniului
+                }
+
+                // exange embleme menu
+                case KITT_SENDER_MENU_EXANGE_EMBLEM:
+                {
+                    player->PlayerTalkClass->ClearMenus();
+
+                    switch (action)
+                    {
+                        // emblems to jeton
+                        case KITT_ACTION_CONQUEST_TO_JETON_C:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(EmblemConquest) < EmblemReqCount)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai destule Embleme! Ai nevoie de minim %u.", EmblemReqCount);
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, JetonConquest, 1);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, JetonConquest);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(EmblemConquest, EmblemReqCount, true);
+                            player->AddItem(JetonConquest, 1);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_FROST_TO_JETON_F:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(EmblemFrost) < EmblemReqCount)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai destule Embleme! Ai nevoie de minim %u.", EmblemReqCount);
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, JetonFrost, 1);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, JetonFrost);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(EmblemFrost, EmblemReqCount, true);
+                            player->AddItem(JetonFrost, 1);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_HEROISM_TO_JETON_H:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(EmblemHeroism) < EmblemReqCount)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai destule Embleme! Ai nevoie de minim %u.", EmblemReqCount);
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, JetonHeroism, 1);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, JetonHeroism);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(EmblemHeroism, EmblemReqCount, true);
+                            player->AddItem(JetonHeroism, 1);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_TRIUMPH_TO_JETON_T:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(EmblemTriumph) < EmblemReqCount)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai destule Embleme! Ai nevoie de minim %u.", EmblemReqCount);
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, JetonTriumph, 1);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, JetonTriumph);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(EmblemTriumph, EmblemReqCount, true);
+                            player->AddItem(JetonTriumph, 1);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_VALOR_TO_JETON_V:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(EmblemValor) < EmblemReqCount)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai destule Embleme! Ai nevoie de minim %u.", EmblemReqCount);
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, JetonValor, 1);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, JetonValor);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(EmblemValor, EmblemReqCount, true);
+                            player->AddItem(JetonValor, 1);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        // jeton to emblems
+                        case KITT_ACTION_JETON_C_TO_CONQUEST:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(JetonConquest) < 1)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai Jeton! Ai nevoie de minim 1.");
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, EmblemConquest, EmblemRewCount);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, EmblemConquest);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(JetonConquest, 1, true);
+                            player->AddItem(EmblemConquest, EmblemRewCount);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_JETON_F_TO_FROST:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(JetonFrost) < 1)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai Jeton! Ai nevoie de minim 1.");
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, EmblemFrost, EmblemRewCount);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, EmblemFrost);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(JetonFrost, 1, true);
+                            player->AddItem(EmblemFrost, EmblemRewCount);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_JETON_H_TO_HEROISM:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(JetonHeroism) < 1)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai Jeton! Ai nevoie de minim 1.");
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, EmblemHeroism, EmblemRewCount);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, EmblemHeroism);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(JetonHeroism, 1, true);
+                            player->AddItem(EmblemHeroism, EmblemRewCount);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_JETON_T_TO_TRIUMPH:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(JetonTriumph) < 1)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai Jeton! Ai nevoie de minim 1.");
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, EmblemTriumph, EmblemRewCount);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, EmblemTriumph);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(JetonTriumph, 1, true);
+                            player->AddItem(EmblemTriumph, EmblemRewCount);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_JETON_V_TO_VALOR:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            if (player->GetItemCount(JetonValor) < 1)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai Jeton! Ai nevoie de minim 1.");
+
+                                return true;
+                            }
+
+                            ItemPosCountVec dest;
+                            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, EmblemValor, EmblemRewCount);
+                            if (msg != EQUIP_ERR_OK)
+                            {
+                                player->SendEquipError(msg, nullptr, nullptr, EmblemValor);
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Eroare:|r Nu ai loc in sac.");
+
+                                return true;
+                            }
+
+                            player->DestroyItemCount(JetonValor, 1, true);
+                            player->AddItem(EmblemValor, EmblemRewCount);
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
+                            player->SaveToDB();
+
+                            return true;
+                        }
+
 
                         default:
                             break;
