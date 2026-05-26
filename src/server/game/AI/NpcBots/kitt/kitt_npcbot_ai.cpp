@@ -338,7 +338,7 @@ namespace KittBotAI
 
         std::list<Creature*> NpcList;
         bot->GetCreatureListWithEntryInGrid(NpcList, npcUlduarColossus, 150.0f);
-        NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
+        NpcList.remove_if([](Creature* npc) { return !npc->IsAlive() || !npc->IsInWorld(); });
 
         if (NpcList.empty())
         {
@@ -351,7 +351,7 @@ namespace KittBotAI
         if (!master->HaveBot())
             return;
 
-        if (bossLevi && !ColossusPrezent)
+        if (bossLevi && bossLevi->IsInWorld()  && !ColossusPrezent)
         {
             if (bossLevi->IsAlive() && bossLevi->GetHealth() > 100000)
             {
