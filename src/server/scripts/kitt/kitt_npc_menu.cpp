@@ -316,17 +316,17 @@ static const std::array<MainMenuOptionConfirm, 9> KittFunZone = { {
 // exange emblem menu
 static const std::array<MainMenuOptionConfirm, 11> KittExangeEmblem = { {
         { GOSSIP_ICON_CHAT, "Triumph " + sTriumphReqCount + "x to Frost " + sFrostRewCount + "x",  KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_TRIUMPH_TO_FROST, "Convert?", 0, false},
-        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Conquest",  KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_CONQUEST_TO_JETON_C, "Conquest to Jeton", 0, false},
-        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Frost",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_FROST_TO_JETON_F, "Frost to Jeton", 0, false},
-        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Heroism",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_HEROISM_TO_JETON_H, "Heroism to Jeton", 0, false},
-        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Triumph",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_TRIUMPH_TO_JETON_T, "Triumph to Jeton", 0, false},
-        { GOSSIP_ICON_CHAT, "Buy Jeton with " + sEmblemReqCount + "x Valor",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_VALOR_TO_JETON_V, "Valor to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton Conquest with " + sEmblemReqCount + "x Conquest",           KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_CONQUEST_TO_JETON_C, "Conquest to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton Frost with " + sEmblemReqCount + "x Frost",                 KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_FROST_TO_JETON_F, "Frost to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton Heroism with " + sEmblemReqCount + "x Heroism",             KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_HEROISM_TO_JETON_H, "Heroism to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton Triumph with " + sEmblemReqCount + "x Triumph",             KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_TRIUMPH_TO_JETON_T, "Triumph to Jeton", 0, false},
+        { GOSSIP_ICON_CHAT, "Buy Jeton Valor with " + sEmblemReqCount + "x Valor",                 KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_VALOR_TO_JETON_V, "Valor to Jeton", 0, false},
 
-        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Conquest",  KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_C_TO_CONQUEST, "Jeton to Conquest", 0, false},
-        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Frost",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_F_TO_FROST, "Jeton to Frost", 0, false},
-        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Heroism",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_H_TO_HEROISM, "Jeton to Heroism", 0, false},
-        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Triumph",   KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_T_TO_TRIUMPH, "Jeton to Triumph", 0, false},
-        { GOSSIP_ICON_CHAT, "Sell Jeton for " + sEmblemRewCount + "x Valor",     KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_V_TO_VALOR, "Jeton to Valor", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton Conquest for " + sEmblemRewCount + "x Conquest",           KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_C_TO_CONQUEST, "Jeton to Conquest", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton Frost for " + sEmblemRewCount + "x Frost",                 KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_F_TO_FROST, "Jeton to Frost", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton Heroism for " + sEmblemRewCount + "x Heroism",             KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_H_TO_HEROISM, "Jeton to Heroism", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton Triumph for " + sEmblemRewCount + "x Triumph",             KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_T_TO_TRIUMPH, "Jeton to Triumph", 0, false},
+        { GOSSIP_ICON_CHAT, "Sell Jeton Valor for " + sEmblemRewCount + "x Valor",                 KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_V_TO_VALOR, "Jeton to Valor", 0, false},
 } };
 
 // Meniu Instance Reset Cooldown cu confirmare.
@@ -2839,7 +2839,10 @@ public:
                             player->DestroyItemCount(EmblemTriumph, TriumphReqCount, true);
                             player->AddItem(EmblemFrost, FrostRewCount);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %ux Triumph pentru %ux Frost!", TriumphReqCount, FrostRewCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -2869,7 +2872,10 @@ public:
                             player->DestroyItemCount(EmblemConquest, EmblemReqCount, true);
                             player->AddItem(JetonConquest, 1);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -2898,7 +2904,10 @@ public:
                             player->DestroyItemCount(EmblemFrost, EmblemReqCount, true);
                             player->AddItem(JetonFrost, 1);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -2927,7 +2936,10 @@ public:
                             player->DestroyItemCount(EmblemHeroism, EmblemReqCount, true);
                             player->AddItem(JetonHeroism, 1);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -2956,7 +2968,10 @@ public:
                             player->DestroyItemCount(EmblemTriumph, EmblemReqCount, true);
                             player->AddItem(JetonTriumph, 1);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -2985,7 +3000,10 @@ public:
                             player->DestroyItemCount(EmblemValor, EmblemReqCount, true);
                             player->AddItem(JetonValor, 1);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat %u de Embleme pentru 1x Jeton!", EmblemReqCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -3015,7 +3033,10 @@ public:
                             player->DestroyItemCount(JetonConquest, 1, true);
                             player->AddItem(EmblemConquest, EmblemRewCount);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -3044,7 +3065,10 @@ public:
                             player->DestroyItemCount(JetonFrost, 1, true);
                             player->AddItem(EmblemFrost, EmblemRewCount);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -3073,7 +3097,10 @@ public:
                             player->DestroyItemCount(JetonHeroism, 1, true);
                             player->AddItem(EmblemHeroism, EmblemRewCount);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -3102,7 +3129,10 @@ public:
                             player->DestroyItemCount(JetonTriumph, 1, true);
                             player->AddItem(EmblemTriumph, EmblemRewCount);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
@@ -3131,7 +3161,10 @@ public:
                             player->DestroyItemCount(JetonValor, 1, true);
                             player->AddItem(EmblemValor, EmblemRewCount);
                             ChatHandler(player->GetSession()).PSendSysMessage("|cff00FF00Succes:|r Ai schimbat 1 Jeton pentru %ux Emblems!", EmblemRewCount);
-                            player->SaveToDB();
+
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans);
 
                             return true;
                         }
