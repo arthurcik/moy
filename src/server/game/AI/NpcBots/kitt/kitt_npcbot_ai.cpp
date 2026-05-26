@@ -3195,25 +3195,33 @@ namespace KittBotAI
         // faza sabiei heroic
         if (isInFrostmourneRoom)
         {
+            if (!master)
+            {
+                return;
+            }
+
             bool InProgressFrostmourne = true;
             bool MasterIsInFrostmourne = (master->GetPositionZ() > 940.0f); // 1049
 
             Creature* terenasAnchor = bot->FindNearestCreature(npcTerenasHeroic, 80.0f, true); // apare dupa 2 sec
 
-            if (terenasAnchor && terenasAnchor->HasUnitState(UNIT_STATE_CASTING))
+            if (terenasAnchor && terenasAnchor->IsInWorld() && terenasAnchor->HasUnitState(UNIT_STATE_CASTING))
             {
                 if (Spell const* spell = terenasAnchor->GetCurrentSpell(CURRENT_GENERIC_SPELL))
                 {
-                    uint32 spellcast = spell->GetSpellInfo()->Id;
-
-                    if (spellcast == spellRestoreSouls)
+                    if (spell->GetSpellInfo())
                     {
-                        int32 remainingTime = spell->GetTimer();
+                        uint32 spellcast = spell->GetSpellInfo()->Id;
 
-                        // cand spell are sub 1 secunda de cast
-                        if (remainingTime <= 1000 && remainingTime > 0)
+                        if (spellcast == spellRestoreSouls)
                         {
-                            InProgressFrostmourne = false;
+                            int32 remainingTime = spell->GetTimer();
+
+                            // cand spell are sub 1 secunda de cast
+                            if (remainingTime <= 1000 && remainingTime > 0)
+                            {
+                                InProgressFrostmourne = false;
+                            }
                         }
                     }
                 }
@@ -3247,7 +3255,7 @@ namespace KittBotAI
                 }
             }
 
-            if (InProgressFrostmourne && !MasterIsInFrostmourne)
+            if (terenasAnchor && terenasAnchor->IsInWorld() && InProgressFrostmourne && !MasterIsInFrostmourne)
             {
                 float distToTarget = bot->GetDistance(terenasAnchor);
                 if (distToTarget > 30.0f)
