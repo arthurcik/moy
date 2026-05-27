@@ -806,6 +806,11 @@ namespace KittBotAI
         if (!instance)
             return;
 
+        if (master->GetBotMgr()->GetBotFollowDist() < 100)
+        {
+            master->GetBotMgr()->SetBotFollowDist(100);
+        }
+
         uint32 instanceTeam = static_cast<uint32>(instance->GetData(27)); // icc DATA_TEAM_IN_INSTANCE
         uint32 GunshipStart = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE       = 2,
 
