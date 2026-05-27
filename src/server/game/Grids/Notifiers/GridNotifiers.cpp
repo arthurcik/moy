@@ -34,6 +34,10 @@ void VisibleNotifier::SendToSelf()
     {
         for (Transport::PassengerSet::const_iterator itr = transport->GetPassengers().begin(); itr != transport->GetPassengers().end(); ++itr)
         {
+            // kitt start
+            if (!*itr || !(*itr)->IsInWorld())
+                continue;
+            // kitt end
             if (vis_guids.find((*itr)->GetGUID()) != vis_guids.end())
             {
                 vis_guids.erase((*itr)->GetGUID());
