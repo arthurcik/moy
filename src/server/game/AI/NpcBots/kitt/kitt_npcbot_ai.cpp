@@ -2386,6 +2386,11 @@ namespace KittBotAI
                     uint32(bot->GetMotionMaster()->GetCurrentMovementGeneratorType()));
             }*/
 
+            if (master->GetBotMgr()->GetBotFollowDist() < 100)
+            {
+                master->GetBotMgr()->SetBotFollowDist(100);
+            }
+
             bool isWinter = (bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter));
             bool isWinterStart = false;
             // cand face cast sa fuga toti
@@ -3195,11 +3200,6 @@ namespace KittBotAI
         // faza sabiei heroic
         if (isInFrostmourneRoom)
         {
-            if (!master)
-            {
-                return;
-            }
-
             bool InProgressFrostmourne = true;
             bool MasterIsInFrostmourne = (master->GetPositionZ() > 940.0f); // 1049
 
