@@ -20,6 +20,8 @@ namespace KittBotAI
 
     // ulduar start
     void KittHandleFlameLeviathan(Creature* bot, Player* master, bot_ai* ai);
+
+    void KittHandleHodir(Creature* bot, Player* master, bot_ai* ai);
     // ulduar end
 
     // icc start

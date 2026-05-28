@@ -374,6 +374,20 @@ namespace KittBotAI
 
         
     }
+
+    void KittHandleHodir(Creature* bot, Player* master, bot_ai* /*ai*/)
+    {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
+            return;
+
+    }
     // ulduar end
 
     // icc start
@@ -3302,7 +3316,8 @@ namespace KittBotAI
                         bot->StopMoving();
                     }
                 }
-                else if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
+
+                if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
                 {
                     if (MovementGenerator* currentGen = bot->GetMotionMaster()->GetCurrentMovementGenerator())
                     {
@@ -3310,7 +3325,7 @@ namespace KittBotAI
                         {
                             if (pointGen->GetId() == 1)
                             {
-                                //bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
                                 bot->StopMoving();
                                 bot->GetMotionMaster()->MoveIdle();
                             }
