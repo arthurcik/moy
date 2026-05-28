@@ -2369,7 +2369,7 @@ namespace KittBotAI
             }
         }
 
-        if (Creature* bossLichK = bot->FindNearestCreature(npcBossLichKing, 150.0f, true))
+        if (Creature* bossLichK = bot->FindNearestCreature(npcBossLichKing, 120.0f, true))
         {
             // debug movement
             /*if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
@@ -3130,8 +3130,11 @@ namespace KittBotAI
                         {
                             if (bossLichK->GetHealthPct() > 95.0f)
                             {
-                                bot->RemoveAura(spellHarvestSoulStartHC);
-                                bot->RemoveAura(spellHarvestSouls);
+                                if (bot->HasAura(spellHarvestSoulStartHC) || bot->HasAura(spellHarvestSouls))
+                                {
+                                    bot->RemoveAura(spellHarvestSoulStartHC);
+                                    bot->RemoveAura(spellHarvestSouls);
+                                }
                             }
 
                             // setam Diamond
@@ -3188,7 +3191,7 @@ namespace KittBotAI
                     }
                 }
 
-                if (!iconRezervat)
+                if (!iconRezervat && !bot->HasAura(spellHarvestSouls))
                 {
                     if (gr)
                     {
