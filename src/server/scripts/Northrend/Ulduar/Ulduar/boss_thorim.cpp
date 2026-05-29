@@ -874,6 +874,75 @@ class boss_thorim : public CreatureScript
 
             void SummonWave()
             {
+                // Coordonatele centrului arenei din codul t?u
+                float const centerCharX = 2134.77f;
+                float const centerCharY = -262.307f;
+                float const arenaFloorZ = 419.845f;
+                float const spawnRadius = 40.0f; // Perimetrul de 40 de metri solicitat
+
+                switch (_waveType)
+                {
+                case 0:
+                {
+                    // Dark Rune Commoner
+                    std::list<Creature*> triggers;
+                    GetTrashSpawnTriggers(triggers, urand(5, 6));
+
+                    for (Creature* bunny : triggers)
+                    {
+                        // Calcul?m unghiul matematic folosind func?ia global? atan2 din C++ între bunny ?i centru
+                        float angle = std::atan2(centerCharY - bunny->GetPositionY(), centerCharX - bunny->GetPositionX());
+
+                        float x = centerCharX + spawnRadius * std::cos(angle);
+                        float y = centerCharY + spawnRadius * std::sin(angle);
+                        float orientation = angle + M_PI; // Întors spre interiorul arenei
+
+                        me->SummonCreature(StaticThorimTrashInfo[6 + 3].Entry, x, y, arenaFloorZ, orientation, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3s);
+                    }
+
+                    ++_waveType;
+                    break;
+                }
+                case 1:
+                    if (urand(0, 1))
+                    {
+                        // Dark Rune Champion or Dark Rune Evoker
+                        std::list<Creature*> triggers;
+                        GetTrashSpawnTriggers(triggers, urand(2, 4));
+
+                        for (Creature* bunny : triggers)
+                        {
+                            float angle = std::atan2(centerCharY - bunny->GetPositionY(), centerCharX - bunny->GetPositionX());
+                            float x = centerCharX + spawnRadius * std::cos(angle);
+                            float y = centerCharY + spawnRadius * std::sin(angle);
+                            float orientation = angle + M_PI;
+
+                            me->SummonCreature(StaticThorimTrashInfo[6 + RAND(0, 2)].Entry, x, y, arenaFloorZ, orientation, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3s);
+                        }
+                    }
+                    else
+                    {
+                        // Dark Rune Warbringer
+                        std::list<Creature*> triggers;
+                        GetTrashSpawnTriggers(triggers);
+
+                        for (Creature* bunny : triggers)
+                        {
+                            float angle = std::atan2(centerCharY - bunny->GetPositionY(), centerCharX - bunny->GetPositionX());
+                            float x = centerCharX + spawnRadius * std::cos(angle);
+                            float y = centerCharY + spawnRadius * std::sin(angle);
+                            float orientation = angle + M_PI;
+
+                            me->SummonCreature(StaticThorimTrashInfo[6 + 1].Entry, x, y, arenaFloorZ, orientation, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3s);
+                        }
+                    }
+                    --_waveType;
+                    break;
+                }
+            }
+
+            /*void SummonWave()
+            {
                 switch (_waveType)
                 {
                     case 0:
@@ -910,7 +979,7 @@ class boss_thorim : public CreatureScript
                         --_waveType;
                         break;
                 }
-            }
+            }*/
 
             bool CanStartPhase2(Unit* actor) const
             {
