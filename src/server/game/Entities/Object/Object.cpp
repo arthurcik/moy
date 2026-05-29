@@ -2230,6 +2230,10 @@ Unit* WorldObject::GetOwner() const
     // kitt - protectie de baza daca obiectul curent e corupt
     if ((uintptr_t)this < 0x1000)
         return nullptr;
+
+    ObjectGuid ownerGuid = GetOwnerGUID();
+    if (!ownerGuid)
+        return nullptr;
     // ---- end
     return ObjectAccessor::GetUnit(*this, GetOwnerGUID());
 }
