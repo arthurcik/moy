@@ -214,6 +214,7 @@ namespace KittBotAI
         // ulduar
         uint32 FlameLeviathan     = static_cast<uint32>(instance->GetBossState(0)); //  DATA_FLAME_LEVIATHAN
         uint32 Hodir              = static_cast<uint32>(instance->GetBossState(7)); // DATA_HODIR
+        uint32 Freya              = static_cast<uint32>(instance->GetBossState(9)); // DATA_FREYA
 
         // icc
         uint32 LordMarrStart      = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
@@ -248,6 +249,15 @@ namespace KittBotAI
                     if (Hodir == IN_PROGRESS)
                     {
                         KittHandleHodir(bot, master, ai); // Hodir
+                    }
+                    break;
+                }
+
+                case 4656:
+                {
+                    if (Freya == IN_PROGRESS)
+                    {
+                        KittHandleFreya(bot, master, ai); // Freya
                     }
                     break;
                 }
@@ -704,6 +714,95 @@ namespace KittBotAI
 
         }
 
+
+    }
+
+    void KittHandleFreya(Creature* bot, Player* master, bot_ai* ai)
+    {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
+            return;
+
+
+        uint32 static const npcIronRoots = 33088;
+
+
+        if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+        {
+            std::list<Creature*> NpcList;
+            bot->GetCreatureListWithEntryInGrid(NpcList, npcIronRoots, 50.0f);
+            NpcList.remove_if([](Creature* npc) { return !npc->IsAlive() || !npc->IsInWorld(); });
+
+            if (!NpcList.empty())
+            {
+                Creature* NpcTar = nullptr;
+                bool iconExist = false;
+                uint8 iconIndex = 5; // patrat
+                ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex];
+
+                NpcList.sort([](Creature* a, Creature* b) {
+                    return a->GetGUID() < b->GetGUID();
+                    });
+
+                for (Creature* s : NpcList)
+                {
+                    if (!s->IsAlive()) continue;
+
+                    if (s->GetGUID() == currentIconGuid)
+                    {
+                        iconExist = true;
+                        NpcTar = s;
+                        break;
+                    }
+                }
+
+                if (!iconExist && gr)
+                {
+                    for (Creature* s : NpcList)
+                    {
+                        s = NpcList.front();
+
+                        if (s->IsAlive())
+                        {
+                            NpcTar = s;
+                            gr->SetTargetIcon(iconIndex, bot->GetGUID(), NpcTar->GetGUID());
+                        }
+
+                        break;
+                    }
+                }
+
+                if (NpcTar && NpcTar->IsAlive())
+                {
+                    if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
+                    {
+                        return;
+                    }
+
+                    if (bot->GetVictim() != NpcTar)
+                    {
+                        if (ai->HasRole(BOT_ROLE_RANGED))
+                        {
+                            bot->Attack(NpcTar, false);
+                            bot->GetMotionMaster()->MoveChase(NpcTar, 15);
+                        }
+                        else
+                        {
+                            bot->Attack(NpcTar, true);
+                            bot->GetMotionMaster()->MoveChase(NpcTar);
+                        }
+                        ai->AttackStart(NpcTar);
+                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                    }
+                }
+            }
+        }
 
     }
     // ulduar end
