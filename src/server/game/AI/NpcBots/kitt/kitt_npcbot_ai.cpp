@@ -419,7 +419,7 @@ namespace KittBotAI
         time_t currentTimeMS = GameTime::GetGameTimeMS();
 
         uint32 static const bossHodir = 32845;
-        uint32 static const npcIcicleTarget = 33174; // nu face nimic, doar tinta
+        //uint32 static const npcIcicleTarget = 33174; // nu face nimic, doar tinta
         uint32 static const npcIcicle = 33169; // turturi cad
         uint32 static const npcIcicleSnowpacked = 33173; // turturi sa stai pe el
         //uint32 static const npcFlashFreeze = 32926; // con gheata
