@@ -28,6 +28,21 @@
 
 namespace
 {
+    // --- Ulduar
+    // Hodir
+    struct SnowPileData
+    {
+        float x;
+        float y;
+        float z;
+        bool posSalvat;
+        uint32 timpExplozie;
+        bool fazaExplozieActiva;
+    };
+
+    static std::map<uint32, SnowPileData> posIcicleSnow;
+    // -------------
+
     // Lich King.
     static std::map<ObjectGuid, uint32> teleportCooldownMap; // map for cd
     static uint32 const TELEPORT_CD = 1000; // in ms / 1 secunde intre teleportari pentru acelasi obiect
@@ -198,6 +213,7 @@ namespace KittBotAI
 
         // ulduar
         uint32 FlameLeviathan     = static_cast<uint32>(instance->GetBossState(0)); //  DATA_FLAME_LEVIATHAN
+        uint32 Hodir              = static_cast<uint32>(instance->GetBossState(7)); // DATA_HODIR
 
         // icc
         uint32 LordMarrStart      = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
@@ -224,6 +240,15 @@ namespace KittBotAI
                         //KittHandleFlameLeviathan(bot, master, ai); // Flame Leviathan
                     }
                     KittHandleFlameLeviathan(bot, master, ai);
+                    break;
+                }
+
+                case 4273:
+                {
+                    if (Hodir == IN_PROGRESS)
+                    {
+                        KittHandleHodir(bot, master, ai); // Hodir
+                    }
                     break;
                 }
             }
@@ -375,7 +400,7 @@ namespace KittBotAI
         
     }
 
-    void KittHandleHodir(Creature* bot, Player* master, bot_ai* /*ai*/)
+    void KittHandleHodir(Creature* bot, Player* master, bot_ai* ai)
     {
         if (!master || !master->IsInWorld() || !master->GetSession())
             return;
@@ -386,6 +411,299 @@ namespace KittBotAI
         Group* gr = master->GetGroup();
         if (!gr)
             return;
+
+        uint32 currentInstanceId = bot->GetMap()->GetInstanceId();
+        if (!currentInstanceId)
+            return;
+
+        time_t currentTimeMS = GameTime::GetGameTimeMS();
+
+        uint32 static const bossHodir = 32845;
+        uint32 static const npcIcicleTarget = 33174; // nu face nimic, doar tinta
+        uint32 static const npcIcicle = 33169; // turturi cad
+        uint32 static const npcIcicleSnowpacked = 33173; // turturi sa stai pe el
+        //uint32 static const npcFlashFreeze = 32926; // con gheata
+        //uint32 static const npcFlashFreezeAliati = 32938; // con gheata aliati
+
+
+        uint32 static const spellBitingCold = 62039; // aura
+        uint32 static const spellFlashFreeze = 61968;
+
+        float static const centerX = 2000.70f;
+        float static const centerY = -234.08f;
+        float static const centerZ = 432.90f;
+
+        
+        if (Creature* HodirTar = bot->FindNearestCreature(bossHodir, 120.0f, true))
+        {
+            bool mergePeZapada = false;
+
+            // sa ma pun pe zapada
+            if (Creature* snowPile = bot->FindNearestCreature(npcIcicleSnowpacked, 100.0f, true))
+            {
+                if (posIcicleSnow[currentInstanceId].posSalvat == false)
+                {
+                    posIcicleSnow[currentInstanceId].x = snowPile->GetPositionX();
+                    posIcicleSnow[currentInstanceId].y = snowPile->GetPositionY();
+                    posIcicleSnow[currentInstanceId].z = snowPile->GetPositionZ();
+                    posIcicleSnow[currentInstanceId].posSalvat = true;
+                    posIcicleSnow[currentInstanceId].fazaExplozieActiva = false;
+                    posIcicleSnow[currentInstanceId].timpExplozie = 0;
+                }
+            }
+
+            if (posIcicleSnow[currentInstanceId].posSalvat == true)
+            {
+                if (HodirTar->HasUnitState(UNIT_STATE_CASTING))
+                {
+                    if (Spell const* currentSpell = HodirTar->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                    {
+                        if (currentSpell->GetSpellInfo() && currentSpell->GetSpellInfo()->Id == spellFlashFreeze)
+                        {
+                            float targetX = posIcicleSnow[currentInstanceId].x;
+                            float targetY = posIcicleSnow[currentInstanceId].y;
+                            float targetZ = posIcicleSnow[currentInstanceId].z;
+
+                            int32 remainingTime = currentSpell->GetTimer();
+                            if (remainingTime <= 2000)
+                            {
+                                mergePeZapada = true;
+
+                                /*if (bot->IsNonMeleeSpellCast(true))
+                                {
+                                    bot->InterruptNonMeleeSpells(true);
+                                }
+
+                                bot->AttackStop();*/
+                                if (!ai->HasBotCommandState(BOT_COMMAND_STAY))
+                                {
+                                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                    ai->SetBotCommandState(BOT_COMMAND_STAY);
+
+                                    bot->NearTeleportTo(targetX, targetY, targetZ + 1.5f, bot->GetOrientation());
+                                }
+                                //bot->AddUnitState(UNIT_STATE_ROOT);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (posIcicleSnow[currentInstanceId].fazaExplozieActiva == false)
+                    {
+                        posIcicleSnow[currentInstanceId].timpExplozie = currentTimeMS;
+                        posIcicleSnow[currentInstanceId].fazaExplozieActiva = true;
+                    }
+
+                    if (posIcicleSnow[currentInstanceId].fazaExplozieActiva == true)
+                    {
+                        // intarziere de a le da drumul
+                        if (currentTimeMS >= (static_cast<long long>(posIcicleSnow[currentInstanceId].timpExplozie) + 2000))
+                        {
+                            if (bot->HasUnitState(UNIT_STATE_ROOT))
+                            {
+                                bot->ClearUnitState(UNIT_STATE_ROOT);
+                            }
+
+                            if (ai->HasBotCommandState(BOT_COMMAND_STAY))
+                            {
+                                ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+                            }
+
+                            posIcicleSnow[currentInstanceId].posSalvat = false;
+                            posIcicleSnow[currentInstanceId].fazaExplozieActiva = false;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (bot->HasUnitState(UNIT_STATE_ROOT))
+                {
+                    bot->ClearUnitState(UNIT_STATE_ROOT);
+                }
+
+                if (ai->HasBotCommandState(BOT_COMMAND_STAY))
+                {
+                    ai->RemoveBotCommandState(BOT_COMMAND_STAY);
+                }
+            }
+
+            // miscate sa te incalzesti
+            if (!mergePeZapada && (posIcicleSnow[currentInstanceId].fazaExplozieActiva == false))
+            {
+                if (Aura* bitingCold = bot->GetAura(spellBitingCold))
+                {
+                    static std::map<uint32, bool> bitingColdStack;
+                    uint32 botLowGUID = bot->GetGUID().GetCounter();
+
+                    if (bitingCold->GetStackAmount() >= 2)
+                    {
+                        bitingColdStack[botLowGUID] = true;
+                    }
+                    else
+                    {
+                        if (bitingCold->GetStackAmount() < 1)
+                        {
+                            bitingColdStack[botLowGUID] = false;
+                        }
+
+                    }
+
+                    if (bitingColdStack[botLowGUID])
+                    {
+                        if (bot->IsNonMeleeSpellCast(true))
+                        {
+                            bot->InterruptNonMeleeSpells(true);
+                        }
+
+                        bot->AttackStop();
+                        //bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+
+                        float randomAngle = frand(0.0f, 2.0f * (float)M_PI);
+                        float runDist = 3.0f;
+                        float x = bot->GetPositionX() + (runDist * std::cos(randomAngle));
+                        float y = bot->GetPositionY() + (runDist * std::sin(randomAngle));
+
+                        float dxCheck = x - centerX;
+                        float dyCheck = y - centerY;
+                        if (std::sqrt(dxCheck * dxCheck + dyCheck * dyCheck) <= 40.0f)
+                        {
+                            bot->GetMotionMaster()->MovePoint(105, x, y, bot->GetPositionZ());
+                            //return;
+                        }
+                    }
+                }
+            }
+
+            // ataca con gheata
+            /*if (!mergePeZapada && !ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+            {
+                std::list<Creature*> NpcList;
+                bot->GetCreatureListWithEntryInGrid(NpcList, npcFlashFreeze, 50.0f);
+                NpcList.remove_if([](Creature* npc) { return !npc->IsAlive() || !npc->IsInWorld(); });
+                if (NpcList.empty())
+                {
+                    bot->GetCreatureListWithEntryInGrid(NpcList, npcFlashFreezeAliati, 50.0f);
+                    NpcList.remove_if([](Creature* npc) { return !npc->IsAlive() || !npc->IsInWorld(); });
+                }
+
+                if (!NpcList.empty())
+                {
+                    Creature* NpcTar = nullptr;
+                    bool iconExist = false;
+                    uint8 iconIndex = 5; // patrat
+                    ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex];
+
+                    NpcList.sort([](Creature* a, Creature* b) {
+                        return a->GetGUID() < b->GetGUID();
+                        });
+
+                    for (Creature* s : NpcList)
+                    {
+                        if (!s->IsAlive()) continue;
+
+                        if (s->GetGUID() == currentIconGuid)
+                        {
+                            iconExist = true;
+                            NpcTar = s;
+                            break;
+                        }
+                    }
+
+                    if (!iconExist && gr)
+                    {
+                        for (Creature* s : NpcList)
+                        {
+                            s = NpcList.front();
+
+                            if (s->IsAlive())
+                            {
+                                NpcTar = s;
+                                gr->SetTargetIcon(iconIndex, bot->GetGUID(), NpcTar->GetGUID());
+                            }
+
+                            break;
+                        }
+                    }
+                }
+            }*/
+
+            // Turturii cad
+            if (!mergePeZapada && (posIcicleSnow[currentInstanceId].fazaExplozieActiva == false))
+            {
+                float currentDistToCenter = bot->GetDistance2d(centerX, centerY);
+                if (currentDistToCenter > 40.0f)
+                {
+                    float safeX = centerX;
+                    float safeY = centerY;
+
+                    std::list<Creature*> centerIcicles;
+                    bot->GetCreatureListWithEntryInGrid(centerIcicles, npcIcicle, 50.0f);
+
+                    for (int i = 0; i < 4; ++i)
+                    {
+                        float offsetAngle = (i * M_PI / 2);
+                        float testX = centerX + (5.0f * std::cos(offsetAngle));
+                        float testY = centerY + (5.0f * std::sin(offsetAngle));
+                        bool testPointBlocked = false;
+
+                        for (Creature* t : centerIcicles)
+                        {
+                            if (!t || !t->IsAlive()) continue;
+                            float dx = testX - t->GetPositionX();
+                            float dy = testY - t->GetPositionY();
+                            if (std::sqrt(dx * dx + dy * dy) < 5.5f)
+                            {
+                                testPointBlocked = true;
+                                break;
+                            }
+                        }
+
+                        if (!testPointBlocked)
+                        {
+                            safeX = testX;
+                            safeY = testY;
+                            break;
+                        }
+                    }
+
+                    if (bot->IsNonMeleeSpellCast(true))
+                    {
+                        bot->InterruptNonMeleeSpells(true);
+                    }
+
+                    bot->AttackStop();
+                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                    bot->NearTeleportTo(safeX, safeY, centerZ, bot->GetOrientation());
+                    if (HodirTar && HodirTar->IsInWorld() && HodirTar->GetVictim() == bot)
+                    {
+                        HodirTar->NearTeleportTo(safeX, safeY, centerZ, HodirTar->GetOrientation());
+                    }
+                    return;
+                }
+
+                if (Creature* trapIcicle = bot->FindNearestCreature(npcIcicle, 5.5f, true))
+                {
+                    if (bot->IsNonMeleeSpellCast(true))
+                    {
+                        bot->InterruptNonMeleeSpells(true);
+                    }
+
+                    bot->AttackStop();
+                    bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+
+                    float angle = trapIcicle->GetAbsoluteAngle(bot);
+                    float runDist = 6.0f;
+                    float x = bot->GetPositionX() + (runDist * std::cos(angle));
+                    float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+                    bot->GetMotionMaster()->MovePoint(102, x, y, bot->GetPositionZ());
+                }
+            }
+
+        }
+
 
     }
     // ulduar end
