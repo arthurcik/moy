@@ -33,8 +33,8 @@ namespace KittBotExpireException
         switch (accountId)
         {
             case 2:   // test1
+            case 3:   // Gutza test2
             case 5:   // titel
-            case 8:   // gutza
             case 26:  // test0
             case 31:  // PALAKISS
             {
