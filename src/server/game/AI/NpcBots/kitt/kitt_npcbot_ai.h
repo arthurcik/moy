@@ -12,6 +12,11 @@ class Player;
 class Creature;
 class bot_ai;
 
+namespace KittBotExpireException
+{
+    bool KittIsExempt(uint32 accountId);
+}
+
 namespace KittBotAI
 {
     bool IsSafeToCure(Unit* target, Creature* bot); // for dispell

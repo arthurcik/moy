@@ -26,6 +26,27 @@
 //#include "botcommon.h"
 
 
+namespace KittBotExpireException
+{
+    bool KittIsExempt(uint32 accountId)
+    {
+        switch (accountId)
+        {
+            case 2:   // test1
+            case 5:   // titel
+            case 8:   // gutza
+            case 26:  // test0
+            case 31:  // PALAKISS
+            {
+                return true;
+            }
+
+            default:
+                return false;
+        }
+    }
+}
+
 namespace
 {
     // --- Ulduar

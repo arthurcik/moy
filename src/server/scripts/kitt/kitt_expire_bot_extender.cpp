@@ -1,4 +1,4 @@
-#include "ScriptMgr.h"
+/**#include "ScriptMgr.h"
 #include "Player.h"
 #include "DatabaseEnv.h"
 #include "GameTime.h"
@@ -43,3 +43,4 @@ void AddSC_kitt_expire_bot_extender()
 {
     new kitt_expire_bot_extender();
 }
+**/

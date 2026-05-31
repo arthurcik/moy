@@ -522,13 +522,20 @@ void bot_ai::CheckOwnerExpiry()
         return;
 
     ObjectGuid ownerGuid = ObjectGuid::Create<HighGuid::Player>(_botData->owner);
+    // ================= kitt expire exception start ===============
+    uint32 accId = sCharacterCache->GetCharacterAccountIdByGuid(ownerGuid);
+    if (KittBotExpireException::KittIsExempt(accId))
+    {
+        return;
+    }
+    // ================= kitt expire exception end =================
     time_t timeNow = time(nullptr);
     time_t expireTime = time_t(BotMgr::GetOwnershipExpireTime());
     time_t baseTimeStamp;
 
     if (BotMgr::GetOwnershipExpireMode() == BOT_OWNERSHIP_EXPIRE_OFFLINE)
     {
-        uint32 accId = sCharacterCache->GetCharacterAccountIdByGuid(ownerGuid);
+        //uint32 accId = sCharacterCache->GetCharacterAccountIdByGuid(ownerGuid);
         QueryResult result = accId ? CharacterDatabase.PQuery("SELECT MAX(logout_time) FROM characters WHERE account = {}", accId) : nullptr;
 
         //Field* fields = result ? result->Fetch() : nullptr;
