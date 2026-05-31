@@ -14,6 +14,7 @@ class bot_ai;
 
 namespace KittBotExpireException
 {
+    void LoadKittBotExceptions();
     bool KittIsExempt(uint32 accountId);
 }
 

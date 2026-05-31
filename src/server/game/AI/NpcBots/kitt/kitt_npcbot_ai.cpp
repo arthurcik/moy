@@ -28,6 +28,106 @@
 
 namespace KittBotExpireException
 {
+    struct BotExemptInfo
+    {
+        uint32 durationDays;
+        std::time_t expireTime;
+    };
+
+    typedef std::unordered_map<uint32, BotExemptInfo> BotExceptionMap;
+    static BotExceptionMap m_KittExemptMap;
+
+    void LoadKittBotExceptions()
+    {
+        m_KittExemptMap.clear();
+
+        //std::time_t now = static_cast<std::time_t>(GameTime::GetGameTime());
+
+        QueryResult result = CharacterDatabase.Query("SELECT account_id, duration_days, UNIX_TIMESTAMP(date_added) FROM character_kitt_bot_exceptions");
+
+        if (!result)
+        {
+            TC_LOG_INFO("server.loading", ">> KITT [Bot expire exception] Incarcat 0 exceptii KittBot. Tabelul este gol.");
+            return;
+        }
+
+        uint32 count = 0;
+
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 accountId = fields[0].GetUInt32();
+            uint32 durationDays = fields[1].GetUInt32();
+            std::time_t dateAdded = (std::time_t)fields[2].GetUInt64();
+
+            BotExemptInfo info{};
+            info.durationDays = durationDays;
+
+            if (durationDays == 0)
+            {
+                info.expireTime = 0;
+            }
+            else
+            {
+                info.expireTime = dateAdded + (static_cast<long long>(durationDays) * 24 * 60 * 60);
+            }
+
+            /*if (info.expireTime == 0 || info.expireTime > now)
+            { // doar conturi ne expirate
+                m_KittExemptMap[accountId] = info;
+                count++;
+            }*/
+
+            // incarcam tot
+            m_KittExemptMap[accountId] = info;
+            count++;
+
+        } while (result->NextRow());
+
+        TC_LOG_INFO("server.loading", ">> KITT [Bot expire exception] Incarcat {} exceptii KittBot din baza de date", count);
+    }
+
+    bool KittIsExempt(uint32 accountId)
+    {
+        BotExceptionMap::iterator itr = m_KittExemptMap.find(accountId);
+
+        if (itr == m_KittExemptMap.end())
+        {
+            // nu se afla in lista
+            //TC_LOG_ERROR("kitt", "return false for: {} nu este in lista", accountId);
+            return false;
+        }
+
+        if (itr->second.expireTime == 0)
+        {
+            // daca exista in db si e setat pe 0 (permanent)
+            //TC_LOG_ERROR("kitt", "return true for: {} este in lista permanent", accountId);
+            return true;
+        }
+
+        if (static_cast<std::time_t>(GameTime::GetGameTime()) > itr->second.expireTime)
+        {
+            // daca timpul a trecut dar exista in db
+            //TC_LOG_ERROR("kitt", "return false for: {} timp expirat", accountId);
+
+            // STERGERE DIN BAZA DE DATE (Asincron - nu provoaca lag pe server)
+            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+            trans->PAppend("DELETE FROM character_kitt_bot_exceptions WHERE account_id = {}", accountId);
+            CharacterDatabase.AsyncCommitTransaction(trans);
+
+            // STERGERE DIN MEMORIA RAM
+            m_KittExemptMap.erase(itr);
+
+            return false;
+        }
+
+        //TC_LOG_ERROR("kitt", "return true for: {} este in DB, nu a expirat timpul.", accountId);
+        return true;
+    }
+}
+
+/*namespace KittBotExpireException
+{
     bool KittIsExempt(uint32 accountId)
     {
         switch (accountId)
@@ -45,7 +145,7 @@ namespace KittBotExpireException
                 return false;
         }
     }
-}
+}*/
 
 namespace
 {
