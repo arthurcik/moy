@@ -29,6 +29,7 @@
 #include "bot_ai.h"
 #include "CharacterCache.h"
 #include "botdatamgr.h"
+#include "kitt_npcbot_ai.h"
 
 
 /*enum kittGossipOptionIcon : uint8
@@ -47,6 +48,7 @@
 namespace
 {
     static uint32 sKittNpcMenuBotTransferEnable = 0;
+    static uint32 sKittNpcMenuBotValability     = 0;
 
     static std::string KittResetCode = "RESET"; // Valoare default config
     static std::string KittNuApasaCode = "fun"; // default Fun Zone NuApasa
@@ -102,6 +104,14 @@ namespace
     static const uint32 JetonTriumph   = 230023;
     static const uint32 JetonValor     = 230024;
 
+    // B0t Valability
+    static const uint64 KittBotValability10 = 10000 * 10000;   // 10 day 10k gold
+    static const uint64 KittBotValability15 = 15000 * 10000;   // 15 day 15k gold
+    static const uint64 KittBotValability20 = 20000 * 10000;   // 20 day 20k gold
+    static const std::string sKittBotValability10 = std::to_string(KittBotValability10 / 10000);
+    static const std::string sKittBotValability15 = std::to_string(KittBotValability15 / 10000);
+    static const std::string sKittBotValability20 = std::to_string(KittBotValability20 / 10000);
+
 
 }
 // stocare valori temporare
@@ -118,7 +128,8 @@ namespace KittNpcText
     {
         KITT_NPC_HELLO                = 90014,
         KITT_INSTANCE_RESET           = 90015,
-        KITT_DROP_SELECT              = 90016
+        KITT_DROP_SELECT              = 90016,
+        KITT_BOT_VALABILITY           = 90017
         //KITT_INSTANCE_RESET_NO_SHOW   = 90016
     };
 
@@ -126,7 +137,8 @@ namespace KittNpcText
     static const std::vector<uint32> KittAllNpcTexts = {
         KITT_NPC_HELLO,
         KITT_INSTANCE_RESET,
-        KITT_DROP_SELECT
+        KITT_DROP_SELECT,
+        KITT_BOT_VALABILITY
         //KITT_INSTANCE_RESET_NO_SHOW
     };
 }
@@ -146,7 +158,8 @@ enum KittSender
     KITT_SENDER_TFC_APPLY_ENCHANT_CDPS  = 9,
     KITT_SENDER_TFC_APPLY_ENCHANT_HEAL  = 10,
     KITT_SENDER_TFC_APPLY_ENCHANT_RDPS  = 11,
-    KITT_SENDER_MENU_EXANGE_EMBLEM      = 12
+    KITT_SENDER_MENU_EXANGE_EMBLEM      = 12,
+    KITT_SENDER_MENU_BOT_VALABILITY     = 13
 };
 
 enum KittAutoSender
@@ -212,6 +225,10 @@ enum KittAction
     KITT_ACTION_JETON_T_TO_TRIUMPH      = 136,   // Jeton to triumph
     KITT_ACTION_JETON_V_TO_VALOR        = 137,   // Jeton to valor
     KITT_ACTION_TRIUMPH_TO_FROST        = 138,   // Convert triumph to frost
+    KITT_ACTION_MENU_BOT_VALABILITY     = 139,   // menu B0t Valability
+    KITT_ACTION_BOT_VALABILITY_10_DAY   = 140,
+    KITT_ACTION_BOT_VALABILITY_15_DAY   = 141,
+    KITT_ACTION_BOT_VALABILITY_20_DAY   = 142,
 
 
     KITT_ACTION_TFC_ENCHANT_MENU        = 286,
@@ -299,7 +316,7 @@ static const std::array<MainMenuOption, 8> KittTeleportTo = { {
     { GOSSIP_ICON_CHAT, "Raid Teleports",            KITT_SENDER_TELEPORT_TO,     KITT_ACTION_MENU_RAID }
 } };
 // Meniu Fun Zone
-static const std::array<MainMenuOptionConfirm, 9> KittFunZone = { {
+static const std::array<MainMenuOptionConfirm, 10> KittFunZone = { {
     { GOSSIP_ICON_TALK, "Fun Zone (Teleports)",                                    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TELE_FUN_ZONE },
     { GOSSIP_ICON_TAXI, "Fly baby! Fly...",                                        KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_FLY_BABY_FLY },
     { GOSSIP_ICON_BATTLE, "Do Not Press!!! (" + sNuApasaPret + " g)",              KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_NU_APASA, "Are you sure?", NuApasaPret, true},
@@ -308,7 +325,8 @@ static const std::array<MainMenuOptionConfirm, 9> KittFunZone = { {
     { GOSSIP_ICON_CHAT, "Reset All Spell Cooldowns (" + sResetAllSpellCd + " g)",  KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_RESET_ALL_CD_SPELL, "Reset all spell cooldowns", ResetAllSpellCd, false},
     { GOSSIP_ICON_CHAT, "Fix b0t (" + sKittBotFix + " g)",                         KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TFC_BOT_FIX, "1. Select the problematic B0t and click 'Accept'. \n2. After repair: use normal cast/fly mount abilities.", KittBotFix, false},
     { GOSSIP_ICON_CHAT, "Transfer b0t Owner (" + sKittBotNewOwner + " g)",         KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_TFC_BOT_OWNER, "To transfer the SELECTED b0t:\n1. Type the receiver's Character Name.\n2. Both characters must be on YOUR account.\n3. Click 'Accept' to pay fee and transfer.", KittBotNewOwner, true},
-    { GOSSIP_ICON_CHAT, "Exchange Emblems",                                           KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_MENU_EXANGE_EMBLEM},
+    { GOSSIP_ICON_CHAT, "Exchange Emblems",                                        KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_MENU_EXANGE_EMBLEM},
+    { GOSSIP_ICON_CHAT, "B0ts Reserv Valability",                                  KITT_SENDER_MENU_BOT_VALABILITY, KITT_ACTION_MENU_BOT_VALABILITY},
 
  //   { GOSSIP_ICON_CHAT, "Check Item Drop Location (" + sKittSelectDrop + " g)",    KITT_SENDER_MENU_FUN_ZONE,       KITT_ACTION_DB_DROP_SHOW, "Enter Item ID \nYou will only be charged if results are found.", KittSelectDrop, true}
 } };
@@ -327,6 +345,13 @@ static const std::array<MainMenuOptionConfirm, 11> KittExangeEmblem = { {
         { GOSSIP_ICON_CHAT, "Sell Jeton Heroism for " + sEmblemRewCount + "x Heroism",             KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_H_TO_HEROISM, "Jeton to Heroism", 0, false},
         { GOSSIP_ICON_CHAT, "Sell Jeton Triumph for " + sEmblemRewCount + "x Triumph",             KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_T_TO_TRIUMPH, "Jeton to Triumph", 0, false},
         { GOSSIP_ICON_CHAT, "Sell Jeton Valor for " + sEmblemRewCount + "x Valor",                 KITT_SENDER_MENU_EXANGE_EMBLEM, KITT_ACTION_JETON_V_TO_VALOR, "Jeton to Valor", 0, false},
+} };
+
+// Bot Valability Menu
+static const std::array<MainMenuOptionConfirm, 3> KittBotValability = { {
+        { GOSSIP_ICON_CHAT, "Rezerva pe 10 zile " + sKittBotValability10 + "g",  KITT_SENDER_MENU_BOT_VALABILITY, KITT_ACTION_BOT_VALABILITY_10_DAY, "Sigur?", 0, false},
+        { GOSSIP_ICON_CHAT, "Rezerva pe 15 zile " + sKittBotValability15 + "g",  KITT_SENDER_MENU_BOT_VALABILITY, KITT_ACTION_BOT_VALABILITY_15_DAY, "Sigur?", 0, false},
+        { GOSSIP_ICON_CHAT, "Rezerva pe 20 zile " + sKittBotValability20 + "g",  KITT_SENDER_MENU_BOT_VALABILITY, KITT_ACTION_BOT_VALABILITY_20_DAY, "Sigur?", 0, false},
 } };
 
 // Meniu Instance Reset Cooldown cu confirmare.
@@ -3179,6 +3204,210 @@ public:
                     return true; // Returnam true pentru a confirma afisarea meniului
                 }
 
+                // B0t Valability
+                case KITT_SENDER_MENU_BOT_VALABILITY:
+                {
+                    if (sKittNpcMenuBotValability == 0)
+                    {
+                        CloseGossipMenuFor(player);
+                        ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Error:|r Menu disabled by config");
+                        return true;
+                    }
+
+                    player->PlayerTalkClass->ClearMenus();
+
+                    switch (action)
+                    {
+                        case KITT_ACTION_MENU_BOT_VALABILITY:
+                        {
+                            for (auto const& option : KittBotValability)
+                            {
+                                AddGossipItemFor(player, option.icon, option.name, option.sender, option.action, option.ctext, option.money, option.confirm);
+                            }
+
+                            break;
+                        }
+
+                        case KITT_ACTION_BOT_VALABILITY_10_DAY:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            // 1. Verificare boti in RAM
+                            if (!player->GetBotMgr()->HaveBot())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Nu detii niciun TFC B0t activ pentru a face o rezervare!");
+                                return true;
+                            }
+
+                            uint32 accountId = player->GetSession()->GetAccountId();
+                            std::string expireDateStr = "";
+
+                            // 3. Verificare daca exista deja rezervare si extragere data (din RAM)
+                            if (KittBotExpireException::GetKittExemptExpiryString(accountId, expireDateStr))
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Acest cont are deja o rezervare activa! Valabilitate: |cffffffff%s|r", expireDateStr.c_str());
+                                return true;
+                            }
+
+                            // 2. Verificare gold in RAM
+                            //uint32 goldCost = 10000;
+                            if (player->GetMoney() < KittBotValability10)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Nu ai suficient gold! Ai nevoie de |cffffffff%s|r Gold.", sKittBotValability10.c_str());
+                                return true;
+                            }
+
+                            // 4. Totul este in regula: retragem banii
+                            player->ModifyMoney(-int32(KittBotValability10));
+                            std::string accountName = player->GetSession()->GetAccountName();
+
+                            // 5. Inserare sincrona in baza de date
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            trans->PAppend("INSERT INTO character_kitt_bot_exceptions (account_id, account_name, duration_days) VALUES ({}, '{}', 15)",
+                                accountId, accountName.c_str());
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans); // Schimbat in Async pentru siguranta thread-ului
+
+                            // 6. In loc de intregul load, inseram direct in memoria RAM valoarea proaspata
+                            KittBotExpireException::AddExemptToRamDirectly(accountId, 15);
+
+
+                            // 7. Calculam si afisam data proaspat activata pentru confirmare imediata
+                            if (KittBotExpireException::GetKittExemptExpiryString(accountId, expireDateStr))
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Rezervarea de 10 zile a fost activata! Noua valabilitate: |cffffffff%s|r. S-au retras |cffffffff%s|r Gold. |cff00ff00[NOTE]|r Intra in joc pana la data expirarii", expireDateStr.c_str(), sKittBotValability10.c_str());
+                            }
+                            else
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Rezervarea de 10 zile a fost activata! S-au retras %s Gold.", sKittBotValability10.c_str());
+                            }
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_BOT_VALABILITY_15_DAY:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            // 1. Verificare boti in RAM
+                            if (!player->GetBotMgr()->HaveBot())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Nu detii niciun TFC B0t activ pentru a face o rezervare!");
+                                return true;
+                            }
+
+                            uint32 accountId = player->GetSession()->GetAccountId();
+                            std::string expireDateStr = "";
+
+                            // 3. Verificare daca exista deja rezervare si extragere data (din RAM)
+                            if (KittBotExpireException::GetKittExemptExpiryString(accountId, expireDateStr))
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Acest cont are deja o rezervare activa! Valabilitate: |cffffffff%s|r", expireDateStr.c_str());
+                                return true;
+                            }
+
+                            // 2. Verificare gold in RAM
+                            //uint32 goldCost = 10000;
+                            if (player->GetMoney() < KittBotValability15)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Nu ai suficient gold! Ai nevoie de |cffffffff%s|r Gold.", sKittBotValability15.c_str());
+                                return true;
+                            }
+
+                            // 4. Totul este in regula: retragem banii
+                            player->ModifyMoney(-int32(KittBotValability15));
+                            std::string accountName = player->GetSession()->GetAccountName();
+
+                            // 5. Inserare sincrona in baza de date
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            trans->PAppend("INSERT INTO character_kitt_bot_exceptions (account_id, account_name, duration_days) VALUES ({}, '{}', 20)",
+                                accountId, accountName.c_str());
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans); // Schimbat in Async pentru siguranta thread-ului
+
+                            // 6. In loc de intregul load, inseram direct in memoria RAM valoarea proaspata
+                            KittBotExpireException::AddExemptToRamDirectly(accountId, 20);
+
+
+                            // 7. Calculam si afisam data proaspat activata pentru confirmare imediata
+                            if (KittBotExpireException::GetKittExemptExpiryString(accountId, expireDateStr))
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Rezervarea de 15 zile a fost activata! Noua valabilitate: |cffffffff%s|r. S-au retras |cffffffff%s|r Gold. |cff00ff00[NOTE]|r Intra in joc pana la data expirarii", expireDateStr.c_str(), sKittBotValability15.c_str());
+                            }
+                            else
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Rezervarea de 15 zile a fost activata! S-au retras %s Gold.", sKittBotValability15.c_str());
+                            }
+
+                            return true;
+                        }
+
+                        case KITT_ACTION_BOT_VALABILITY_20_DAY:
+                        {
+                            CloseGossipMenuFor(player);
+
+                            // 1. Verificare boti in RAM
+                            if (!player->GetBotMgr()->HaveBot())
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Nu detii niciun TFC B0t activ pentru a face o rezervare!");
+                                return true;
+                            }
+
+                            uint32 accountId = player->GetSession()->GetAccountId();
+                            std::string expireDateStr = "";
+
+                            // 3. Verificare daca exista deja rezervare si extragere data (din RAM)
+                            if (KittBotExpireException::GetKittExemptExpiryString(accountId, expireDateStr))
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Acest cont are deja o rezervare activa! Valabilitate: |cffffffff%s|r", expireDateStr.c_str());
+                                return true;
+                            }
+
+                            // 2. Verificare gold in RAM
+                            //uint32 goldCost = 10000;
+                            if (player->GetMoney() < KittBotValability20)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ccffEroare:|r Nu ai suficient gold! Ai nevoie de |cffffffff%s|r Gold.", sKittBotValability20.c_str());
+                                return true;
+                            }
+
+                            // 4. Totul este in regula: retragem banii
+                            player->ModifyMoney(-int32(KittBotValability20));
+                            std::string accountName = player->GetSession()->GetAccountName();
+
+                            // 5. Inserare sincrona in baza de date
+                            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                            trans->PAppend("INSERT INTO character_kitt_bot_exceptions (account_id, account_name, duration_days) VALUES ({}, '{}', 25)",
+                                accountId, accountName.c_str());
+                            player->SaveInventoryAndGoldToDB(trans);
+                            CharacterDatabase.AsyncCommitTransaction(trans); // Schimbat in Async pentru siguranta thread-ului
+
+                            // 6. In loc de intregul load, inseram direct in memoria RAM valoarea proaspata
+                            KittBotExpireException::AddExemptToRamDirectly(accountId, 25);
+
+
+                            // 7. Calculam si afisam data proaspat activata pentru confirmare imediata
+                            if (KittBotExpireException::GetKittExemptExpiryString(accountId, expireDateStr))
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Rezervarea de 20 zile a fost activata! Noua valabilitate: |cffffffff%s|r. S-au retras |cffffffff%s|r Gold. |cff00ff00[NOTE]|r Intra in joc pana la data expirarii", expireDateStr.c_str(), sKittBotValability20.c_str());
+                            }
+                            else
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r Rezervarea de 20 zile a fost activata! S-au retras %s Gold.", sKittBotValability20.c_str());
+                            }
+
+                            return true;
+                        }
+
+                        default:
+                            break;
+                    }
+
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<<< Back <<<", KITT_SENDER_OPEN_SUBMENU, KITT_ACTION_MENU_FUN_ZONE);
+                    SendGossipMenuFor(player, KittNpcText::KITT_BOT_VALABILITY, me->GetGUID());
+                    return true; // Returnam true pentru a confirma afisarea meniului
+                }
+
                 //  3. Logica pentru Teleportare sau Logica finala action
                 // menu de cautare automata pentru enum
                 case KITT_AUTO_SENDER_HORDE:
@@ -3541,6 +3770,7 @@ public:
     {
         // Bot Transfer Enable
         sKittNpcMenuBotTransferEnable = sConfigMgr->GetIntDefault("KittNpcMenu.Bot.Transfer.Enable", 0);
+        sKittNpcMenuBotValability     = sConfigMgr->GetIntDefault("KittNpcMenu.Bot.Valability.Enable", 0);
     }
 };
 

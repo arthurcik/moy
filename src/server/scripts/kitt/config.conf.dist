@@ -137,6 +137,10 @@ Kitt.Fun.NuApasa.Code = "4fun"
 # default: 0
 KittNpcMenu.Bot.Transfer.Enable = 0
 
+# Bot Valability extender
+# default: 0
+KittNpcMenu.Bot.Valability.Enable = 0
+
 ##############
 # Start Guild
 ##############

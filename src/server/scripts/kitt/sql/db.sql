@@ -26,3 +26,26 @@ UPDATE `npc_text` SET `text0_0` =
 |n|cffff0000Note:|r If a creature cannot be found, it is likely summoned via quests or events.
 |n|cffff0000Note:|r A drop rate of 0% usually indicates Group Loot or special loot tables.' 
 WHERE `id` = 90016;
+
+-- 90017 bot valability
+-- ro
+DELETE FROM `npc_text` WHERE `id` = 90017;
+INSERT INTO `npc_text` (`id`, `text0_0`) VALUES 
+(90017, 'Salut, |cffffffff$n|r! Acesta este sistemul de |cffffffffExtindere Valabilitate B0ts|r pentru perioada de vacanta.
+
+Standard, botii tai expira dupa |cffffffff5 zile|r de inactivitate calculate de la ultimul tau logout.
+
+|cffffffffCum functioneaza extinderea?|r
+- Optiunea de 10 Zile adauga timp in plus. In baza de date se vor seta |cffffffff15 Zile|r de valabilitate.
+- Atata timp cat esti in aceasta perioada, pierderea botilor este complet blocata.
+
+|cffffffffExemplu Practic (Foarte Important):|r
+Chiar daca perioada de extindere mai are doar |cffffffff2 zile|r valabile si tu te conectezi la joc astazi si dai logout, botii tai vor avea din acel moment |cffffffff5 zile|r intregi de valabilitate standard! Protectia nu anuleaza cele 5 zile oferite de joc de la ultimul logout.
+
+|cffff0000AVERTISMENT CRITIC:|r
+Trebuie sa te conectezi la joc |cffffffffCEL PUTIN O DATA|r inainte ca data totala de expirare sa expire!
+Daca timpul expira complet si nu ai fost online deloc, |cffff0000BOTII TAI VOR PLECA SI II VEI PIERDE|r, itemele lor le vei primi pe mail!
+
+Alege perioada de rezervare dorita:|r');
+
+

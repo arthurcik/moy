@@ -110,7 +110,6 @@ namespace KittBotExpireException
             // daca timpul a trecut dar exista in db
             //TC_LOG_ERROR("kitt", "return false for: {} timp expirat", accountId);
 
-            // STERGERE DIN BAZA DE DATE (Asincron - nu provoaca lag pe server)
             CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
             trans->PAppend("DELETE FROM character_kitt_bot_exceptions WHERE account_id = {}", accountId);
             CharacterDatabase.AsyncCommitTransaction(trans);
@@ -124,28 +123,48 @@ namespace KittBotExpireException
         //TC_LOG_ERROR("kitt", "return true for: {} este in DB, nu a expirat timpul.", accountId);
         return true;
     }
-}
 
-/*namespace KittBotExpireException
-{
-    bool KittIsExempt(uint32 accountId)
+    // helper for gossip menu
+    void AddExemptToRamDirectly(uint32 accountId, uint32 durationDays)
     {
-        switch (accountId)
-        {
-            case 2:   // test1
-            case 3:   // Gutza test2
-            case 5:   // titel
-            case 26:  // test0
-            case 31:  // PALAKISS
-            {
-                return true;
-            }
+        BotExemptInfo info{};
+        info.durationDays = durationDays;
 
-            default:
-                return false;
+        if (durationDays == 0)
+        {
+            info.expireTime = 0;
         }
+        else
+        {
+            // Calculam timpul direct din momentul curent pe thread-ul de joc
+            info.expireTime = static_cast<std::time_t>(GameTime::GetGameTime()) + (static_cast<long long>(durationDays) * 24 * 60 * 60);
+        }
+
+        m_KittExemptMap[accountId] = info;
     }
-}*/
+
+    bool GetKittExemptExpiryString(uint32 accountId, std::string& outDateStr)
+    {
+        BotExceptionMap::iterator itr = m_KittExemptMap.find(accountId);
+        if (itr == m_KittExemptMap.end())
+        {
+            return false;
+        }
+
+        if (itr->second.expireTime == 0)
+        {
+            outDateStr = "Permanenta";
+            return true;
+        }
+
+        std::time_t expireTime = itr->second.expireTime;
+        std::tm* ptm = std::localtime(&expireTime);
+        char buffer[32];
+        std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", ptm);
+        outDateStr = buffer;
+        return true;
+    }
+}
 
 namespace
 {

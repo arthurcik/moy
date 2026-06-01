@@ -16,6 +16,8 @@ namespace KittBotExpireException
 {
     void LoadKittBotExceptions();
     bool KittIsExempt(uint32 accountId);
+    void AddExemptToRamDirectly(uint32 accountId, uint32 durationDays); // add to ram
+    bool GetKittExemptExpiryString(uint32 accountId, std::string& outDateStr); // gossip helper
 }
 
 namespace KittBotAI
