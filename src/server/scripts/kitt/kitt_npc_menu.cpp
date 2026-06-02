@@ -246,6 +246,7 @@ enum KittAction
     KITT_ACTION_VENDOR_OPEN             = 298,   // vendor open
     //KITT_ACTION_TELE_ZONE               = 299,   // Teleport Zone
     KITT_ACTION_BACK_MAIN_MENU          = 300,    // Inapoi la Meniul Principal
+    KITT_ACTION_SUMMON_STONE            = 301,    // summon stone
     KITT_GOSSIP_ACTION_SHOW_RESULTS     = 5000
 
 };
@@ -273,11 +274,12 @@ struct MainMenuOptionConfirm {
 // pentru viteza adaugam "const" si "array" in loc de "vector"
 // metoda veche: static std::vector ....
 // nr de dupa "," reprezinta nr de meniuri
-static const std::array<MainMenuOption, 9> KittMainMenu = { {
+static const std::array<MainMenuOption, 10> KittMainMenu = { {
     { GOSSIP_ICON_CHAT,      "Fun Zone (Under Construction)", KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MENU_FUN_ZONE },
     { GOSSIP_ICON_TAXI,      "Teleport: Categories",          KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_TELEPORT_TO },
     { GOSSIP_ICON_TALK,      "Horde Capitals",                KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MENU_HORDE },
     { GOSSIP_ICON_TALK,      "Alliance Capitals",             KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_MENU_ALLIANCE },
+    { GOSSIP_ICON_TAXI,      "Summon Stone",                  KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_SUMMON_STONE },
     { GOSSIP_ICON_MONEY_BAG, "Open Auction House",            KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_AH_OPEN },
     { GOSSIP_ICON_MONEY_BAG, "Access Personal Bank",          KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_BANK_OPEN },
     { GOSSIP_ICON_MONEY_BAG, "Access Guild Bank",             KITT_SENDER_OPEN_SUBMENU,     KITT_ACTION_GV_OPEN },
@@ -2201,6 +2203,35 @@ public:
                             if (me->SummonGameObject(KittGVObj, KittspawnPos.GetPositionX(), KittspawnPos.GetPositionY(), KittspawnPos.GetPositionZ(), me->GetOrientation(), KittmyRotation, despawnTime, GO_SUMMON_TIMED_DESPAWN))
                             {
                                 player->GetSession()->SendNotification("Guild Bank summoned for 2 minutes!");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
+                            CloseGossipMenuFor(player);
+                            return true;
+                        }
+
+                        case KITT_ACTION_SUMMON_STONE:
+                        {
+                            uint32 KittGVObj = 195013;    // summon stone object
+                            Seconds despawnTime = Seconds(120);
+                            // X = +fata/-spate , Y = +stanga/-dreapta , Z = +sus/-jos , 0.0 = orientarea
+                            Position Kittoffset(-1.0f, -4.0f, 0.0f, 0.0f);
+                            Position KittspawnPos = me->GetPositionWithOffset(Kittoffset);
+                            // verifica ca pozitiile sa fie pe sol dupa map si vmap (anuleaza pozitia Z personalizata)
+                            me->UpdateAllowedPositionZ(KittspawnPos.GetPositionX(), KittspawnPos.GetPositionY(), KittspawnPos.m_positionZ);
+
+                            QuaternionData KittmyRotation = QuaternionData();
+                            float distance = 50.0f;  // distanta de a verifica daca exista deja
+                            if (player->FindNearestGameObject(KittGVObj, distance, true))
+                            {
+                                player->GetSession()->SendNotification("There is already an active stone nearby (50yd)!");
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            if (me->SummonGameObject(KittGVObj, KittspawnPos.GetPositionX(), KittspawnPos.GetPositionY(), KittspawnPos.GetPositionZ(), me->GetOrientation(), KittmyRotation, despawnTime, GO_SUMMON_TIMED_DESPAWN))
+                            {
+                                player->GetSession()->SendNotification("Stone summoned for 2 minutes!");
                                 CloseGossipMenuFor(player);
                                 return true;
                             }

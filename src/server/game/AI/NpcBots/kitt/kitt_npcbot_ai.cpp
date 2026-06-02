@@ -1679,6 +1679,10 @@ namespace KittBotAI
         uint32 NpcBloodDeast = 38508;
         uint8 iconIndex5 = 5; // patrat
 
+        if (master->GetBotMgr()->GetBotFollowDist() != 60)
+        {
+            master->GetBotMgr()->SetBotFollowDist(60);
+        }
 
         if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
         {
@@ -2962,9 +2966,9 @@ namespace KittBotAI
                     uint32(bot->GetMotionMaster()->GetCurrentMovementGeneratorType()));
             }*/
 
-            if (master->GetBotMgr()->GetBotFollowDist() < 100)
+            if (master->GetBotMgr()->GetBotFollowDist() != 60)
             {
-                master->GetBotMgr()->SetBotFollowDist(100);
+                master->GetBotMgr()->SetBotFollowDist(60);
             }
 
             bool isWinter = (bossLichK->HasAura(spell1Winter) || bossLichK->HasAura(spell2Winter));
