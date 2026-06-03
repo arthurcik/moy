@@ -2442,13 +2442,33 @@ void BotMgr::UpdatePhaseForBots()
     }
 }
 
-void BotMgr::UpdatePvPForBots()
+/*void BotMgr::UpdatePvPForBots()
 {
     for (BotMap::const_iterator itr = _bots.begin(); itr != _bots.end(); ++itr)
     {
         itr->second->SetByteValue(UNIT_FIELD_BYTES_2, 1, _owner->GetByteValue(UNIT_FIELD_BYTES_2, 1));
         if (itr->second->GetBotsPet())
             itr->second->GetBotsPet()->SetByteValue(UNIT_FIELD_BYTES_2, 1, _owner->GetByteValue(UNIT_FIELD_BYTES_2, 1));
+    }
+}*/
+
+void BotMgr::UpdatePvPForBots()
+{
+    // kitt fix
+    if (!_owner)
+        return;
+
+    for (BotMap::const_iterator itr = _bots.begin(); itr != _bots.end(); ++itr)
+    {
+        if (!itr->second || !itr->second->IsInWorld())
+            continue;
+
+        itr->second->SetByteValue(UNIT_FIELD_BYTES_2, 1, _owner->GetByteValue(UNIT_FIELD_BYTES_2, 1));
+
+        if (itr->second->GetBotsPet() && itr->second->GetBotsPet()->IsInWorld())
+        {
+            itr->second->GetBotsPet()->SetByteValue(UNIT_FIELD_BYTES_2, 1, _owner->GetByteValue(UNIT_FIELD_BYTES_2, 1));
+        }
     }
 }
 
