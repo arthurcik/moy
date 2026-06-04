@@ -320,6 +320,7 @@ void BotMgr::Initialize()
 
 void BotMgr::ReloadConfig()
 {
+    BotDataMgr::CreateWanderingBotsSortedGear(); // kitt reload disables items
     LoadConfig(true);
 }
 
