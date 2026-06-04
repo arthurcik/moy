@@ -81,8 +81,16 @@ namespace
     static const std::string sKittSelectDrop = std::to_string(KittSelectDrop / 10000);
 
     // acc kitt for enchant enquip and bags
-    static const uint32 kittAcc1 = 2;
-    static const uint32 kittAcc2 = 5;
+    static const std::unordered_set<uint32> KittEnchantShowAccId = {
+        3,   // test2
+        11   // kittAcc3
+    };
+
+    static const std::unordered_set<uint32> KittEnchantSlotBagAccId = {
+        2,   // kittAcc1
+        5,   // kittAcc2
+        11   // kittAcc3
+    };
 
     // exange emblem
     static const uint32 EmblemConquest = 45624;
@@ -959,7 +967,7 @@ public:
 
                 uint32 kPlSec = player->GetSession()->GetSecurity();
                 uint32 kPlAccId = player->GetSession()->GetAccountId();
-                if (kPlSec > 0 || kPlAccId == 3)
+                if (kPlSec > 0 || KittEnchantShowAccId.contains(kPlAccId))
                 {
                     for (auto const& option : KittMainMenuTFC)
                     {
@@ -1418,7 +1426,7 @@ public:
                             bool found = false;
 
                             uint32 kPlAccId = player->GetSession()->GetAccountId();
-                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
+                            if (KittEnchantSlotBagAccId.contains(kPlAccId))
                             {
                                 // verificam itemele echipate si cele din sac
                                 for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
@@ -1504,7 +1512,7 @@ public:
                             bool found = false;
 
                             uint32 kPlAccId = player->GetSession()->GetAccountId();
-                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
+                            if (KittEnchantSlotBagAccId.contains(kPlAccId))
                             {
                                 // verificam itemele echipate si cele din sac
                                 for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
@@ -1564,7 +1572,7 @@ public:
                             bool found = false;
 
                             uint32 kPlAccId = player->GetSession()->GetAccountId();
-                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
+                            if (KittEnchantSlotBagAccId.contains(kPlAccId))
                             {
                                 // verificam itemele echipate si cele din sac
                                 for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
@@ -1623,7 +1631,7 @@ public:
                             bool found = false;
 
                             uint32 kPlAccId = player->GetSession()->GetAccountId();
-                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
+                            if (KittEnchantSlotBagAccId.contains(kPlAccId))
                             {
                                 // verificam itemele echipate si cele din sac
                                 for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
@@ -1682,7 +1690,7 @@ public:
                             bool found = false;
 
                             uint32 kPlAccId = player->GetSession()->GetAccountId();
-                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
+                            if (KittEnchantSlotBagAccId.contains(kPlAccId))
                             {
                                 // verificam itemele echipate si cele din sac
                                 for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
@@ -1741,7 +1749,7 @@ public:
                             bool found = false;
 
                             uint32 kPlAccId = player->GetSession()->GetAccountId();
-                            if (kPlAccId == kittAcc1 || kPlAccId == kittAcc2)
+                            if (KittEnchantSlotBagAccId.contains(kPlAccId))
                             {
                                 // verificam itemele echipate si cele din sac
                                 for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
@@ -1827,7 +1835,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
+                    if (!item->IsEquipped() && !KittEnchantSlotBagAccId.contains(kPlAccId))
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
@@ -1877,7 +1885,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
+                    if (!item->IsEquipped() && !KittEnchantSlotBagAccId.contains(kPlAccId))
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
@@ -1930,7 +1938,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
+                    if (!item->IsEquipped() && !KittEnchantSlotBagAccId.contains(kPlAccId))
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
@@ -1980,7 +1988,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
+                    if (!item->IsEquipped() && !KittEnchantSlotBagAccId.contains(kPlAccId))
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
@@ -2032,7 +2040,7 @@ public:
                         return true;
                     }
 
-                    if (!item->IsEquipped() && kPlAccId == !kittAcc1 && kPlAccId == !kittAcc2)
+                    if (!item->IsEquipped() && !KittEnchantSlotBagAccId.contains(kPlAccId))
                     {
                         ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Eroare: Trebuie sa ai itemul echipat pentru a-l imbunatati!|r");
                         CloseGossipMenuFor(player);
