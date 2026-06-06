@@ -498,7 +498,7 @@ static const std::array<TeleportLocation, 11> NorthrendLocs = { {
 } };
 
 // Classic Dungeons
-static const std::array<TeleportLocation, 19> ClassicDungeonsLocs = { {
+static const std::array<TeleportLocation, 17> ClassicDungeonsLocs = { {
     {0, -5163.54f, 925.423f, 257.181f, 1.57423f, "Gnomeregan (lvl 25-28)",        1},
     {0, -11209.6f, 1666.54f, 24.6974f, 1.42053f, "The Deadmines (lvl 17-20)",     1},
     {0, -8799.15f, 832.718f, 97.6348f, 6.04085f, "The Stockade (lvl 22-25)",      1},
@@ -509,8 +509,8 @@ static const std::array<TeleportLocation, 19> ClassicDungeonsLocs = { {
     {0, -234.675f, 1561.63f, 76.8921f, 1.24031f, "Shadowfang Keep (lvl 18-21)",   1},
     {1, -731.607f, -2218.39f, 17.0281f, 2.78486f, "Wailing Caverns (lvl 17-20)",  1},
     {1, 4249.99f, 740.102f, -25.671f, 1.34062f, "Blackfathom Deeps (lvl 21-24)",  1},
-    {0, -7179.34f, -921.212f, 165.821f, 5.09599f, "Blackrock Depths (lvl 49-56)", 1},
-    {0, -7527.05f, -1226.77f, 285.732f, 5.29626f, "Blackrock Spire (lvl 57-63)",  1},
+//    {0, -7179.34f, -921.212f, 165.821f, 5.09599f, "Blackrock Depths (lvl 49-56)", 1},
+//    {0, -7527.05f, -1226.77f, 285.732f, 5.29626f, "Blackrock Spire (lvl 57-63)",  1},
     {1, -3520.14f, 1119.38f, 161.025f, 4.70454f, "Dire Maul (lvl 55-60)",         1},
     {1, -1421.42f, 2907.83f, 137.415f, 1.70718f, "Maraudon (lvl 41-48)",          1},
     {0, 1269.64f, -2556.21f, 93.6088f, 0.620623f, "Scholomance (lvl 55-60)",      1},
@@ -547,9 +547,9 @@ static const std::array<TeleportLocation, 12> WrathDungeonsLocs = { {
 } };
 
 // Raid Teleports
-static const std::array<TeleportLocation, 22> RaidLocs = { {
+static const std::array<TeleportLocation, 20> RaidLocs = { {
     {530, -3649.92f, 317.469f, 35.2827f, 2.94285f, "Black Temple (lvl 70+)",             70},
-    {229, 152.451f, -474.881f, 116.84f, 0.001073f, "Blackwing Lair (req. Raid lvl 60+)", 60},
+//    {229, 152.451f, -474.881f, 116.84f, 0.001073f, "Blackwing Lair (req. Raid lvl 60+)", 60},
     {1, -8177.89f, -4181.23f, -167.552f, 0.913338f, "Hyjal Summit (lvl 70+)",            70},
     {530, 797.855f, 6865.77f, -65.4165f, 0.005938f, "Serpentshrine Cavern (lvl 68+)",    70},
     {571, 8515.61f, 714.153f, 558.248f, 1.57753f, "Trial of the Crusader (lvl 80)",      80},
@@ -557,7 +557,7 @@ static const std::array<TeleportLocation, 22> RaidLocs = { {
     {530, -336.411f, 3130.46f, -102.928f, 5.20322f, "Magtheridon\'s Lair (lvl 65+)",     70},
     {571, 5855.22f, 2102.03f, 635.991f, 3.57899f, "Icecrown Citadel (lvl 80)",           80},
     {0, -11118.9f, -2010.33f, 47.0819f, 0.649895f, "Karazhan (lvl 68+)",                 70},
-    {230, 1126.64f, -459.94f, -102.535f, 3.46095f, "Molten Core (req. Raid lvl 50+)",    60},
+//    {230, 1126.64f, -459.94f, -102.535f, 3.46095f, "Molten Core (req. Raid lvl 50+)",    60},
     {571, 3668.72f, -1262.46f, 243.622f, 4.785f, "Naxxramas (lvl 80+)",                  80},
     {1, -4708.27f, -3727.64f, 54.5589f, 3.72786f, "Onyxia\'s Lair')",                    80},
     {1, -8409.82f, 1499.06f, 27.7179f, 2.51868f, "Ruins of Ahn\'Qiraj (lvl 50+)",        50},
