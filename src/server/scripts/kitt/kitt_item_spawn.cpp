@@ -13,9 +13,33 @@
 #include "Containers.h"
 #include "WorldSession.h"
 #include "Chat.h"
+#include "GameTime.h"
 #include "DatabaseEnv.h"
 
 
+namespace
+{
+    struct CooldownKey
+    {
+        ObjectGuid playerGuid;
+        uint32 itemId;
+
+        bool operator==(const CooldownKey& other) const
+        {
+            return playerGuid == other.playerGuid && itemId == other.itemId;
+        }
+    };
+
+    struct CooldownKeyHash
+    {
+        std::size_t operator()(const CooldownKey& k) const
+        {
+            return std::hash<uint64>()(k.playerGuid.GetRawValue()) ^ (std::hash<uint32>()(k.itemId) << 1);
+        }
+    };
+
+    static std::unordered_map<CooldownKey, time_t, CooldownKeyHash> s_CustomItemCooldowns;
+}
 
 enum KittItemWinterTransform
 {
@@ -58,7 +82,8 @@ public:
 
 
             // spell 53105 portal dummy
-            uint32 spellUse = 53105; // spell for item use
+            //uint32 spellUse = 53105; // spell for item use
+            uint32 spellCooldown = 300; // secunde
             uint32 spellEfect = 25823; // efect de spawn 3 min cd
             uint32 npcId = 90014; // Inlocuieste cu ID-ul NPC-ului tau
             Milliseconds despawnTime = 180000ms; // despawn time
@@ -117,7 +142,7 @@ public:
                 return true;
             }
 
-            if (player->GetSpellHistory()->HasCooldown(spellUse, KittItemID, true))
+            /*if (player->GetSpellHistory()->HasCooldown(spellUse, KittItemID, true))
             {
                 uint32 remainingMs = player->GetSpellHistory()->GetRemainingCooldown(sSpellMgr->AssertSpellInfo(spellUse));
                 uint32 totalSeconds = remainingMs / 1000;
@@ -148,10 +173,49 @@ public:
 
                 //player->GetSession()->SendNotification("Acest obiect nu este gata inca!");
                 return true;
+            }*/
+
+            // --- cooldown in ram start ---
+            time_t currentTime = GameTime::GetGameTime();
+            CooldownKey key{ player->GetGUID(), KittItemID };
+
+            auto it = s_CustomItemCooldowns.find(key);
+            if (it != s_CustomItemCooldowns.end())
+            {
+                if (currentTime < it->second)
+                {
+                    uint32 totalSeconds = uint32(it->second - currentTime);
+
+                    uint32 oreRamase = totalSeconds / 3600;
+                    uint32 minutes = (totalSeconds % 3600) / 60;
+                    uint32 seconds = totalSeconds % 60;
+
+                    std::string msg;
+                    if (oreRamase > 0)
+                    {
+                        msg = "This item will be ready in " + std::to_string(oreRamase) + (oreRamase == 1 ? " hour and " : " hours and ") + std::to_string(minutes) + (minutes == 1 ? " minute and " : " minutes and ") + std::to_string(seconds) + " seconds.";
+                    }
+                    else if (minutes > 0)
+                    {
+                        msg = "This item will be ready in " + std::to_string(minutes) + (minutes == 1 ? " minute and " : " minutes and ") + std::to_string(seconds) + " seconds.";
+                    }
+                    else
+                    {
+                        msg = "This item will be ready in " + std::to_string(seconds) + " seconds.";
+                    }
+
+                    player->GetSession()->SendNotification("%s", msg.c_str());
+                    return true;
+                }
             }
+            // --- end ---
 
             if (Creature* csummon = player->SummonCreature(npcId, *player, TEMPSUMMON_TIMED_DESPAWN, despawnTime))
             {
+                // --- APLICARE COOLDOWN IN RAM ---
+                s_CustomItemCooldowns[key] = currentTime + spellCooldown;
+                // ---------------------------------
+
                 csummon->CastSpell(csummon, spellEfect, true); // true = instant cast, false = normal cast
                 // random spell, efect winter
                 //uint32 randomSpell = Trinity::Containers::SelectRandomContainerElement(KittItemWinterTransformSpells);
