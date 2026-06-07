@@ -40,6 +40,7 @@ void AddSC_kitt_custom_sanctuary();
 void AddSC_kitt_invite_friend();
 void AddSC_kitt_telegram_chat();
 void AddSC_kitt_npcbot_ai_loader();
+void AddSC_kitt_raid_leader_items();
 
 
 // The name of this function should match:
@@ -69,4 +70,5 @@ void AddkittScripts()
     AddSC_kitt_invite_friend();
     AddSC_kitt_telegram_chat();
     AddSC_kitt_npcbot_ai_loader();
+    AddSC_kitt_raid_leader_items();
 }
