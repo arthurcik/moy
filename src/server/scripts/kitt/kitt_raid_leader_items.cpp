@@ -67,6 +67,10 @@ namespace
         if (!member)
             return false;
 
+        Map* map = member->GetMap();
+        if (!map || !map->IsRaid())
+            return false;
+
         Group* group = member->GetGroup();
         if (!group || !group->isRaidGroup())
             return false;
@@ -235,7 +239,7 @@ public:
             if (!ValidateMemberConditions(player))
             {
                 if (player->GetSession())
-                    ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Raid System]:|r You cannot equip this item! Your raid leader must fulfill the conditions.");
+                    ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Raid System]:|r You cannot equip this item! You must be inside an instance and your raid leader must fulfill the conditions.");
 
                 return EQUIP_ERR_ITEM_LOCKED;
             }
