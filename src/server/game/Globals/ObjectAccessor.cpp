@@ -210,6 +210,14 @@ Pet* ObjectAccessor::GetPet(WorldObject const& u, ObjectGuid const& guid)
 
 Player* ObjectAccessor::GetPlayer(Map const* m, ObjectGuid const& guid)
 {
+    // -- kitt fix start
+    if (!guid || !guid.IsPlayer())
+        return nullptr;
+
+    if (!m)
+        return nullptr;
+    // -- kitt fix end
+
     if (Player* player = HashMapHolder<Player>::Find(guid))
         if (player->IsInWorld() && player->GetMap() == m)
             return player;
@@ -219,6 +227,14 @@ Player* ObjectAccessor::GetPlayer(Map const* m, ObjectGuid const& guid)
 
 Player* ObjectAccessor::GetPlayer(WorldObject const& u, ObjectGuid const& guid)
 {
+    // -- kitt fix start
+    if (!guid || !guid.IsPlayer())
+        return nullptr;
+
+    if (!u.FindMap())
+        return nullptr;
+    // -- kitt fix end
+
     return GetPlayer(u.GetMap(), guid);
 }
 
