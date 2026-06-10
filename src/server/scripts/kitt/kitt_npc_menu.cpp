@@ -120,6 +120,43 @@ namespace
     static const std::string sKittBotValability15 = std::to_string(KittBotValability15 / 10000);
     static const std::string sKittBotValability20 = std::to_string(KittBotValability20 / 10000);
 
+    // instance reset menu map reset count
+    struct PlayerRaidResetData
+    {
+        uint32 resets;
+        time_t expireTime;
+    };
+
+    // Map-ul global din RAM
+    std::map<std::pair<ObjectGuid, uint8>, PlayerRaidResetData> RaidResetCounter;
+    const uint32 ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
+    
+    static uint32 MAX_MANUAL_RESETS = 0;
+
+
+    time_t GetCurrentInstanceWeekStartTime()
+    {
+        time_t now = GameTime::GetGameTime();
+        uint32 resetHour = sWorld->getIntConfig(CONFIG_INSTANCE_RESET_TIME_HOUR);
+        const time_t oneWeek = static_cast<time_t>(7 * 24 * 60) * 60;
+        const time_t referenceWednesday = 1767744000;
+
+        if (now < referenceWednesday)
+            return now;
+
+        time_t elapsed = now - referenceWednesday;
+        time_t currentWeekElapsed = elapsed % oneWeek;
+        time_t currentWednesdayStart = now - currentWeekElapsed;
+        time_t finalResetTime = currentWednesdayStart + (static_cast<long long>(resetHour) * 3600);
+
+        if (now < finalResetTime)
+        {
+            finalResetTime -= oneWeek;
+        }
+
+        return finalResetTime;
+    }
+    // -- instance reset end
 
 }
 // stocare valori temporare
@@ -367,8 +404,8 @@ static const std::array<MainMenuOptionConfirm, 3> KittBotValability = { {
 // Meniu Instance Reset Cooldown cu confirmare.
 // menu code. daca are TRUE optiunea finala se adauga la OnGossipSelectCode
 
-static const std::array<MainMenuOptionConfirm, 6> KittInstanceReset = { {
-    { GOSSIP_ICON_CHAT, "Reset Dungeon Heroic (" + sMoneyDungeons + " g)", KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_DUNGEON,  "Reset Dungeon Heroic",  MoneyDungeons, false},
+static const std::array<MainMenuOptionConfirm, 5> KittInstanceReset = { {
+//    { GOSSIP_ICON_CHAT, "Reset Dungeon Heroic (" + sMoneyDungeons + " g)", KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_DUNGEON,  "Reset Dungeon Heroic",  MoneyDungeons, false},
     { GOSSIP_ICON_CHAT, "Reset Raid 10 Normal (" + sMoneyRaid10 + " g)",   KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID10,   "Reset Raid 10 Normal",  MoneyRaid10,   false },
     { GOSSIP_ICON_CHAT, "Reset Raid 25 Normal (" + sMoneyRaid25 + " g)",   KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID25,   "Reset Raid 25 Normal",  MoneyRaid25,   false },
     { GOSSIP_ICON_CHAT, "Reset Raid 10 Heroic (" + sMoneyRaid10H + " g)",  KITT_SENDER_MENU_INSTANCE_RESET, KITT_ACTION_RESET_RAID10H,  "Reset Raid 10 Heroic",  MoneyRaid10H,  false },
@@ -2403,37 +2440,6 @@ public:
                             break;
                         }
                         // Actiune directa din Instance Reset
-/*                        case KITT_ACTION_RESET_DUNGEONS:
-                             // Metoda Veche de resetare
-                        {
-                            // difficulty raid 0 = 10N  1 = 25N  2 = 10H  3 = 25H  dungeons 1 = 5hc
-                            QueryResult result = CharacterDatabase.PQuery("SELECT `guid` FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 1)", player->GetGUID().GetCounter());
-
-                            if (!result)
-                            {
-                                std::string message = "|cffff0000!...|r Nu ai nicio instanta (Dungeons Heroic) blocata (cu cooldown) pe care sa o resetezi.";
-                                ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
-                                CloseGossipMenuFor(player);
-                                return true;
-                            }
-                            if (!player->HasEnoughMoney(MoneyDungeons))
-                            {
-                                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
-                                me->Whisper(player->GetName() + ", ai nevoie de 30g pentru a reseta aceste instante (Dungeons Heroic)!", LANG_UNIVERSAL, player);
-                                CloseGossipMenuFor(player);
-                                return true;
-                            }
-                            else
-                            {
-                                player->ModifyMoney(-int32(MoneyDungeons));
-                                // 10 N
-                                CharacterDatabase.PExecute("DELETE FROM `character_instance` WHERE `guid` = {} AND `instance` IN (SELECT `id` FROM `instance` WHERE `difficulty` = 1)", player->GetGUID().GetCounter());
-                                CloseGossipMenuFor(player);
-                                std::string message = "|cffff0000ATENTIE|r Instance reset: Dungeons Heroic (Necesita re-log), leave party/raid and re-log.";
-                                ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
-                            }
-                            return true;
-                        }*/
                         case KITT_ACTION_RESET_RAID10:
                         {
                             if (player->GetGroup())
@@ -2455,6 +2461,49 @@ public:
                                 return true;
                             }
 
+                            // ----- Verificare contor in RAM
+                            ObjectGuid playerGuid = player->GetGUID();
+                            uint8 mode = uint8(diff);
+                            auto key = std::make_pair(playerGuid, mode);
+
+                            time_t now = GameTime::GetGameTime();
+                            uint32 currentResets = 0;
+                            time_t playerLastResetTime = 0;
+
+                            time_t currentWeekStart = GetCurrentInstanceWeekStartTime();
+
+                            if (RaidResetCounter.find(key) != RaidResetCounter.end())
+                            {
+                                if (RaidResetCounter[key].expireTime < currentWeekStart)
+                                {
+                                    // A trecut miercurea la ora 4! Curatam RAM-ul si DB-ul pe loc
+                                    RaidResetCounter.erase(key);
+                                    CharacterDatabase.PExecute("DELETE FROM character_kitt_raid_manual_resets WHERE guid = {} AND mode = {}", playerGuid.GetCounter(), mode);
+
+                                    currentResets = 0;
+                                    playerLastResetTime = 0;
+                                }
+                                else
+                                {
+                                    // Este in saptamana curenta, preluam datele
+                                    currentResets = RaidResetCounter[key].resets;
+                                    playerLastResetTime = RaidResetCounter[key].expireTime;
+                                }
+                            }
+                            else
+                            {
+                                currentResets = 0;
+                                playerLastResetTime = 0;
+                            }
+
+                            if (MAX_MANUAL_RESETS != 0 && currentResets >= MAX_MANUAL_RESETS)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[System]|r You have reached the weekly limit of |cffffffff%u/%u|r manual resets for this difficulty.", currentResets, MAX_MANUAL_RESETS);
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            // ----------------
+
                             if (!player->HasEnoughMoney(MoneyDungeons))
                             {
                                 player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, nullptr, 0, 0);
@@ -2474,6 +2523,30 @@ public:
                                 if (instanceReset)
                                 {
                                     ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r All |cffffffff10-man Normal Raid|r instances have been reset.");
+
+                                    // -- kitt reset count start
+                                    playerLastResetTime = now;
+
+                                    RaidResetCounter[key].resets = currentResets + 1;
+                                    RaidResetCounter[key].expireTime = playerLastResetTime;
+
+                                    uint32 remaining = MAX_MANUAL_RESETS - RaidResetCounter[key].resets;
+
+                                    if (MAX_MANUAL_RESETS != 0)
+                                    {
+                                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Success:|r You have |cffffffff%u|r out of |cffffffff%u|r manual resets remaining for this week.", remaining, MAX_MANUAL_RESETS);
+                                    }
+
+                                    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                                    uint32 guidLow = playerGuid.GetCounter();
+
+                                    trans->PAppend("INSERT INTO character_kitt_raid_manual_resets (guid, mode, resets, reset_time) VALUES ({}, {}, {}, {}) "
+                                        "ON DUPLICATE KEY UPDATE resets = {}, reset_time = {}",
+                                        guidLow, mode, RaidResetCounter[key].resets, uint64(playerLastResetTime),
+                                        RaidResetCounter[key].resets, uint64(playerLastResetTime));
+
+                                    CharacterDatabase.AsyncCommitTransaction(trans);
+                                    // -- kitt reset count end
                                 }
                             }
                             CloseGossipMenuFor(player);
@@ -2500,6 +2573,49 @@ public:
                                 return true;
                             }
 
+                            // ----- Verificare contor in RAM
+                            ObjectGuid playerGuid = player->GetGUID();
+                            uint8 mode = uint8(diff);
+                            auto key = std::make_pair(playerGuid, mode);
+
+                            time_t now = GameTime::GetGameTime();
+                            uint32 currentResets = 0;
+                            time_t playerLastResetTime = 0;
+
+                            time_t currentWeekStart = GetCurrentInstanceWeekStartTime();
+
+                            if (RaidResetCounter.find(key) != RaidResetCounter.end())
+                            {
+                                if (RaidResetCounter[key].expireTime < currentWeekStart)
+                                {
+                                    // A trecut miercurea la ora 4! Curatam RAM-ul si DB-ul pe loc
+                                    RaidResetCounter.erase(key);
+                                    CharacterDatabase.PExecute("DELETE FROM character_kitt_raid_manual_resets WHERE guid = {} AND mode = {}", playerGuid.GetCounter(), mode);
+
+                                    currentResets = 0;
+                                    playerLastResetTime = 0;
+                                }
+                                else
+                                {
+                                    // Este in saptamana curenta, preluam datele
+                                    currentResets = RaidResetCounter[key].resets;
+                                    playerLastResetTime = RaidResetCounter[key].expireTime;
+                                }
+                            }
+                            else
+                            {
+                                currentResets = 0;
+                                playerLastResetTime = 0;
+                            }
+
+                            if (MAX_MANUAL_RESETS != 0 && currentResets >= MAX_MANUAL_RESETS)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[System]|r You have reached the weekly limit of |cffffffff%u/%u|r manual resets for this difficulty.", currentResets, MAX_MANUAL_RESETS);
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            // ----------------
+
                             if (!player->HasEnoughMoney(MoneyDungeons))
                             {
                                 player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, nullptr, 0, 0);
@@ -2519,6 +2635,30 @@ public:
                                 if (instanceReset)
                                 {
                                     ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r All |cffffffff25-man Normal Raid|r instances have been reset.");
+
+                                    // -- kitt reset count start
+                                    playerLastResetTime = now;
+
+                                    RaidResetCounter[key].resets = currentResets + 1;
+                                    RaidResetCounter[key].expireTime = playerLastResetTime;
+
+                                    uint32 remaining = MAX_MANUAL_RESETS - RaidResetCounter[key].resets;
+
+                                    if (MAX_MANUAL_RESETS != 0)
+                                    {
+                                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Success:|r You have |cffffffff%u|r out of |cffffffff%u|r manual resets remaining for this week.", remaining, MAX_MANUAL_RESETS);
+                                    }
+
+                                    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                                    uint32 guidLow = playerGuid.GetCounter();
+
+                                    trans->PAppend("INSERT INTO character_kitt_raid_manual_resets (guid, mode, resets, reset_time) VALUES ({}, {}, {}, {}) "
+                                        "ON DUPLICATE KEY UPDATE resets = {}, reset_time = {}",
+                                        guidLow, mode, RaidResetCounter[key].resets, uint64(playerLastResetTime),
+                                        RaidResetCounter[key].resets, uint64(playerLastResetTime));
+
+                                    CharacterDatabase.AsyncCommitTransaction(trans);
+                                    // -- kitt reset count end
                                 }
                             }
                             CloseGossipMenuFor(player);
@@ -2545,6 +2685,49 @@ public:
                                 return true;
                             }
 
+                            // ----- Verificare contor in RAM
+                            ObjectGuid playerGuid = player->GetGUID();
+                            uint8 mode = uint8(diff);
+                            auto key = std::make_pair(playerGuid, mode);
+
+                            time_t now = GameTime::GetGameTime();
+                            uint32 currentResets = 0;
+                            time_t playerLastResetTime = 0;
+
+                            time_t currentWeekStart = GetCurrentInstanceWeekStartTime();
+
+                            if (RaidResetCounter.find(key) != RaidResetCounter.end())
+                            {
+                                if (RaidResetCounter[key].expireTime < currentWeekStart)
+                                {
+                                    // A trecut miercurea la ora 4! Curatam RAM-ul si DB-ul pe loc
+                                    RaidResetCounter.erase(key);
+                                    CharacterDatabase.PExecute("DELETE FROM character_kitt_raid_manual_resets WHERE guid = {} AND mode = {}", playerGuid.GetCounter(), mode);
+
+                                    currentResets = 0;
+                                    playerLastResetTime = 0;
+                                }
+                                else
+                                {
+                                    // Este in saptamana curenta, preluam datele
+                                    currentResets = RaidResetCounter[key].resets;
+                                    playerLastResetTime = RaidResetCounter[key].expireTime;
+                                }
+                            }
+                            else
+                            {
+                                currentResets = 0;
+                                playerLastResetTime = 0;
+                            }
+
+                            if (MAX_MANUAL_RESETS != 0 && currentResets >= MAX_MANUAL_RESETS)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[System]|r You have reached the weekly limit of |cffffffff%u/%u|r manual resets for this difficulty.", currentResets, MAX_MANUAL_RESETS);
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            // ----------------
+
                             if (!player->HasEnoughMoney(MoneyDungeons))
                             {
                                 player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, nullptr, 0, 0);
@@ -2564,6 +2747,30 @@ public:
                                 if (instanceReset)
                                 {
                                     ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r All |cffffffff10-man Heroic Raid|r instances have been reset.");
+
+                                    // -- kitt reset count start
+                                    playerLastResetTime = now;
+
+                                    RaidResetCounter[key].resets = currentResets + 1;
+                                    RaidResetCounter[key].expireTime = playerLastResetTime;
+
+                                    uint32 remaining = MAX_MANUAL_RESETS - RaidResetCounter[key].resets;
+
+                                    if (MAX_MANUAL_RESETS != 0)
+                                    {
+                                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Success:|r You have |cffffffff%u|r out of |cffffffff%u|r manual resets remaining for this week.", remaining, MAX_MANUAL_RESETS);
+                                    }
+
+                                    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                                    uint32 guidLow = playerGuid.GetCounter();
+
+                                    trans->PAppend("INSERT INTO character_kitt_raid_manual_resets (guid, mode, resets, reset_time) VALUES ({}, {}, {}, {}) "
+                                        "ON DUPLICATE KEY UPDATE resets = {}, reset_time = {}",
+                                        guidLow, mode, RaidResetCounter[key].resets, uint64(playerLastResetTime),
+                                        RaidResetCounter[key].resets, uint64(playerLastResetTime));
+
+                                    CharacterDatabase.AsyncCommitTransaction(trans);
+                                    // -- kitt reset count end
                                 }
                             }
                             CloseGossipMenuFor(player);
@@ -2590,6 +2797,49 @@ public:
                                 return true;
                             }
 
+                            // ----- Verificare contor in RAM
+                            ObjectGuid playerGuid = player->GetGUID();
+                            uint8 mode = uint8(diff);
+                            auto key = std::make_pair(playerGuid, mode);
+
+                            time_t now = GameTime::GetGameTime();
+                            uint32 currentResets = 0;
+                            time_t playerLastResetTime = 0;
+
+                            time_t currentWeekStart = GetCurrentInstanceWeekStartTime();
+
+                            if (RaidResetCounter.find(key) != RaidResetCounter.end())
+                            {
+                                if (RaidResetCounter[key].expireTime < currentWeekStart)
+                                {
+                                    // A trecut miercurea la ora 4! Curatam RAM-ul si DB-ul pe loc
+                                    RaidResetCounter.erase(key);
+                                    CharacterDatabase.PExecute("DELETE FROM character_kitt_raid_manual_resets WHERE guid = {} AND mode = {}", playerGuid.GetCounter(), mode);
+
+                                    currentResets = 0;
+                                    playerLastResetTime = 0;
+                                }
+                                else
+                                {
+                                    // Este in saptamana curenta, preluam datele
+                                    currentResets = RaidResetCounter[key].resets;
+                                    playerLastResetTime = RaidResetCounter[key].expireTime;
+                                }
+                            }
+                            else
+                            {
+                                currentResets = 0;
+                                playerLastResetTime = 0;
+                            }
+
+                            if (MAX_MANUAL_RESETS != 0 && currentResets >= MAX_MANUAL_RESETS)
+                            {
+                                ChatHandler(player->GetSession()).PSendSysMessage("|cff822424[System]|r You have reached the weekly limit of |cffffffff%u/%u|r manual resets for this difficulty.", currentResets, MAX_MANUAL_RESETS);
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+                            // ----------------
+
                             if (!player->HasEnoughMoney(MoneyDungeons))
                             {
                                 player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, nullptr, 0, 0);
@@ -2609,6 +2859,30 @@ public:
                                 if (instanceReset)
                                 {
                                     ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Succes:|r All |cffffffff25-man Heroic Raid|r instances have been reset.");
+
+                                    // -- kitt reset count start
+                                    playerLastResetTime = now;
+
+                                    RaidResetCounter[key].resets = currentResets + 1;
+                                    RaidResetCounter[key].expireTime = playerLastResetTime;
+
+                                    uint32 remaining = MAX_MANUAL_RESETS - RaidResetCounter[key].resets;
+
+                                    if (MAX_MANUAL_RESETS != 0)
+                                    {
+                                        ChatHandler(player->GetSession()).PSendSysMessage("|cff00ff00Success:|r You have |cffffffff%u|r out of |cffffffff%u|r manual resets remaining for this week.", remaining, MAX_MANUAL_RESETS);
+                                    }
+
+                                    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+                                    uint32 guidLow = playerGuid.GetCounter();
+
+                                    trans->PAppend("INSERT INTO character_kitt_raid_manual_resets (guid, mode, resets, reset_time) VALUES ({}, {}, {}, {}) "
+                                        "ON DUPLICATE KEY UPDATE resets = {}, reset_time = {}",
+                                        guidLow, mode, RaidResetCounter[key].resets, uint64(playerLastResetTime),
+                                        RaidResetCounter[key].resets, uint64(playerLastResetTime));
+
+                                    CharacterDatabase.AsyncCommitTransaction(trans);
+                                    // -- kitt reset count end
                                 }
                             }
                             CloseGossipMenuFor(player);
@@ -3826,6 +4100,88 @@ public:
     }
 };
 
+class kitt_raid_reset_loader : public WorldScript
+{
+public:
+    kitt_raid_reset_loader() : WorldScript("kitt_raid_reset_loader") {}
+
+    void OnStartup() override
+    {
+        MAX_MANUAL_RESETS = sConfigMgr->GetIntDefault("KittNpcMenu.Raid.Reset.Count", 0);
+
+        LoadRaidResetCounters();
+    }
+
+    void OnConfigLoad(bool /*reload*/) override
+    {
+        MAX_MANUAL_RESETS = sConfigMgr->GetIntDefault("KittNpcMenu.Raid.Reset.Count", 0);
+
+        LoadRaidResetCounters();
+    }
+
+private:
+    void LoadRaidResetCounters()
+    {
+        RaidResetCounter.clear();
+
+        // Aflam secunda exacta cand a inceput saptamana curenta de instante
+        time_t currentWeekStart = GetCurrentInstanceWeekStartTime();
+
+        // Citim datele din DB
+        QueryResult result = CharacterDatabase.Query("SELECT guid, mode, resets, reset_time FROM character_kitt_raid_manual_resets");
+
+        if (!result)
+        {
+            TC_LOG_INFO("server.loading", ">> KITT [Raid Reset] Tabela este goala sau nu exista date.");
+            return;
+        }
+
+        uint32 loadedCount = 0;
+        uint32 expiredCount = 0;
+
+        // Pregatim o tranzactie pentru a sterge datele vechi dintr-un singur drum
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 guidLow = fields[0].GetUInt32();
+            uint8 mode = fields[1].GetUInt8();
+            uint32 resets = fields[2].GetUInt32();
+            time_t expireTime = fields[3].GetUInt64();
+
+            // Daca ultima resetare a fost facuta INAINTE sa inceapa saptamana curenta de instante
+            if (expireTime < currentWeekStart)
+            {
+                trans->PAppend("DELETE FROM `character_kitt_raid_manual_resets` WHERE `guid` = {} AND mode = {}", guidLow, mode);
+                expiredCount++;
+            }
+            else
+            {
+                // Datele sunt valide pentru saptamana asta, le incarcam in RAM
+                ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(guidLow);
+
+                auto key = std::make_pair(playerGuid, mode);
+                RaidResetCounter[key].resets = resets;
+                RaidResetCounter[key].expireTime = expireTime;
+                loadedCount++;
+            }
+
+        } while (result->NextRow());
+
+        // Daca am gasit caractere cu contoare ramase din saptamani trecute, le stergem asincron
+        if (expiredCount > 0)
+        {
+            CharacterDatabase.AsyncCommitTransaction(trans);
+            TC_LOG_INFO("server.loading", ">> KITT [Raid Reset Erase] S-au sters {} inregistrari expirate din saptamanile trecute.", expiredCount);
+        }
+
+        TC_LOG_INFO("server.loading", ">> KITT [Raid Reset] S-au incarcat cu succes {} inregistrari active in RaidResetCounter.", loadedCount);
+    }
+};
+
+
+
 void AddSC_kitt_npc_menu()
 {
     new kitt_npc_menu_config();
@@ -3833,4 +4189,5 @@ void AddSC_kitt_npc_menu()
     new kitt_npc_menu();
     new kitt_npc_menu_validator();
     new Kitt_Player_Cleanup();
+    new kitt_raid_reset_loader();
 }

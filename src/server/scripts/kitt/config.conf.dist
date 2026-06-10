@@ -15,6 +15,11 @@ Kitt.Play.Time.Reward = 0
 # Default: 0
 Kitt.Invite.Friend = 0
 
+# instance reset cont
+# manual reset npc menu
+# default: 0 (infinit)
+KittNpcMenu.Raid.Reset.Count = 0
+
 ###################################
 ##### Kitt Instance Req start #####
 ###################################
