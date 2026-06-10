@@ -129,7 +129,6 @@ namespace
 
     // Map-ul global din RAM
     std::map<std::pair<ObjectGuid, uint8>, PlayerRaidResetData> RaidResetCounter;
-    const uint32 ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
     
     static uint32 MAX_MANUAL_RESETS = 0;
 
