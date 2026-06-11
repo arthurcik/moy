@@ -1497,6 +1497,9 @@ void bot_ai::BuffAndHealGroup(uint32 diff)
             for (BotMap::const_iterator itr = map->begin(); itr != map->end(); ++itr)
             {
                 Unit* u = itr->second;
+                if (!u || !u->IsInWorld() || me->GetMap() != u->FindMap()) // kitt fix
+                    continue; // kitt fix
+
                 if (!(!u->IsInWorld() || me->GetMap() != u->FindMap() || !u->IsAlive() || u->HasUnitState(UNIT_STATE_ISOLATED) ||
                     u->ToCreature()->IsTempBot() || me->GetDistance(u) > 40 ||
                     (GetHealthPCT(u) > hppctthreshold && !IsTank(u))))
@@ -1504,7 +1507,8 @@ void bot_ai::BuffAndHealGroup(uint32 diff)
 
                 u = itr->second->GetBotsPet();
 
-                if (!(!u || !u->IsAlive() || u->HasUnitState(UNIT_STATE_ISOLATED) || me->GetDistance(u) > 40 || GetHealthPCT(u) > hppctthreshold))
+                if (u && u->IsInWorld() && u->IsAlive() && !u->HasUnitState(UNIT_STATE_ISOLATED) && me->GetDistance(u) <= 40 && GetHealthPCT(u) <= hppctthreshold) // kitt fix
+                //if (!(!u || !u->IsAlive() || u->HasUnitState(UNIT_STATE_ISOLATED) || me->GetDistance(u) > 40 || GetHealthPCT(u) > hppctthreshold))
                     targets3.push_back(u);
 
                 u = itr->second->GetVehicleBase();
@@ -1533,6 +1537,8 @@ void bot_ai::BuffAndHealGroup(uint32 diff)
         for (BotMap::const_iterator itr = map->begin(); itr != map->end(); ++itr)
         {
             Unit* u = itr->second;
+            if (!u || !u->IsInWorld() || me->GetMap() != u->FindMap()) // kitt fix
+                continue; // kitt fix
             if (!(!u->IsInWorld() || me->GetMap() != u->FindMap() || !u->IsAlive() || u->HasUnitState(UNIT_STATE_ISOLATED) ||
                 u->IsTotem() || me->GetDistance(u) > 30))
                 targets4.push_back(u);
@@ -1592,6 +1598,9 @@ void bot_ai::BuffAndHealGroup(uint32 diff)
                     for (BotMap::const_iterator bitr = map->begin(); bitr != map->end(); ++bitr)
                     {
                         Unit* u = bitr->second;
+                        if (!u || !u->IsInWorld() || me->GetMap() != u->FindMap()) // kitt fix
+                            continue; // kitt fix
+
                         if (!(!u->IsInWorld() || me->GetMap() != u->FindMap() || !u->IsAlive() || u->HasUnitState(UNIT_STATE_ISOLATED) ||
                             u->ToCreature()->IsTempBot() || me->GetDistance(u) > 40 ||
                             (GetHealthPCT(u) > hppctthreshold && !IsTank(u))))
@@ -1599,7 +1608,8 @@ void bot_ai::BuffAndHealGroup(uint32 diff)
 
                         u = bitr->second->GetBotsPet();
 
-                        if (!(!u || !u->IsAlive() || u->HasUnitState(UNIT_STATE_ISOLATED) || me->GetDistance(u) > 40 || GetHealthPCT(u) > hppctthreshold))
+                        if (u && u->IsInWorld() && u->IsAlive() && !u->HasUnitState(UNIT_STATE_ISOLATED) && me->GetDistance(u) <= 40 && GetHealthPCT(u) <= hppctthreshold) // kitt fix
+                            //if (!(!u || !u->IsAlive() || u->HasUnitState(UNIT_STATE_ISOLATED) || me->GetDistance(u) > 40 || GetHealthPCT(u) > hppctthreshold))
                             targets5.push_back(u);
 
                         u = bitr->second->GetVehicleBase();
