@@ -3220,6 +3220,100 @@ namespace KittBotAI
                 {
                     float currentDistToCenter = bot->GetDistance2d(centerX, centerY);
 
+                    if (currentDistToCenter > 25.0f)
+                    {
+                        bool pathToCenterBlocked = false;
+                        std::list<Creature*> centerTraps;
+                        bot->GetCreatureListWithEntryInGrid(centerTraps, npcShadowTrapTrigger, 45.0f);
+
+                        float angleToCenter = bot->GetAbsoluteAngle(centerX, centerY);
+                        for (float d = 3.0f; d < currentDistToCenter; d += 3.0f)
+                        {
+                            float checkX = bot->GetPositionX() + (d * std::cos(angleToCenter));
+                            float checkY = bot->GetPositionY() + (d * std::sin(angleToCenter));
+                            G3D::Vector3 checkPos(checkX, checkY, centerZ);
+
+                            for (Creature* t : centerTraps)
+                            {
+                                if (!t || !t->IsAlive()) continue;
+                                G3D::Vector3 trapPos(t->GetPositionX(), t->GetPositionY(), t->GetPositionZ());
+                                if ((checkPos - trapPos).length() < 9.0f)
+                                {
+                                    pathToCenterBlocked = true;
+                                    break;
+                                }
+                            }
+                            if (pathToCenterBlocked) break;
+                        }
+
+                        if (!pathToCenterBlocked)
+                        {
+                            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+                            {
+                                bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                bot->GetMotionMaster()->MovePoint(76, centerX, centerY, centerZ);
+                            }
+                        }
+                        else
+                        {
+                            float safeX = centerX;
+                            float safeY = centerY;
+                            bool centerIsSafe = false;
+
+                            float testRadii[] = { 0.0f, 4.0f, 8.0f };
+
+                            for (float radius : testRadii)
+                            {
+                                int maxAngles = (radius == 0.0f) ? 1 : 6;
+
+                                for (int i = 0; i < maxAngles; ++i)
+                                {
+                                    float testAngle = i * (M_PI / 3.0f);
+                                    float testX = centerX + (radius * std::cos(testAngle));
+                                    float testY = centerY + (radius * std::sin(testAngle));
+                                    bool targetPointBlocked = false;
+
+                                    G3D::Vector3 targetPos(testX, testY, centerZ);
+
+                                    for (Creature* t : centerTraps)
+                                    {
+                                        if (!t || !t->IsAlive()) continue;
+                                        G3D::Vector3 trapPos(t->GetPositionX(), t->GetPositionY(), t->GetPositionZ());
+                                        if ((targetPos - trapPos).length() < 9.0f)
+                                        {
+                                            targetPointBlocked = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (!targetPointBlocked)
+                                    {
+                                        safeX = testX;
+                                        safeY = testY;
+                                        centerIsSafe = true;
+                                        break;
+                                    }
+                                }
+                                if (centerIsSafe) break;
+                            }
+
+                            if (centerIsSafe)
+                            {
+                                bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+                                bot->NearTeleportTo(safeX, safeY, centerZ, bot->GetOrientation());
+
+                                if (bossLichK && bossLichK->IsInWorld() && bossLichK->GetVictim() == bot)
+                                {
+                                    bossLichK->NearTeleportTo(safeX, safeY, centerZ, bossLichK->GetOrientation());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                /*{
+                    float currentDistToCenter = bot->GetDistance2d(centerX, centerY);
+
                     if (currentDistToCenter > 6.0f)
                     {
                         bool pathToCenterBlocked = false;
@@ -3255,12 +3349,113 @@ namespace KittBotAI
                             }
                         }
                     }
-                }
+                }*/
             }
 
 
             // 2. Defile, faza 2
             if (Creature* defile = bot->FindNearestCreature(npcDefileTrigger, 40.0f, true))
+            {
+                float currentScale = defile->GetObjectScale();
+                float safetyMargin = 2.0f;
+                float dynamicRadius = (8.0f * currentScale) + safetyMargin;
+
+                float distToDefile = bot->GetDistance(defile);
+
+                if (distToDefile < dynamicRadius)
+                {
+                    if (bot->IsNonMeleeSpellCast(true))
+                        bot->InterruptNonMeleeSpells(true);
+
+                    bot->AttackStop();
+
+                    float lkCenterX = 505.286f;
+                    float lkCenterY = -2124.36f;
+                    float lkCenterZ = 840.95f;
+
+                    float distToCenter = bot->GetDistance2d(lkCenterX, lkCenterY);
+
+                    if (distToCenter > 40.0f)
+                    {
+                        bot->GetMotionMaster()->Clear(MOTION_SLOT_ACTIVE);
+
+                        float safeX = lkCenterX;
+                        float safeY = lkCenterY;
+
+                        std::list<Creature*> activeDefiles;
+                        bot->GetCreatureListWithEntryInGrid(activeDefiles, npcDefileTrigger, 50.0f);
+
+                        bool foundSafeSpot = false;
+
+                        float testRadii[] = { 3.0f, 8.0f, 15.0f };
+
+                        for (float radius : testRadii)
+                        {
+                            for (int i = 0; i < 8; ++i)
+                            {
+                                float testAngle = i * (M_PI / 4.0f);
+                                float testX = lkCenterX + (radius * std::cos(testAngle));
+                                float testY = lkCenterY + (radius * std::sin(testAngle));
+                                bool pointIsBlocked = false;
+
+                                for (Creature* d : activeDefiles)
+                                {
+                                    if (!d || !d->IsAlive()) continue;
+
+                                    float dScale = d->GetObjectScale();
+                                    float dRadius = (8.0f * dScale) + 2.0f;
+
+                                    float dx = testX - d->GetPositionX();
+                                    float dy = testY - d->GetPositionY();
+                                    float distToDefileCenter = std::sqrt(dx * dx + dy * dy);
+
+                                    if (distToDefileCenter < dRadius)
+                                    {
+                                        pointIsBlocked = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!pointIsBlocked)
+                                {
+                                    safeX = testX;
+                                    safeY = testY;
+                                    foundSafeSpot = true;
+                                    break;
+                                }
+                            }
+                            if (foundSafeSpot)
+                                break;
+                        }
+
+                        // Teleportam botul in siguranta
+                        bot->NearTeleportTo(safeX, safeY, lkCenterZ, bot->GetOrientation());
+
+                        // Daca botul are aggro de la LK si il trage dupa el, teleportam si LK (optional, similar cu HodirTar)
+                        //if (LKTar && LKTar->IsInWorld() && LKTar->GetVictim() == bot)
+                        //{
+                        //    LKTar->NearTeleportTo(safeX, safeY, lkCenterZ, LKTar->GetOrientation());
+                        //}
+
+                        DefilesPrezent = true;
+                        // return;
+                    }
+
+                    // Daca NU este pe margine, ruleaza fuga ta clasica prin deplasare (MovePoint)
+                    float angle = defile->GetAbsoluteAngle(bot);
+                    float runDist = (dynamicRadius - distToDefile) + 10.0f;
+                    float x = bot->GetPositionX() + (runDist * std::cos(angle));
+                    float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+                    bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+
+                    DefilesPrezent = true;
+                    //return;
+                }
+            }
+
+
+            /*if (Creature* defile = bot->FindNearestCreature(npcDefileTrigger, 40.0f, true))
             {
                 float currentScale = defile->GetObjectScale();
                 float safetyMargin = 2.0f;
@@ -3285,7 +3480,7 @@ namespace KittBotAI
                     DefilesPrezent = true;
                     //return;
                 }
-            }
+            }*/
 
             // 3. sphere, intre faze
             if (Creature* sphere = bot->FindNearestCreature(npcIceSphere, 35.0f, true))
