@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `instance_veteran_status` (
+CREATE TABLE IF NOT EXISTS `character_kitt_instance_veteran_status` (
   `id` int(10) unsigned NOT NULL COMMENT 'Instance ID',
   `isVeteran` tinyint(3) unsigned NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),

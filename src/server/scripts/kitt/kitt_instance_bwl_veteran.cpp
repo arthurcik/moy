@@ -26,6 +26,7 @@ using namespace Trinity::ChatCommands;
 namespace
 {
     const uint32 MAP_BWL = 469;
+
     const uint32 VISUAL_AURA_MARKER = 38164;
 
     static std::map<ObjectGuid, bool> HeroicSelection;
@@ -82,7 +83,7 @@ public:
                         ActiveHeroicInstances.insert(instanceId);
 
                         // Folosim REPLACE INTO: dac? exist? deja, ?l actualizeaz?; dac? nu, ?l insereaz?.
-                        CharacterDatabase.PExecute("REPLACE INTO instance_veteran_status (id, isVeteran) VALUES ({}, 1)", instanceId);
+                        CharacterDatabase.PExecute("REPLACE INTO character_kitt_instance_veteran_status (id, isVeteran) VALUES ({}, 1)", instanceId);
 
                         ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Instanta a fost sigilata permanent pe modul Veteran!");
                     }
@@ -90,7 +91,7 @@ public:
 
                 if (isVeteran)
                 {
-                    CheckAndApplyVeteran(player);
+                    //CheckAndApplyVeteran(player);
                     ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Modul a fost aplicat cu succes!");
                 }
             }, 2s);
@@ -184,8 +185,8 @@ public:
         }
     }
 
-    void OnSpellCast(Player* player, Spell* /*spell*/, bool /*skipCheck*/) override
-    {
+    //void OnSpellCast(Player* player, Spell* /*spell*/, bool /*skipCheck*/) override
+    /*{
         Map* map = player->GetMap();
         if (map->GetId() != MAP_BWL)
             return;
@@ -203,7 +204,7 @@ public:
             CheckAndApplyVeteran(player);
             //ChatHandler(player->GetSession()).PSendSysMessage("|cffffd700[TEST] spell cast mod apply");
         }
-    }
+    }*/
 
     void CheckAndApplyVeteran(Player* player)
     {
@@ -482,7 +483,7 @@ public:
     {
         ActiveHeroicInstances.clear();
 
-        QueryResult result = CharacterDatabase.Query("SELECT id FROM instance_veteran_status WHERE isVeteran = 1");
+        QueryResult result = CharacterDatabase.Query("SELECT id FROM character_kitt_instance_veteran_status WHERE isVeteran = 1");
 
         if (!result)
             return;
@@ -501,9 +502,171 @@ public:
     }
 };
 
+// scalare
+// --- SECTIUNEA 1: MODIFICARE NIVEL PRIN HOOK-UL TAU GLOBAL ---
+class CustomAllCreatureScaler : public AllCreatureScript
+{
+public:
+    CustomAllCreatureScaler() : AllCreatureScript("CustomAllCreatureScaler") {}
 
+    void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
+    {
+        if (!creature || !creature->IsAlive())
+            return;
 
+        Map* map = creature->GetMap();
+        if (!map || map->GetId() != MAP_BWL)
+            return;
 
+        uint32 instanceId = map->GetInstanceId();
+        bool isVeteran = (ActiveHeroicInstances.find(instanceId) != ActiveHeroicInstances.end());
+        if (!isVeteran)
+            return;
+
+        if (creature->IsNPCBotOrPet() || creature->IsPet() || creature->IsTotem() || creature->IsVehicle())
+            return;
+
+        uint8 nivelCurent = creature->GetLevel();
+
+        if (nivelCurent >= 60 && nivelCurent <= 63)
+        {
+            ScaleazaCreaturaLaNivel80(creature, nivelCurent);
+        }
+    }
+
+    void Creature_SelectLevel(const CreatureTemplate* /*cinfo*/, Creature* creature) override
+    {
+        if (!creature || !creature->IsAlive())
+            return;
+
+        Map* map = creature->GetMap();
+        if (!map || map->GetId() != MAP_BWL)
+            return;
+
+        uint32 instanceId = map->GetInstanceId();
+        bool isVeteran = (ActiveHeroicInstances.find(instanceId) != ActiveHeroicInstances.end());
+        if (!isVeteran)
+            return;
+
+        if (creature->IsNPCBotOrPet() || creature->IsPet() || creature->IsTotem() || creature->IsVehicle())
+            return;
+
+        uint8 nivelCurent = creature->GetLevel();
+
+        if (nivelCurent >= 60 && nivelCurent <= 63)
+        {
+            ScaleazaCreaturaLaNivel80(creature, nivelCurent);
+        }
+    }
+
+private:
+    void ScaleazaCreaturaLaNivel80(Creature* creature, uint8 nivelCurent)
+    {
+        if (!creature || !creature->IsAlive())
+            return;
+
+        Map* map = creature->GetMap();
+        if (!map || map->GetId() != MAP_BWL)
+            return;
+
+        if (creature->IsNPCBotOrPet() || creature->IsPet() || creature->IsTotem() || creature->IsVehicle())
+            return;
+
+        //uint8 nivelCurent = creature->GetLevel();
+
+        // Evitam loop-ul infinit verificand daca monstrul este in intervalul de Vanilla
+        if (nivelCurent >= 60 && nivelCurent <= 63)
+        {
+            uint8 noulNivel = nivelCurent + 20; // Transformam 60->80, 63->83
+
+            creature->SetLevel(noulNivel);
+            creature->UpdateLevelDependantStats();
+
+            // Multiplicator bonus pentru HP-ul monstrilor din instanta
+            float multiplicatorHP = 10.0f;
+            uint32 hpNou = creature->GetMaxHealth() * multiplicatorHP;
+            creature->SetMaxHealth(hpNou);
+            creature->SetHealth(hpNou);
+            creature->SetStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, (float)hpNou);
+            creature->SetCustomAggroDistances(20.0f, 20.0f);
+
+            float multiplicatorArmor = 3.5f; // 4.5
+            uint32 armorNoua = creature->GetArmor() * multiplicatorArmor;
+            creature->SetStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, (float)armorNoua);
+
+            float multiplicatorAP = 3.5f; // 4.5
+
+            uint32 apMeleeNou = creature->GetFlatModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE) * multiplicatorAP;
+            uint32 apRangedNou = creature->GetFlatModifierValue(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE) * multiplicatorAP;
+
+            // Aplicam noile valori in mod corect pentru TrinityCore
+            creature->SetStatFlatModifier(UNIT_MOD_ATTACK_POWER, BASE_VALUE, (float)apMeleeNou);
+            creature->SetStatFlatModifier(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE, (float)apRangedNou);
+        }
+    }
+};
+
+// --- SECTIUNEA 2: HOOKS DE DAMAGE SI HEAL (UnitScript) ---
+class CustomInstanceDamageScaler : public UnitScript
+{
+public:
+    CustomInstanceDamageScaler() : UnitScript("CustomInstanceDamageScaler") {}
+
+    void OnHeal(Unit* healer, Unit* reciever, uint32& gain) override
+    {
+        gain = AplicaMultiplicatorDamage(reciever, healer, gain);
+    }
+
+    /*void OnDamage(Unit* attacker, Unit* victim, uint32& damage) override
+    {
+        damage = AplicaMultiplicatorDamage(victim, attacker, damage);
+    }*/
+
+    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage) override
+    {
+        damage = AplicaMultiplicatorDamage(target, attacker, damage);
+    }
+
+    void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage) override
+    {
+        damage = AplicaMultiplicatorDamage(target, attacker, damage);
+    }
+
+    void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage) override
+    {
+        uint32 damageConversie = damage > 0 ? (uint32)damage : 0;
+        damage = (int32)AplicaMultiplicatorDamage(target, attacker, damageConversie);
+    }
+
+private:
+    uint32 AplicaMultiplicatorDamage(Unit* /*target*/, Unit* attacker, uint32 damage)
+    {
+        if (!attacker || attacker->GetTypeId() == TYPEID_PLAYER || !attacker->IsInWorld())
+            return damage;
+
+        Map* map = attacker->GetMap();
+        if (!map || map->GetId() != MAP_BWL)
+            return damage;
+
+        uint32 instanceId = map->GetInstanceId();
+        bool isVeteran = (ActiveHeroicInstances.find(instanceId) != ActiveHeroicInstances.end());
+        if (!isVeteran)
+            return damage;
+
+        // Daca atacatorul este un NPCBot sau un pet de bot, damage-ul lui NU trebuie inmultit,
+        // deoarece boti au deja stats si spell-uri native de nivel 80.
+        if (attacker->ToCreature() && attacker->ToCreature()->IsNPCBotOrPet())
+            return damage;
+
+        if ((attacker->IsHunterPet() || attacker->IsPet() || attacker->IsSummon()) && attacker->IsControlledByPlayer())
+            return damage;
+
+        // Multiplicator pentru damage-ul monstrilor din instanta
+        float damageMultiplier = 4.5f;
+
+        return uint32(damage * damageMultiplier);
+    }
+};
 
 
 void AddSC_kitt_instance_bwl_veteran()
@@ -511,5 +674,7 @@ void AddSC_kitt_instance_bwl_veteran()
     new kitt_bwl_veteran_startup();
     new kitt_bwl_heroic_core();
     new kitt_bwl_commandscript();
-    new npc_veteran_upgrader();
+    //new npc_veteran_upgrader();
+    new CustomAllCreatureScaler();
+    new CustomInstanceDamageScaler();
 }
