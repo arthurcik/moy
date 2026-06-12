@@ -59,7 +59,7 @@ public:
             return;
 
         ObjectGuid guid = player->GetGUID();
-        player->m_Events.AddEventAtOffset([guid, this]()
+        player->m_Events.AddEventAtOffset([guid]()
             {
                 Player* player = ObjectAccessor::FindPlayer(guid);
 
