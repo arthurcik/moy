@@ -297,6 +297,19 @@ class TC_GAME_API FormulaScript : public ScriptObject
         virtual void OnGroupRateCalculation(float& rate, uint32 count, bool isRaid);
 };
 
+class TC_GAME_API AllCreatureScript : public ScriptObject // kitt
+{
+    protected:
+        AllCreatureScript(const char* name);
+
+    public:
+        // Hook-ul pentru update periodic (VAS)
+        virtual void OnAllCreatureUpdate(Creature* /*creature*/, uint32 /*diff*/) {}
+
+        // Hook-ul pentru generarea/selectarea nivelului (VAS)
+        virtual void Creature_SelectLevel(const CreatureTemplate* /*cinfo*/, Creature* /*creature*/) {}
+};
+
 template<class TMap>
 class TC_GAME_API MapScript
 {
@@ -384,25 +397,25 @@ class TC_GAME_API ItemScript : public ScriptObject
 
 class TC_GAME_API UnitScript : public ScriptObject
 {
-    protected:
+protected:
 
-        explicit UnitScript(char const* name);
+    explicit UnitScript(char const* name);
 
-    public:
-        // Called when a unit deals healing to another unit
-        virtual void OnHeal(Unit* healer, Unit* reciever, uint32& gain);
+public:
+    // Called when a unit deals healing to another unit
+    virtual void OnHeal(Unit* healer, Unit* reciever, uint32& gain);
 
-        // Called when a unit deals damage to another unit
-        virtual void OnDamage(Unit* attacker, Unit* victim, uint32& damage);
+    // Called when a unit deals damage to another unit
+    virtual void OnDamage(Unit* attacker, Unit* victim, uint32& damage);
 
-        // Called when DoT's Tick Damage is being Dealt
-        virtual void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage);
+    // Called when DoT's Tick Damage is being Dealt
+    virtual void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage);
 
-        // Called when Melee Damage is being Dealt
-        virtual void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage);
+    // Called when Melee Damage is being Dealt
+    virtual void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage);
 
-        // Called when Spell Damage is being Dealt
-        virtual void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage);
+    // Called when Spell Damage is being Dealt
+    virtual void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage);
 };
 
 class TC_GAME_API CreatureScript : public ScriptObject
@@ -1105,6 +1118,10 @@ class TC_GAME_API ScriptMgr
         void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage);
         void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage);
         void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage);
+
+    public: /* AllCreatureScript kitt */
+        void OnCreatureUpdate(Creature* creature, uint32 diff);
+        void Creature_SelectLevel(const CreatureTemplate* cinfo, Creature* creature);
 
     private:
         uint32 _scriptCount;

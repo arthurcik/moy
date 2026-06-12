@@ -2185,6 +2185,24 @@ void ScriptMgr::ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& dama
     FOREACH_SCRIPT(UnitScript)->ModifySpellDamageTaken(target, attacker, damage);
 }
 
+// kitt
+AllCreatureScript::AllCreatureScript(const char* name)
+    : ScriptObject(name)
+{
+    ScriptRegistry<AllCreatureScript>::Instance()->AddScript(this);
+}
+
+void ScriptMgr::OnCreatureUpdate(Creature* creature, uint32 diff)
+{
+    FOREACH_SCRIPT(AllCreatureScript)->OnAllCreatureUpdate(creature, diff);
+}
+
+void ScriptMgr::Creature_SelectLevel(const CreatureTemplate* cinfo, Creature* creature)
+{
+    FOREACH_SCRIPT(AllCreatureScript)->Creature_SelectLevel(cinfo, creature);
+}
+// -------------
+
 SpellScriptLoader::SpellScriptLoader(char const* name)
     : ScriptObject(name)
 {
@@ -2904,6 +2922,7 @@ template class TC_GAME_API ScriptRegistry<InstanceMapScript>;
 template class TC_GAME_API ScriptRegistry<BattlegroundMapScript>;
 template class TC_GAME_API ScriptRegistry<ItemScript>;
 template class TC_GAME_API ScriptRegistry<CreatureScript>;
+template class TC_GAME_API ScriptRegistry<AllCreatureScript>; // kitt
 template class TC_GAME_API ScriptRegistry<GameObjectScript>;
 template class TC_GAME_API ScriptRegistry<AreaTriggerScript>;
 template class TC_GAME_API ScriptRegistry<BattlefieldScript>;
