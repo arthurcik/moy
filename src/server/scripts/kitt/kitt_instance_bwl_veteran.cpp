@@ -114,7 +114,7 @@ public:
         }
     }
 
-    void KittAddLoot(Player* /*player*/, Loot* loot) /*override*/
+    void KittAddLootBoss(Player* /*player*/, Loot* loot) /*override*/
     {
         ObjectGuid sourceGuid = loot->sourceGuid;
         if (sourceGuid.GetEntry() == 13020)   // Vaelastrasz the Corrupt
@@ -125,6 +125,8 @@ public:
             loot->gold += 500000; // adauga 50g la loot
             //ChatHandler(player->GetSession()).PSendSysMessage("|cffffd700[TEST Loot Heroic]|r Ai primit un item Veteran!");
         }
+
+        AddKittCustomItem(loot, 49908, 1, 50.0f, false); // primordial saronite
     }
 
     void KittAddLootElite(Player* /*player*/, Loot* loot) /*override*/
@@ -133,7 +135,7 @@ public:
 
         // loot comun
         //loot->items.clear(); // sterge loot vechi
-        //AddKittCustomItem(loot, 49426, 5, 100.0f, true);   // emblem of frost
+        AddKittCustomItem(loot, 43102, 1, 1.0f, false); // frozen orb
 
         loot->gold += 100000; // adauga 50g la loot
         //player->SendLoot(sourceGuid, LOOT_CORPSE);
@@ -166,7 +168,7 @@ public:
                         {
                             if (member->IsAtGroupRewardDistance(player))
                             {
-                                member->AddItem(49426, 5);
+                                member->AddItem(49426, 5); // emblem of frost
                                 //member->ModifyMoney(extraGold);
 
                                 //ChatHandler(member->GetSession()).PSendSysMessage("|cffffd700[Loot Heroic]|r Ai primit un item Veteran!");
@@ -175,7 +177,7 @@ public:
                     }
                 }
 
-                KittAddLoot(player, loot);
+                KittAddLootBoss(player, loot);
             }
 
             if (creature->isElite())
@@ -590,11 +592,11 @@ private:
             creature->SetStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, (float)hpNou);
             creature->SetCustomAggroDistances(20.0f, 20.0f);
 
-            float multiplicatorArmor = 3.5f; // 4.5
+            float multiplicatorArmor = 6.5f; // 4.5
             uint32 armorNoua = creature->GetArmor() * multiplicatorArmor;
             creature->SetStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, (float)armorNoua);
 
-            float multiplicatorAP = 3.5f; // 4.5
+            float multiplicatorAP = 6.5f; // 4.5
 
             uint32 apMeleeNou = creature->GetFlatModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE) * multiplicatorAP;
             uint32 apRangedNou = creature->GetFlatModifierValue(UNIT_MOD_ATTACK_POWER_RANGED, BASE_VALUE) * multiplicatorAP;
@@ -612,12 +614,12 @@ class CustomInstanceDamageScaler : public UnitScript
 public:
     CustomInstanceDamageScaler() : UnitScript("CustomInstanceDamageScaler") {}
 
-    void OnHeal(Unit* healer, Unit* reciever, uint32& gain) override
+    /*void OnHeal(Unit* healer, Unit* reciever, uint32& gain) override
     {
         gain = AplicaMultiplicatorDamage(reciever, healer, gain);
     }
 
-    /*void OnDamage(Unit* attacker, Unit* victim, uint32& damage) override
+    void OnDamage(Unit* attacker, Unit* victim, uint32& damage) override
     {
         damage = AplicaMultiplicatorDamage(victim, attacker, damage);
     }*/
@@ -655,7 +657,7 @@ private:
 
         // Daca atacatorul este un NPCBot sau un pet de bot, damage-ul lui NU trebuie inmultit,
         // deoarece boti au deja stats si spell-uri native de nivel 80.
-        if (attacker->ToCreature() && attacker->ToCreature()->IsNPCBotOrPet())
+        if (attacker && attacker->IsNPCBotOrPet())
             return damage;
 
         if ((attacker->IsHunterPet() || attacker->IsPet() || attacker->IsSummon()) && attacker->IsControlledByPlayer())
