@@ -2257,6 +2257,15 @@ public:
 
                         case KITT_ACTION_SUMMON_STONE:
                         {
+                            if (player->GetMapId() == 469 || player->GetMapId() == 229)
+                            {
+                                std::string message = "|cffff0000!...|r Menu disabled inside WBL and BRS.";
+                                ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
+
+                                CloseGossipMenuFor(player);
+                                return true;
+                            }
+
                             uint32 KittGVObj = 195013;    // summon stone object
                             Seconds despawnTime = Seconds(120);
                             // X = +fata/-spate , Y = +stanga/-dreapta , Z = +sus/-jos , 0.0 = orientarea
