@@ -203,7 +203,7 @@ public:
         }
 
         AddKittCustomItem(loot, 49908, 1, 50.0f, false); // primordial saronite
-        AddKittCustomItem(loot, 43102, 1, 50.0f, true); // frozen orb
+        AddKittCustomItem(loot, 43102, 1, 50.0f, false); // frozen orb
 
     }
 
@@ -722,7 +722,7 @@ private:
             creature->SetStatFlatModifier(UNIT_MOD_HEALTH, BASE_VALUE, (float)hpNou);
             creature->SetCustomAggroDistances(20.0f, 20.0f);
 
-            float multiplicatorArmor = 6.5f; // 4.5
+            float multiplicatorArmor = 2.5f; // 4.5
             uint32 armorNoua = creature->GetArmor() * multiplicatorArmor;
             creature->SetStatFlatModifier(UNIT_MOD_ARMOR, BASE_VALUE, (float)armorNoua);
 
