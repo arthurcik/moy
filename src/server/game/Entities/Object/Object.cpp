@@ -2810,6 +2810,13 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
     Player const* selfPlayerOwner = GetAffectingPlayer();
     Player const* targetPlayerOwner = target->GetAffectingPlayer();
 
+    // kitt fix
+    if (selfPlayerOwner && (uintptr_t)selfPlayerOwner < 0x1000)
+        return REP_FRIENDLY;
+    if (targetPlayerOwner && (uintptr_t)targetPlayerOwner < 0x1000)
+        return REP_FRIENDLY;
+    // ==========================================
+
     // check forced reputation to support SPELL_AURA_FORCE_REACTION
     if (selfPlayerOwner)
     {
@@ -2826,6 +2833,11 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
 
     Unit const* unit = Coalesce<const Unit>(ToUnit(), selfPlayerOwner);
     Unit const* targetUnit = Coalesce<const Unit>(target->ToUnit(), targetPlayerOwner);
+
+    // kitt fix
+    if (!unit || !targetUnit || (uintptr_t)unit < 0x1000 || (uintptr_t)targetUnit < 0x1000)
+        return REP_FRIENDLY;
+
     //npcbot
     /*
     if (unit && unit->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED))
