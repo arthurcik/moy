@@ -26,6 +26,7 @@ using namespace Trinity::ChatCommands;
 namespace
 {
     const uint32 MAP_BWL = 469;
+    const uint32 MAP_BRS = 229;
 
     const uint32 VISUAL_AURA_MARKER = 38164;
 
@@ -45,17 +46,11 @@ namespace
         ITEM_UPGRADE_TOKEN = 212202,
         GOLD_COST = 500 * 10000  // 500 Gold
     };
-}
 
-class kitt_bwl_heroic_core : public PlayerScript
-{
-public:
-    kitt_bwl_heroic_core() : PlayerScript("kitt_bwl_heroic_core") {}
-
-    void OnMapChanged(Player* player) override
+    void KittOnMapChanged(Player* player)
     {
         uint32 mapId = player->GetMapId();
-        if (mapId != MAP_BWL)
+        if (mapId != MAP_BWL && mapId != MAP_BRS)
             return;
 
         ObjectGuid guid = player->GetGUID();
@@ -63,7 +58,7 @@ public:
             {
                 Player* player = ObjectAccessor::FindPlayer(guid);
 
-                if (!player || !player->IsInWorld() || player->GetMapId() != MAP_BWL)
+                if (!player || !player->IsInWorld() || (player->GetMapId() != MAP_BWL && player->GetMapId() != MAP_BRS))
                     return;
 
                 InstanceMap* instance = (InstanceMap*)player->GetMap();
@@ -72,9 +67,31 @@ public:
                 // 1. Verific?m RAM
                 bool isVeteran = (ActiveHeroicInstances.find(instanceId) != ActiveHeroicInstances.end());
 
+                // verificare daca nu sa inceput deja
+                // anti exploit
+                if (!isVeteran)
+                {
+                    InstanceScript* instScript = player->GetInstanceScript();
+                    if (!instScript)
+                        return;
+
+                    uint32 brsPiroguard = static_cast<uint32>(instScript->GetBossState(9)); // DATA_PYROGAURD_EMBERSEER
+                    uint32 bwlRazorgore = static_cast<uint32>(instScript->GetBossState(0)); // DATA_RAZORGORE_THE_UNTAMED
+                    if (brsPiroguard == DONE || bwlRazorgore == DONE)
+                    {
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN = fail]|r Instanta are deja progrese, resetati pentru aplicare mod!");
+                        return;
+                    }
+                }
+
                 // 3. Activare ini?ial? (doar dac? liderul are comanda ?i instan?a e curat?)
                 if (Group* group = player->GetGroup())
                 {
+                    if (group->IsLeader(player->GetGUID()) && isVeteran)
+                    {
+                        HeroicSelection[player->GetGUID()] = true;
+                    }
+
                     if (group->IsLeader(player->GetGUID()) && HeroicSelection[player->GetGUID()] && !isVeteran)
                     {
                         // Verific?m dac? instan?a exist? ?n tabelul `instance` (s? nu d?m eroare de FK)
@@ -95,6 +112,65 @@ public:
                     ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Modul a fost aplicat cu succes!");
                 }
             }, 2s);
+    }
+}
+
+class kitt_bwl_heroic_core : public PlayerScript
+{
+public:
+    kitt_bwl_heroic_core() : PlayerScript("kitt_bwl_heroic_core") {}
+
+    void OnMapChanged(Player* player) override
+    {
+        KittOnMapChanged(player);
+        return;
+
+        /*uint32 mapId = player->GetMapId();
+        if (mapId != MAP_BWL && mapId != MAP_BRS)
+            return;
+
+        ObjectGuid guid = player->GetGUID();
+        player->m_Events.AddEventAtOffset([guid]()
+            {
+                Player* player = ObjectAccessor::FindPlayer(guid);
+
+                if (!player || !player->IsInWorld() || (player->GetMapId() != MAP_BWL && player->GetMapId() != MAP_BRS))
+                    return;
+
+                InstanceMap* instance = (InstanceMap*)player->GetMap();
+                uint32 instanceId = instance->GetInstanceId();
+
+                // 1. Verific?m RAM
+                bool isVeteran = (ActiveHeroicInstances.find(instanceId) != ActiveHeroicInstances.end());
+                
+                // 3. Activare ini?ial? (doar dac? liderul are comanda ?i instan?a e curat?)
+                if (Group* group = player->GetGroup())
+                {
+                    if (group->IsLeader(player->GetGUID()) && isVeteran)
+                    {
+                        HeroicSelection[player->GetGUID()] = true;
+                    }
+
+                    if (group->IsLeader(player->GetGUID()) && HeroicSelection[player->GetGUID()] && !isVeteran)
+                    {
+                        // Verific?m dac? instan?a exist? ?n tabelul `instance` (s? nu d?m eroare de FK)
+                        // TrinityCore salveaz? de obicei instan?a ?n DB imediat ce juc?torul intr?.
+                        isVeteran = true;
+                        ActiveHeroicInstances.insert(instanceId);
+
+                        // Folosim REPLACE INTO: dac? exist? deja, ?l actualizeaz?; dac? nu, ?l insereaz?.
+                        CharacterDatabase.PExecute("REPLACE INTO character_kitt_instance_veteran_status (id, isVeteran) VALUES ({}, 1)", instanceId);
+
+                        ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Instanta a fost sigilata permanent pe modul Veteran!");
+                    }
+                }
+
+                if (isVeteran)
+                {
+                    //CheckAndApplyVeteran(player);
+                    ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[VETERAN]|r Modul a fost aplicat cu succes!");
+                }
+            }, 2s);*/
     }
 
     void AddKittCustomItem(Loot* loot, uint32 itemID, uint8 count = 1, float dropChance = 100.0f, bool ffa = false)
@@ -127,17 +203,56 @@ public:
         }
 
         AddKittCustomItem(loot, 49908, 1, 50.0f, false); // primordial saronite
+        AddKittCustomItem(loot, 43102, 1, 50.0f, true); // frozen orb
+
     }
 
-    void KittAddLootElite(Player* /*player*/, Loot* loot) /*override*/
+    void KittAddLootElite(Player* player, Loot* loot)
     {
         //ObjectGuid sourceGuid = loot->sourceGuid;
 
         // loot comun
         //loot->items.clear(); // sterge loot vechi
-        AddKittCustomItem(loot, 43102, 1, 1.0f, false); // frozen orb
+        //AddKittCustomItem(loot, 43102, 1, 1.0f, false); // frozen orb
 
         loot->gold += 100000; // adauga 50g la loot
+        if (Group* group = player->GetGroup())
+        {
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                if (Player* member = itr->GetSource())
+                {
+                    if (member->IsAtGroupRewardDistance(player))
+                    {
+                        member->ModifyMoney(10000);
+                    }
+                }
+            }
+        }
+        //player->SendLoot(sourceGuid, LOOT_CORPSE);
+    }
+
+    void KittAddLootEliteBRS(Player* player, Loot* loot)
+    {
+        //ObjectGuid sourceGuid = loot->sourceGuid;
+
+        // loot comun
+        //loot->items.clear(); // sterge loot vechi
+        //AddKittCustomItem(loot, 43102, 1, 1.0f, false); // frozen orb
+        loot->gold += 100000; // adauga 50g la loot
+        if (Group* group = player->GetGroup())
+        {
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                if (Player* member = itr->GetSource())
+                {
+                    if (member->IsAtGroupRewardDistance(player))
+                    {
+                        member->ModifyMoney(10000);
+                    }
+                }
+            }
+        }
         //player->SendLoot(sourceGuid, LOOT_CORPSE);
     }
 
@@ -151,14 +266,14 @@ public:
             return;
 
         Map* map = creature->GetMap();
-        if (map->GetId() != MAP_BWL)
+        if (map->GetId() != MAP_BWL && map->GetId() != MAP_BRS)
             return;
 
         InstanceMap* instance = (InstanceMap*)map;
 
         if (ActiveHeroicInstances.find(instance->GetInstanceId()) != ActiveHeroicInstances.end())
         {
-            if (creature->IsDungeonBoss())
+            if (creature->IsDungeonBoss() && map->GetId() == MAP_BWL)
             {
                 if (Group* group = player->GetGroup())
                 {
@@ -182,33 +297,20 @@ public:
 
             if (creature->isElite())
             {
-                KittAddLootElite(player, loot);
+                if (map->GetId() == MAP_BWL)
+                {
+                    KittAddLootElite(player, loot);
+                }
+
+                if (map->GetId() == MAP_BRS)
+                {
+                    KittAddLootEliteBRS(player, loot);
+                }
             }
         }
     }
 
-    //void OnSpellCast(Player* player, Spell* /*spell*/, bool /*skipCheck*/) override
-    /*{
-        Map* map = player->GetMap();
-        if (map->GetId() != MAP_BWL)
-            return;
-
-        InstanceMap* instance = (InstanceMap*)map;
-        uint32 instanceId = instance->GetInstanceId();
-        if (ActiveHeroicInstances.find(instance->GetInstanceId()) == ActiveHeroicInstances.end())
-            return;
-
-        uint32 now = GameTime::GetGameTimeMS();
-
-        if (player->IsInCombat() && (now - InstanceScanTimers[instanceId] > 10000))
-        {
-            InstanceScanTimers[instanceId] = now;
-            CheckAndApplyVeteran(player);
-            //ChatHandler(player->GetSession()).PSendSysMessage("|cffffd700[TEST] spell cast mod apply");
-        }
-    }*/
-
-    void CheckAndApplyVeteran(Player* player)
+    void CheckAndApplyVeteranOFF(Player* player)
     {
         player->m_Events.AddEventAtOffset([player]()
             {
@@ -283,6 +385,28 @@ public:
 
 };
 
+class kitt_bwl_group : public GroupScript
+{
+public:
+    kitt_bwl_group() : GroupScript("kitt_bwl_group") {}
+
+    void OnChangeLeader(Group* /*group*/, ObjectGuid newLeaderGuid, ObjectGuid oldLeaderGuid) override
+    {
+        if (Player* oldLeader = ObjectAccessor::FindPlayer(oldLeaderGuid))
+        {
+            if (HeroicSelection[oldLeader->GetGUID()])
+            {
+                if (Player* newLeader = ObjectAccessor::FindPlayer(newLeaderGuid))
+                {
+                    HeroicSelection[newLeader->GetGUID()] = true;
+                    KittOnMapChanged(newLeader);
+                }
+            }
+        }
+    }
+
+};
+
 class kitt_bwl_commandscript : public CommandScript
 {
 public:
@@ -301,9 +425,9 @@ public:
         if (!player) return false;
 
         uint32 mapId = player->GetMapId();
-        if (mapId == MAP_BWL)
+        if (mapId == MAP_BWL || mapId == MAP_BRS)
         {
-            handler->SendSysMessage("Comanda trebuie data in afara BWL!");
+            handler->SendSysMessage("Comanda trebuie data in afara BWL or BRS!");
             return true;
         }
 
@@ -317,6 +441,13 @@ public:
         {
             handler->SendSysMessage("|cffff0000[Eroare]|r Ai deja un ID de instanta salvat (Bind) pentru BWL.");
             handler->SendSysMessage("Trebuie sa resetezi instanta pentru a putea activa modul Veteran!");
+            return true;
+        }
+
+        if (player->GetInstanceSave(MAP_BRS, false))
+        {
+            handler->SendSysMessage("|cffff0000[Eroare]|r Ai deja un ID de instanta salvat (Bind) pentru BRS.");
+            handler->SendSysMessage("Trebuie sa resetezi instanta pentru a putea activa modul Veteran! (Meniu jucator, nu vendor)");
             return true;
         }
 
@@ -505,11 +636,10 @@ public:
 };
 
 // scalare
-// --- SECTIUNEA 1: MODIFICARE NIVEL PRIN HOOK-UL TAU GLOBAL ---
-class CustomAllCreatureScaler : public AllCreatureScript
+class kitt_bwl_AllCreatureScaler : public AllCreatureScript
 {
 public:
-    CustomAllCreatureScaler() : AllCreatureScript("CustomAllCreatureScaler") {}
+    kitt_bwl_AllCreatureScaler() : AllCreatureScript("kitt_bwl_AllCreatureScaler") {}
 
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
     {
@@ -517,7 +647,7 @@ public:
             return;
 
         Map* map = creature->GetMap();
-        if (!map || map->GetId() != MAP_BWL)
+        if (!map || (map->GetId() != MAP_BWL && map->GetId() != MAP_BRS))
             return;
 
         uint32 instanceId = map->GetInstanceId();
@@ -530,7 +660,7 @@ public:
 
         uint8 nivelCurent = creature->GetLevel();
 
-        if (nivelCurent >= 60 && nivelCurent <= 63)
+        if (nivelCurent >= 50 && nivelCurent <= 63)
         {
             ScaleazaCreaturaLaNivel80(creature, nivelCurent);
         }
@@ -542,7 +672,7 @@ public:
             return;
 
         Map* map = creature->GetMap();
-        if (!map || map->GetId() != MAP_BWL)
+        if (!map || (map->GetId() != MAP_BWL && map->GetId() != MAP_BRS))
             return;
 
         uint32 instanceId = map->GetInstanceId();
@@ -555,7 +685,7 @@ public:
 
         uint8 nivelCurent = creature->GetLevel();
 
-        if (nivelCurent >= 60 && nivelCurent <= 63)
+        if (nivelCurent >= 50 && nivelCurent <= 63)
         {
             ScaleazaCreaturaLaNivel80(creature, nivelCurent);
         }
@@ -568,7 +698,7 @@ private:
             return;
 
         Map* map = creature->GetMap();
-        if (!map || map->GetId() != MAP_BWL)
+        if (!map || (map->GetId() != MAP_BWL && map->GetId() != MAP_BRS))
             return;
 
         if (creature->IsNPCBotOrPet() || creature->IsPet() || creature->IsTotem() || creature->IsVehicle())
@@ -577,7 +707,7 @@ private:
         //uint8 nivelCurent = creature->GetLevel();
 
         // Evitam loop-ul infinit verificand daca monstrul este in intervalul de Vanilla
-        if (nivelCurent >= 60 && nivelCurent <= 63)
+        if (nivelCurent >= 50 && nivelCurent <= 63)
         {
             uint8 noulNivel = nivelCurent + 20; // Transformam 60->80, 63->83
 
@@ -608,11 +738,10 @@ private:
     }
 };
 
-// --- SECTIUNEA 2: HOOKS DE DAMAGE SI HEAL (UnitScript) ---
-class CustomInstanceDamageScaler : public UnitScript
+class kitt_bwl_InstanceDamageScaler : public UnitScript
 {
 public:
-    CustomInstanceDamageScaler() : UnitScript("CustomInstanceDamageScaler") {}
+    kitt_bwl_InstanceDamageScaler() : UnitScript("kitt_bwl_InstanceDamageScaler") {}
 
     /*void OnHeal(Unit* healer, Unit* reciever, uint32& gain) override
     {
@@ -647,7 +776,7 @@ private:
             return damage;
 
         Map* map = attacker->GetMap();
-        if (!map || map->GetId() != MAP_BWL)
+        if (!map || (map->GetId() != MAP_BWL && map->GetId() != MAP_BRS))
             return damage;
 
         uint32 instanceId = map->GetInstanceId();
@@ -675,8 +804,9 @@ void AddSC_kitt_instance_bwl_veteran()
 {
     new kitt_bwl_veteran_startup();
     new kitt_bwl_heroic_core();
+    new kitt_bwl_group();
     new kitt_bwl_commandscript();
     //new npc_veteran_upgrader();
-    new CustomAllCreatureScaler();
-    new CustomInstanceDamageScaler();
+    new kitt_bwl_AllCreatureScaler();
+    new kitt_bwl_InstanceDamageScaler();
 }
