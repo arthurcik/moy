@@ -214,10 +214,10 @@ private:
     ObjectGuid _leaderGuid;
 };
 
-class AddSC_kitt_raid_leader_items_player : public PlayerScript
+class kitt_raid_leader_items_player : public PlayerScript
 {
 public:
-    AddSC_kitt_raid_leader_items_player() : PlayerScript("AddSC_kitt_raid_leader_items_player") {}
+    kitt_raid_leader_items_player() : PlayerScript("kitt_raid_leader_items_player") {}
 
     InventoryResult OnCanEquipItem(Player* player, uint8 /*slot*/, uint16& /*dest*/, Item* item, bool /*swap*/, bool /*not_loading*/) override
     {
@@ -260,15 +260,15 @@ public:
     {
         if (player && !ValidateLeaderConditions(player))
         {
-            CheckAndProcessUnequip(player);
+            //CheckAndProcessUnequip(player);
         }
     }
 };
 
-class AddSC_kitt_raid_leader_items_group : public GroupScript
+class kitt_raid_leader_items_group : public GroupScript
 {
 public:
-    AddSC_kitt_raid_leader_items_group() : GroupScript("AddSC_kitt_raid_leader_items_group") {}
+    kitt_raid_leader_items_group() : GroupScript("kitt_raid_leader_items_group") {}
 
     void OnRemoveMember(Group* group, ObjectGuid /*guid*/, RemoveMethod /*method*/, ObjectGuid /*kicker*/, char const* /*reason*/) override
     {
@@ -307,6 +307,6 @@ public:
 
 void AddSC_kitt_raid_leader_items()
 {
-    new AddSC_kitt_raid_leader_items_player();
-    new AddSC_kitt_raid_leader_items_group();
+    new kitt_raid_leader_items_player();
+    new kitt_raid_leader_items_group();
 }
