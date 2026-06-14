@@ -235,10 +235,11 @@ private:
     }
 };
 
-
+/*
 void AddSC_kitt_instance_bwl_brs()
 {
     new kitt_instance_bwl_brs();
     new kitt_instance_bwl_brs_CreatureScaler();
     new kitt_instance_bwl_brs_DamageScaler();
 }
+*/
