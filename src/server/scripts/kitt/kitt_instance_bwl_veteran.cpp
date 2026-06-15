@@ -198,62 +198,33 @@ public:
             //loot->items.clear(); // sterge loot vechi
             AddKittCustomItem(loot, 31193, 1, 100.0f, false);
             AddKittCustomItem(loot, 45085, 1, 50.0f, false); // 1 bucata, 50% sansa
-            loot->gold += 500000; // adauga 50g la loot
             //ChatHandler(player->GetSession()).PSendSysMessage("|cffffd700[TEST Loot Heroic]|r Ai primit un item Veteran!");
         }
 
         AddKittCustomItem(loot, 49908, 1, 50.0f, false); // primordial saronite
         AddKittCustomItem(loot, 43102, 1, 50.0f, false); // frozen orb
-
+        loot->gold += 500000; // adauga 50g la loot
     }
 
-    void KittAddLootElite(Player* player, Loot* loot)
+    void KittAddLootElite(Player* /*player*/, Loot* loot)
     {
         //ObjectGuid sourceGuid = loot->sourceGuid;
 
         // loot comun
         //loot->items.clear(); // sterge loot vechi
-        //AddKittCustomItem(loot, 43102, 1, 1.0f, false); // frozen orb
+        AddKittCustomItem(loot, 43501, 1, 1.0f, false); // northern egg
 
         loot->gold += 100000; // adauga 50g la loot
-        if (Group* group = player->GetGroup())
-        {
-            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
-            {
-                if (Player* member = itr->GetSource())
-                {
-                    if (member->IsAtGroupRewardDistance(player))
-                    {
-                        member->ModifyMoney(10000);
-                    }
-                }
-            }
-        }
         //player->SendLoot(sourceGuid, LOOT_CORPSE);
     }
 
-    void KittAddLootEliteBRS(Player* player, Loot* loot)
+    void KittAddLootEliteBRS(Player* /*player*/, Loot* loot)
     {
-        //ObjectGuid sourceGuid = loot->sourceGuid;
-
         // loot comun
         //loot->items.clear(); // sterge loot vechi
-        //AddKittCustomItem(loot, 43102, 1, 1.0f, false); // frozen orb
-        loot->gold += 100000; // adauga 50g la loot
-        if (Group* group = player->GetGroup())
-        {
-            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
-            {
-                if (Player* member = itr->GetSource())
-                {
-                    if (member->IsAtGroupRewardDistance(player))
-                    {
-                        member->ModifyMoney(10000);
-                    }
-                }
-            }
-        }
-        //player->SendLoot(sourceGuid, LOOT_CORPSE);
+        AddKittCustomItem(loot, 43501, 1, 1.0f, false); // northern egg
+
+        loot->gold += 10000; // adauga 50g la loot
     }
 
     void OnAfterLootFill(Player* player, Loot* loot) override
