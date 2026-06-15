@@ -2259,7 +2259,7 @@ public:
                         {
                             if (player->GetMapId() == 469 || player->GetMapId() == 229)
                             {
-                                std::string message = "|cffff0000!...|r Menu disabled inside WBL and BRS.";
+                                std::string message = "|cffff0000!...|r Menu disabled inside BWL and BRS.";
                                 ChatHandler(player->GetSession()).PSendSysMessage("%s", message.c_str());
 
                                 CloseGossipMenuFor(player);
