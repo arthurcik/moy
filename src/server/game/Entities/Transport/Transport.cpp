@@ -713,6 +713,9 @@ void Transport::UpdatePassengerPositions(PassengerSet& passengers)
         if (!passenger || !passenger->IsInWorld())
             continue;
 
+        if (!passenger->GetMapId() || !passenger->FindMap())
+            continue; // kitt
+
         // transport teleported but passenger not yet (can happen for players)
         if (passenger->GetMap() != GetMap())
             continue;
