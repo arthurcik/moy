@@ -15,6 +15,12 @@ Kitt.Play.Time.Reward = 0
 # Default: 0
 Kitt.Invite.Friend = 0
 
+# kitt BG Reward mark
+# enable = 1
+# default: 0
+kitt.Battleground.Reward.Enable = 0
+kitt.Battleground.Reward.Kill.Count = 10
+
 # instance reset cont
 # manual reset npc menu
 # default: 0 (infinit)
