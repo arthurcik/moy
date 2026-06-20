@@ -1187,14 +1187,20 @@ void MotionMaster::DirectAdd(MovementGenerator* movement, MovementSlot slot/* = 
         case MOTION_SLOT_ACTIVE:
         {
             auto where = _generators.lower_bound(movement);
+            bool replacesExisting = false; // kitt fix
+
             if (!_generators.empty())
             {
-                bool replacesExisting = !movement->HasFlag(MOVEMENTGENERATOR_FLAG_IMMEDIATE)
+                //bool replacesExisting = !movement->HasFlag(MOVEMENTGENERATOR_FLAG_IMMEDIATE)
+                replacesExisting = !movement->HasFlag(MOVEMENTGENERATOR_FLAG_IMMEDIATE)
                     && where != _generators.end()
                     && !_generators.key_comp()(movement, *where);
                 auto top = _generators.begin();
                 if (replacesExisting)
+                {
                     Remove(where, where == top, false);
+                    where = _generators.lower_bound(movement); // kitt fix
+                }
                 else if (where == top)
                     (*top)->Deactivate(_owner);
             }
@@ -1203,6 +1209,9 @@ void MotionMaster::DirectAdd(MovementGenerator* movement, MovementSlot slot/* = 
 
             if (!movement->HasFlag(MOVEMENTGENERATOR_FLAG_IMMEDIATE))
             {
+                if (replacesExisting)
+                    where = _generators.lower_bound(movement); // kitt fix
+
                 _generators.emplace_hint(where, movement);
                 AddBaseUnitState(movement);
             }
