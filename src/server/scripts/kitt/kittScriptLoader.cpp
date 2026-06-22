@@ -42,6 +42,7 @@ void AddSC_kitt_telegram_chat();
 void AddSC_kitt_npcbot_ai_loader();
 void AddSC_kitt_raid_leader_items();
 void AddSC_kitt_battleground_reward();
+void AddSC_kitt_duel_player();
 
 
 // The name of this function should match:
@@ -73,4 +74,5 @@ void AddkittScripts()
     AddSC_kitt_npcbot_ai_loader();
     AddSC_kitt_raid_leader_items();
     AddSC_kitt_battleground_reward();
+    AddSC_kitt_duel_player();
 }
