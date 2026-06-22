@@ -96,10 +96,11 @@ public:
         if (it != MultiSecurityMap.end())
         {
             const RestrictedConfig& config = it->second;
+            bool isInDuel = player->IsInDuel();
 
                 // GetMapId()) == config lista permisa
                 // GetMapId()) != config lista nepermisa
-            if (player->GetSession()->GetSecurity() < config.minSecurity ||
+            if (isInDuel || player->GetSession()->GetSecurity() < config.minSecurity ||
                 config.mapWhitelist.find(player->GetMapId()) != config.mapWhitelist.end())
             {
                 ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Security]:|r The item |cffffffff[%s]|r cannot be equipped in this zone!", item->GetTemplate()->Name1.c_str());
@@ -109,6 +110,19 @@ public:
         }
 
         return EQUIP_ERR_OK;
+    }
+
+    void OnDuelStart(Player* player1, Player* player2) override
+    {
+        if (player1 && player1->GetSession() && player1->IsInWorld())
+        {
+            OnMapChanged(player1);
+        }
+
+        if (player2 && player2->GetSession() && player2->IsInWorld())
+        {
+            OnMapChanged(player2);
+        }
     }
 
     void OnMapChanged(Player* player) override
@@ -126,9 +140,10 @@ public:
             if (it != MultiSecurityMap.end())
             {
                 const RestrictedConfig& config = it->second;
+                bool isInDuel = player->IsInDuel();
                 // GetMapId()) == config lista permisa
                 // GetMapId()) != config lista nepermisa
-                if (player->GetSession()->GetSecurity() < config.minSecurity ||
+                if (isInDuel || player->GetSession()->GetSecurity() < config.minSecurity ||
                     config.mapWhitelist.find(player->GetMapId()) != config.mapWhitelist.end())
                 {
                     ItemPosCountVec dest;
