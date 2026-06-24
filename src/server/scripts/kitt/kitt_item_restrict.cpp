@@ -86,6 +86,28 @@ namespace
         { 900962,      { 9,       { 559, 562, 572, 489, 529, 30, 566, 628, 607 } } }, // Blade of Kings // expire
         { 900963,      { 9,       { 559, 562, 572, 489, 529, 30, 566, 628, 607 } } }, // Winter shield // expire
     };
+
+    // enchant restrict list
+    static const std::unordered_set<uint32> RestrictedEnchants = {
+        5012,
+        5013,
+        5014,
+        5015,
+        5016,
+        5017,
+        5018,
+        5019,
+        5020,
+        5021,
+        5022,
+        5023
+    };
+
+    // Functie helper care verifica rapid daca un ID se afla in lista noastra
+    bool IsEnchantRestricted(uint32 enchantId)
+    {
+        return RestrictedEnchants.find(enchantId) != RestrictedEnchants.end();
+    }
 }
 
 class kitt_item_restrict : public PlayerScript
@@ -106,7 +128,8 @@ public:
 
                 // GetMapId()) == config lista permisa
                 // GetMapId()) != config lista nepermisa
-            if (isInDuel || player->GetSession()->GetSecurity() < config.minSecurity ||
+            if (isInDuel || player->InBattleground() || player->InArena() ||
+                player->GetSession()->GetSecurity() < config.minSecurity ||
                 config.mapWhitelist.find(player->GetMapId()) != config.mapWhitelist.end())
             {
                 ChatHandler(player->GetSession()).PSendSysMessage("|cffff0000[Security]:|r The item |cffffffff[%s]|r cannot be equipped in this zone!", item->GetTemplate()->Name1.c_str());
@@ -116,6 +139,28 @@ public:
         }
 
         return EQUIP_ERR_OK;
+    }
+
+    void OnEquip(Player* player, Item* item, uint16 /*slot*/, bool /*update*/) override
+    {
+        if (!player || !item)
+            return;
+
+        if (player->InBattleground() || player->InArena())
+        {
+            for (uint8 slot = 0; slot < MAX_ENCHANTMENT_SLOT; ++slot)
+            {
+                uint32 enchantId = item->GetEnchantmentId(EnchantmentSlot(slot));
+
+                if (IsEnchantRestricted(enchantId))
+                {
+                    player->ApplyEnchantment(item, EnchantmentSlot(slot), false);
+                }
+            }
+
+            item->SetState(ITEM_CHANGED, player);
+            item->SendUpdateToPlayer(player);
+        }
     }
 
     void OnDuelStart(Player* player1, Player* player2) override
@@ -142,6 +187,26 @@ public:
             if (!item)
                 continue;
 
+            // --- INCEPUT VERIFICARE ENCHANT-URI PENTRU BG/ARENA ---
+            for (uint8 slot = 0; slot < MAX_ENCHANTMENT_SLOT; ++slot)
+            {
+                uint32 enchantId = item->GetEnchantmentId(EnchantmentSlot(slot));
+
+                if (IsEnchantRestricted(enchantId))
+                {
+                    if (player->InBattleground() || player->InArena())
+                    {
+                        player->ApplyEnchantment(item, EnchantmentSlot(slot), false);
+                    }
+                    else
+                    {
+                        player->ApplyEnchantment(item, EnchantmentSlot(slot), false);
+                        player->ApplyEnchantment(item, EnchantmentSlot(slot), true);
+                    }
+                }
+            }
+            // --- SFARSIT VERIFICARE ENCHANT-URI ---
+
             auto it = MultiSecurityMap.find(item->GetEntry());
             if (it != MultiSecurityMap.end())
             {
@@ -149,7 +214,8 @@ public:
                 bool isInDuel = player->IsInDuel();
                 // GetMapId()) == config lista permisa
                 // GetMapId()) != config lista nepermisa
-                if (isInDuel || player->GetSession()->GetSecurity() < config.minSecurity ||
+                if (isInDuel || player->InBattleground() || player->InArena() ||
+                    player->GetSession()->GetSecurity() < config.minSecurity ||
                     config.mapWhitelist.find(player->GetMapId()) != config.mapWhitelist.end())
                 {
                     ItemPosCountVec dest;
