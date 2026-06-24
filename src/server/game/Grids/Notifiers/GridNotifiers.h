@@ -1275,6 +1275,17 @@ namespace Trinity
 
             bool operator()(Unit* u) const
             {
+                // kitt - protectie impotriva pointerilor invalizi sau corupti din stiva
+                if (!u || !_me)
+                    return false;
+
+                if ((uintptr_t)u < 0x1000 || (uintptr_t)_me < 0x1000)
+                    return false;
+
+                if (!u->IsInWorld() || !_me->IsInWorld())
+                    return false;
+                // ---------------------------------------------
+
                 if (!u->IsHostileTo(_me))
                     return false;
 

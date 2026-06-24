@@ -346,11 +346,23 @@ Unit* PetAI::SelectNextTarget(bool allowAutoSelect) const
     // Neither pet or owner had a target and aggressive pets can pick any target
     // To prevent aggressive pets from chain selecting targets and running off, we
     //  only select a random target if certain conditions are met.
-    if (me->HasReactState(REACT_AGGRESSIVE) && allowAutoSelect)
+    /*if (me->HasReactState(REACT_AGGRESSIVE) && allowAutoSelect) // origin
     {
         if (!me->GetCharmInfo()->IsReturning() || me->GetCharmInfo()->IsFollowing() || me->GetCharmInfo()->IsAtStay())
             if (Unit* nearTarget = me->SelectNearestHostileUnitInAggroRange(true, true))
                 return nearTarget;
+    }*/
+    if (me && me->IsInWorld() && me->HasReactState(REACT_AGGRESSIVE) && allowAutoSelect) // kitt fix
+    {
+        // kitt - adaugat verificare pentru GetCharmInfo() sa nu fie null
+        if (me->GetCharmInfo())
+        {
+            if (!me->GetCharmInfo()->IsReturning() || me->GetCharmInfo()->IsFollowing() || me->GetCharmInfo()->IsAtStay())
+            {
+                if (Unit* nearTarget = me->SelectNearestHostileUnitInAggroRange(true, true))
+                    return nearTarget;
+            }
+        }
     }
 
     // Default - no valid targets

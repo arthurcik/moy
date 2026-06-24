@@ -2230,6 +2230,8 @@ Unit* WorldObject::GetOwner() const
     // kitt - protectie de baza daca obiectul curent e corupt
     if ((uintptr_t)this < 0x1000)
         return nullptr;
+    if (!this->IsInWorld())
+        return nullptr;
 
     ObjectGuid ownerGuid = GetOwnerGUID();
     if (!ownerGuid)
@@ -2242,6 +2244,8 @@ Unit* WorldObject::GetCharmerOrOwner() const
 {
     // kitt - protectie impotriva adreselor invalide
     if ((uintptr_t)this < 0x1000)
+        return nullptr;
+    if (!this->IsInWorld())
         return nullptr;
     // --- end
 
@@ -2257,6 +2261,8 @@ Unit* WorldObject::GetCharmerOrOwnerOrSelf() const
 {
     // kitt - protectie initiala
     if ((uintptr_t)this < 0x1000)
+        return nullptr;
+    if (!this->IsInWorld())
         return nullptr;
     // --- end
 
@@ -2275,6 +2281,8 @@ Player* WorldObject::GetCharmerOrOwnerPlayerOrPlayerItself() const
 {
     // kitt
     if ((uintptr_t)this < 0x1000)
+        return nullptr;
+    if (!this->IsInWorld())
         return nullptr;
     // --- end
     ObjectGuid guid = GetCharmerOrOwnerGUID();
@@ -2295,6 +2303,8 @@ Player* WorldObject::GetAffectingPlayer() const
 {
     // kitt
     if ((uintptr_t)this < 0x1000)
+        return nullptr;
+    if (!this->IsInWorld())
         return nullptr;
     // --- end
 
@@ -2797,6 +2807,8 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
     // kitt
     if (!target || (uintptr_t)this < 0x1000 || (uintptr_t)target < 0x1000)
         return REP_FRIENDLY;
+    if (!this->IsInWorld() || !target->IsInWorld())
+        return REP_FRIENDLY;
     // -----------
 
     // always friendly to self
@@ -2981,6 +2993,8 @@ bool WorldObject::IsHostileTo(WorldObject const* target) const
     // kitt
     if (!target || (uintptr_t)this < 0x1000 || (uintptr_t)target < 0x1000)
         return false;
+    if (!this->IsInWorld() || !target->IsInWorld())
+        return false;
     // ---------
     return GetReactionTo(target) <= REP_HOSTILE;
 }
@@ -2990,6 +3004,8 @@ bool WorldObject::IsFriendlyTo(WorldObject const* target) const
     // kitt
     if (!target || (uintptr_t)this < 0x1000 || (uintptr_t)target < 0x1000)
         return true;
+    if (!this->IsInWorld() || !target->IsInWorld())
+        return true;
     // ---------
     return GetReactionTo(target) >= REP_FRIENDLY;
 }
@@ -2998,6 +3014,8 @@ bool WorldObject::IsHostileToPlayers() const
 {
     // kitt
     if ((uintptr_t)this < 0x1000)
+        return false;
+    if (!this->IsInWorld())
         return false;
     // ---------
     FactionTemplateEntry const* my_faction = GetFactionTemplateEntry();
