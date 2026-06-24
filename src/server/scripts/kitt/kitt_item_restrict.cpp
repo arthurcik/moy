@@ -103,12 +103,47 @@ namespace
         5023
     };
 
-    // Functie helper care verifica rapid daca un ID se afla in lista noastra
     bool IsEnchantRestricted(uint32 enchantId)
     {
         return RestrictedEnchants.find(enchantId) != RestrictedEnchants.end();
     }
+
+    struct EnchantRestrictedState
+    {
+        ObjectGuid playerGuid;
+        bool isCurrentlyDisabled = false;
+    };
+    std::unordered_map<ObjectGuid, std::unordered_map<ObjectGuid, bool>> EnchantDisabledItemsMap;
+
+
+    // acc kitt for enchant enquip exceptions
+    static const std::unordered_set<uint32> KittEnchantExceptionAccId = {
+        1,   // test2
+        5   // t
+    };
 }
+
+class kitt_item_restrict_loginOut : public PlayerScript
+{
+public:
+    kitt_item_restrict_loginOut() : PlayerScript("kitt_item_restrict_loginOut") {}
+
+    void OnLogout(Player* player) override
+    {
+        if (player)
+        {
+            EnchantDisabledItemsMap.erase(player->GetGUID());
+        }
+    }
+
+    void OnLogin(Player* player, bool /*firstLogin*/) override
+    {
+        if (player)
+        {
+            EnchantDisabledItemsMap.erase(player->GetGUID());
+        }
+    }
+};
 
 class kitt_item_restrict : public PlayerScript
 {
@@ -145,21 +180,44 @@ public:
     {
         if (!player || !item)
             return;
-
-        if (player->InBattleground() || player->InArena())
+        uint32 kPlAccId = player->GetSession()->GetAccountId();
+        
+        if ((player->InBattleground() || player->InArena()) && !KittEnchantExceptionAccId.contains(kPlAccId))
         {
+            ObjectGuid playerGuid = player->GetGUID();
+            ObjectGuid itemGuid = item->GetGUID();
+            auto playerIt = EnchantDisabledItemsMap.find(playerGuid);
+            bool isCurrentlyDisabled = false;
+            bool hasAppliedChange = false;
+
+            if (playerIt != EnchantDisabledItemsMap.end())
+            {
+                // Daca jucatorul exista in RAM, cautam item-ul specific in lista lui
+                auto itemIt = playerIt->second.find(itemGuid);
+                if (itemIt != playerIt->second.end())
+                {
+                    isCurrentlyDisabled = itemIt->second;
+                }
+            }
+
             for (uint8 slot = 0; slot < MAX_ENCHANTMENT_SLOT; ++slot)
             {
                 uint32 enchantId = item->GetEnchantmentId(EnchantmentSlot(slot));
 
                 if (IsEnchantRestricted(enchantId))
                 {
-                    player->ApplyEnchantment(item, EnchantmentSlot(slot), false);
+                    if (!isCurrentlyDisabled)
+                    {
+                        hasAppliedChange = true;
+                        player->ApplyEnchantment(item, EnchantmentSlot(slot), false);
+                    }
                 }
             }
 
-            item->SetState(ITEM_CHANGED, player);
-            item->SendUpdateToPlayer(player);
+            if (hasAppliedChange)
+            {
+                EnchantDisabledItemsMap[playerGuid][itemGuid] = true;
+            }
         }
     }
 
@@ -181,6 +239,9 @@ public:
         if (!player || !player->IsInWorld())
             return;
 
+        uint32 kPlAccId = player->GetSession()->GetAccountId();
+        ObjectGuid playerGuid = player->GetGUID();
+
         for (uint8 i = EQUIPMENT_SLOT_START; i <= EQUIPMENT_SLOT_TABARD; ++i)
         {
             Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i);
@@ -188,20 +249,63 @@ public:
                 continue;
 
             // --- INCEPUT VERIFICARE ENCHANT-URI PENTRU BG/ARENA ---
+            
+            ObjectGuid itemGuid = item->GetGUID();
+            auto playerIt = EnchantDisabledItemsMap.find(playerGuid);
+            bool isCurrentlyDisabled = false;
+            bool isInPvPZone = (player->InBattleground() || player->InArena()) && !KittEnchantExceptionAccId.contains(kPlAccId);
+
+            if (playerIt != EnchantDisabledItemsMap.end())
+            {
+                // Daca jucatorul exista in RAM, cautam item-ul specific in lista lui
+                auto itemIt = playerIt->second.find(itemGuid);
+                if (itemIt != playerIt->second.end())
+                {
+                    isCurrentlyDisabled = itemIt->second;
+                }
+            }
+
             for (uint8 slot = 0; slot < MAX_ENCHANTMENT_SLOT; ++slot)
             {
                 uint32 enchantId = item->GetEnchantmentId(EnchantmentSlot(slot));
 
                 if (IsEnchantRestricted(enchantId))
                 {
-                    if (player->InBattleground() || player->InArena())
+                    
+
+                    if (isInPvPZone)
                     {
-                        player->ApplyEnchantment(item, EnchantmentSlot(slot), false);
+                        if (!isCurrentlyDisabled)
+                        {
+                            player->ApplyEnchantment(item, EnchantmentSlot(slot), false);
+                        }
                     }
                     else
                     {
-                        player->ApplyEnchantment(item, EnchantmentSlot(slot), false);
-                        player->ApplyEnchantment(item, EnchantmentSlot(slot), true);
+                        if (isCurrentlyDisabled)
+                        {
+                            player->ApplyEnchantment(item, EnchantmentSlot(slot), true);
+                        }
+                    }
+                }
+            }
+
+            if (isInPvPZone)
+            {
+                if (!isCurrentlyDisabled)
+                {
+                    EnchantDisabledItemsMap[playerGuid][itemGuid] = true;
+                }
+            }
+            else
+            {
+                if (isCurrentlyDisabled)
+                {
+                    EnchantDisabledItemsMap[playerGuid].erase(itemGuid);
+
+                    if (EnchantDisabledItemsMap[playerGuid].empty())
+                    {
+                        EnchantDisabledItemsMap.erase(playerGuid);
                     }
                 }
             }
@@ -272,5 +376,6 @@ public:
 
 void AddSC_kitt_item_restrict()
 {
+    new kitt_item_restrict_loginOut();
     new kitt_item_restrict();
 }
