@@ -223,6 +223,8 @@ public:
     {
         if (!player || !item)
             return EQUIP_ERR_OK;
+        if (player->IsLoading())
+            return EQUIP_ERR_OK;
 
         if (IsLeaderItem(item->GetEntry()))
         {
@@ -258,9 +260,9 @@ public:
 
     void OnMapChanged(Player* player) override
     {
-        if (player && !ValidateLeaderConditions(player))
+        if (player && !player->isDead() && !player->IsLoading() && !ValidateLeaderConditions(player))
         {
-            //CheckAndProcessUnequip(player);
+            CheckAndProcessUnequip(player);
         }
     }
 };
