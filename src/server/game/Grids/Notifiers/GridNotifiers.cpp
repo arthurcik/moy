@@ -85,8 +85,21 @@ void VisibleNotifier::SendToSelf()
     i_data.BuildPacket(&packet);
     i_player.SendDirectMessage(&packet);
 
+    // KITT START - PROTECTIE FINALA CONTRA CRASH IN GRIDS
     for (std::set<Unit*>::const_iterator it = i_visibleNow.begin(); it != i_visibleNow.end(); ++it)
+    {
+        if (!*it)
+            continue;
+
+        if (!(*it)->IsInWorld())
+            continue;
+
         i_player.SendInitialVisiblePackets(*it);
+    }
+    // KITT END
+
+    //for (std::set<Unit*>::const_iterator it = i_visibleNow.begin(); it != i_visibleNow.end(); ++it)
+    //    i_player.SendInitialVisiblePackets(*it);
 }
 
 void VisibleChangesNotifier::Visit(PlayerMapType &m)
