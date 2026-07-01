@@ -98,6 +98,25 @@ kitt.Quests.AutoReputation.Enable = 0
 kitt.Quests.AutoReputation.List = ""
 
 ########################################
+# Kitt Ghost Bots Arena Team
+########################################
+# Enable Ghost Bots
+# default: false
+Kitt.Bot.Ghost.Loader = true
+
+# Acc ID from GhostBot GuidID
+# only 1 ghost per acc
+# add ex.: "accID, accID"
+# default: ""
+Kitt.Bot.Ghost.List.Acc = ""
+
+# character GUID, ondly 1 char per accID
+# add: AccID....... 1  acc id 1 has char 22
+# add: charGUID ... 22 acc id 1 has char 22
+# default: ""
+Kitt.Bot.Ghost.List.Guid = ""
+
+########################################
 # TELEGRAM CHAT BOT SETTINGS
 ########################################
 

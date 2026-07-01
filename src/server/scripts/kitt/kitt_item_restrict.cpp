@@ -8,6 +8,8 @@
 #include "Mail.h"
 #include "CharacterDatabase.h"
 
+extern bool IsPlayerInBotTracker(uint32 charGuidLow);
+
 
 namespace
 {
@@ -251,7 +253,10 @@ public:
                 continue;
 
             // --- INCEPUT VERIFICARE ENCHANT-URI PENTRU BG/ARENA ---
-            
+            if (IsPlayerInBotTracker(playerGuid.GetCounter()))
+            {
+                return;
+            }
             ObjectGuid itemGuid = item->GetGUID();
             auto playerIt = EnchantDisabledItemsMap.find(playerGuid);
             bool isCurrentlyDisabled = false;
