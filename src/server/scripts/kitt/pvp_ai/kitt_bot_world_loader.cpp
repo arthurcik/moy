@@ -480,7 +480,7 @@ public:
 
                 tracker.AccRealBusy = false;
 
-                ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
+                //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
 
                 SessionMap const& sesiuniGlobale = sWorld->GetAllSessions();
 
