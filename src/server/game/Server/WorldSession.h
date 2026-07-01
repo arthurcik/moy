@@ -480,6 +480,7 @@ class TC_GAME_API WorldSession
 
         void SetSecurity(AccountTypes security) { _security = security; }
         std::string const& GetRemoteAddress() const { return m_Address; }
+        void SetRemoteAddress(std::string const& ip) { m_Address = ip; } // kitt
         void SetPlayer(Player* player);
         uint8 Expansion() const { return m_expansion; }
 
