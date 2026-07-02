@@ -235,6 +235,7 @@ namespace
         if (victim && victim->IsAlive() && botPaladin->IsHostileTo(victim))
         {
             float targetDist = botPaladin->GetDistance(victim);
+            botPaladin->Attack(victim, false);
 
             // Repentance (ID: 20066) - Il folosim automat pe inamicul curent din argument daca viata grupului e sigura
             if (targetDist <= 20.0f && !botPaladin->GetSpellHistory()->HasCooldown(20066))
@@ -249,7 +250,7 @@ namespace
                 botPaladin->GetMotionMaster()->MoveChase(victim);
             }
 
-            if (targetDist <= 5.0f)
+            if (targetDist <= 10.0f)
             {
                 if (!botPaladin->HasInArc(float(M_PI), victim))
                 {
@@ -323,6 +324,7 @@ namespace
 
         if (!botPlayer->IsWithinMeleeRange(victim))
         {
+            botPlayer->GetMotionMaster()->Clear();
             if (botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
             {
                 botPlayer->GetMotionMaster()->MoveChase(victim);
@@ -541,7 +543,11 @@ void kitt_start_bot_pvp_AI(Player* botPlayer)
     if (!currentVictim || !currentVictim->IsAlive() || !botPlayer->IsWithinDistInMap(currentVictim, 160.0f)) // 40
     {
         if (currentVictim)
+        {
             botPlayer->AttackStop();
+            botPlayer->CombatStop();
+            botPlayer->GetMotionMaster()->Clear();
+        }
 
         std::list<Player*> playersInCell;
         botPlayer->GetPlayerListInGrid(playersInCell, 160.0f); // 40
@@ -556,7 +562,7 @@ void kitt_start_bot_pvp_AI(Player* botPlayer)
                 currentVictim = targetPlayer;
                 botPlayer->SetSelection(targetPlayer->GetGUID());
                 //botPlayer->SendMeleeAttackStart(targetPlayer);
-                botPlayer->SetInCombatWith(targetPlayer);
+                //botPlayer->SetInCombatWith(targetPlayer);
                 //botPlayer->Attack(targetPlayer, true);
                 //botPlayer->GetMotionMaster()->MoveChase(targetPlayer);
                 break;
@@ -566,36 +572,30 @@ void kitt_start_bot_pvp_AI(Player* botPlayer)
 
     if (currentVictim && currentVictim->IsAlive())
     {
-        if (botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
+        if (botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
         {
-            botPlayer->SetFacingToObject(currentVictim);
-            botPlayer->GetMotionMaster()->MoveChase(currentVictim);
+            botPlayer->GetMotionMaster()->MoveFollow(currentVictim, 3.0f, float(M_PI));
         }
 
-        botPlayer->Attack(currentVictim, true);
+        //botPlayer->Attack(currentVictim, true);
 
-        //botPlayer->SetFacingToObject(currentVictim);
-
-        if (botPlayer->IsWithinDistInMap(currentVictim, 30.0f))
+        uint8 botClass = botPlayer->GetClass();
+        switch (botClass)
         {
-            uint8 botClass = botPlayer->GetClass();
-            switch (botClass)
-            {
-            case CLASS_PALADIN:
-                ExecutaLogicaPaladinPvP(botPlayer, currentVictim);
-                break;
-            case CLASS_MAGE:
-                ExecutaLogicaMage(botPlayer, currentVictim);
-                break;
-            case CLASS_WARRIOR:
-                ExecutaLogicaWarriorPvP(botPlayer, currentVictim);
-                break;
-            case CLASS_ROGUE:
-                ExecutaLogicaRogue(botPlayer, currentVictim);
-                break;
-            default:
-                break;
-            }
+        case CLASS_PALADIN:
+            ExecutaLogicaPaladinPvP(botPlayer, currentVictim);
+            break;
+        case CLASS_MAGE:
+            ExecutaLogicaMage(botPlayer, currentVictim);
+            break;
+        case CLASS_WARRIOR:
+            ExecutaLogicaWarriorPvP(botPlayer, currentVictim);
+            break;
+        case CLASS_ROGUE:
+            ExecutaLogicaRogue(botPlayer, currentVictim);
+            break;
+        default:
+            break;
         }
     }
 }

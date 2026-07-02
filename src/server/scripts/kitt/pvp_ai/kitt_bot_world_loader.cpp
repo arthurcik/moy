@@ -779,7 +779,7 @@ public:
                             }
 
                             // --- LOGICA VERIFICARE SI ADAUGARE RATING ---
-                            //CheckAndRewardArenaBotRating(botPlayer);
+                            CheckAndRewardArenaBotRating(botPlayer);
                             CheckAndRewardArenaBotPersonalRating(botPlayer);
 
                             //tracker.isQueued = false;
@@ -1024,28 +1024,15 @@ private:
             uint32 bonusPoints = urand(150, 250);
             uint32 newRating = currentRating + bonusPoints;
 
-            // 1. Salvam asincron in baza de date
-            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-            trans->PAppend("UPDATE arena_team SET rating = {} WHERE arenaTeamId = {}", newRating, arenaTeamId);
-            CharacterDatabase.AsyncCommitTransaction(trans);
-
-            // 2. Sincronizam in memoria RAM
-            // CORECTIE CRITICALA SYNTAX: Am unit tot string-ul pe o singura linie curata
-            // Am scos aliasul problematic si am lasat {} simplu, exact pe pozitia coloanei numarul 9
-            QueryResult result = CharacterDatabase.PQuery("SELECT arenaTeamId, name, captainGuid, type, backgroundColor, emblemStyle, emblemColor, borderStyle, borderColor, {}, weekGames, weekWins, seasonGames, seasonWins, rank FROM arena_team WHERE arenaTeamId = {}", newRating, arenaTeamId);
-
-            if (result)
-            {
-                at->LoadArenaTeamFromDB(result);
-            }
+            ArenaTeamStats& stats = const_cast<ArenaTeamStats&>(at->GetStats());
+            stats.Rating = newRating;
 
             TC_LOG_INFO("fakPlayer", "LOG ARENA RATING ASINCRON: Echipa botului {} (ID: {}) avea {} rating. S-au adaugat {} puncte bonus. Noul rating fortat in RAM si salvat in DB: {}",
                 botPlayer->GetName(), arenaTeamId, currentRating, bonusPoints, at->GetRating());
         }
-
     }
 
-    void CheckAndRewardArenaBotPersonalRating(Player* botPlayer)
+    void CheckAndRewardArenaBotPersonalRatingOFF(Player* botPlayer)
     {
         if (!botPlayer)
             return;
@@ -1085,6 +1072,52 @@ private:
                 newPersonalRating, newMMR, arenaTeamId);
         }
     }
+
+    void CheckAndRewardArenaBotPersonalRating(Player* botPlayer)
+    {
+        if (!botPlayer)
+            return;
+
+        uint8 teamSizeIndex = 0; // 0 = 2v2
+        uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
+
+        if (arenaTeamId == 0)
+            return;
+
+        ArenaTeam* at = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
+        if (!at)
+            return;
+
+        uint32 currentPersonalRating = botPlayer->GetUInt32Value(PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + (teamSizeIndex * ARENA_TEAM_END) + ARENA_TEAM_PERSONAL_RATING);
+
+        if (currentPersonalRating < 1350)
+        {
+            uint32 bonusPoints = urand(150, 250);
+            uint32 newPersonalRating = currentPersonalRating + bonusPoints;
+
+            uint32 newMMR = newPersonalRating;
+            if (newMMR < 1500)
+            {
+                newMMR = 1500;
+            }
+
+            botPlayer->SetArenaTeamInfoField(teamSizeIndex, ARENA_TEAM_PERSONAL_RATING, newPersonalRating);
+
+            for (ArenaTeam::MemberList::iterator itr = at->m_membersBegin(); itr != at->m_membersEnd(); ++itr)
+            {
+                if (itr->Guid == botPlayer->GetGUID())
+                {
+                    itr->PersonalRating = newPersonalRating;
+                    itr->MatchMakerRating = newMMR;
+                    break;
+                }
+            }
+
+            TC_LOG_INFO("fakPlayer", "LOG CACHE RAM FIXED: S-au salvat in siguranta {} PR si {} MMR in cache-ul RAM al echipei {} pentru urmatorul meci!",
+                newPersonalRating, newMMR, arenaTeamId);
+        }
+    }
+
 };
 
 class kitt_bot_chat_handler : public PlayerScript
