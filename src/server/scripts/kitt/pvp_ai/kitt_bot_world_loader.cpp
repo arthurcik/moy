@@ -718,7 +718,10 @@ public:
                                                 //TC_LOG_INFO("fakPlayer", "LOG ARENA: Botul {} accepta invitatia nativ...", botPlayer->GetName().c_str());
                                                 botPlayer->SetBattlegroundEntryPoint();
                                                 botPlayer->SetBattlegroundId(bg->GetInstanceID(), bg->GetTypeID());
+
                                                 //bg->AddPlayer(botPlayer);
+                                                bgQueue.RemovePlayer(botPlayer->GetGUID(), false);
+
                                                 botPlayer->TeleportTo(bg->GetMapId(), startPos->GetPositionX(), startPos->GetPositionY(), startPos->GetPositionZ(), startPos->GetOrientation());
                                                 
                                                 if (botPlayer->GetSession())
@@ -766,7 +769,7 @@ public:
                         {
                             TC_LOG_INFO("fakPlayer", "LOG ARENA: Meciul s-a terminat pentru {}. Se forteaza parasirea instantei...", botPlayer->GetName().c_str());
 
-                            botPlayer->LeaveBattleground();
+                            botPlayer->LeaveBattleground(true, true);
 
                             // opcode
                             if (botPlayer->GetSession())
@@ -781,7 +784,8 @@ public:
 
                             //tracker.isQueued = false;
 
-                            break;
+                            //break;
+                            continue;
                         }
                     }
 
@@ -844,10 +848,23 @@ public:
                                     botPlayer->RemoveAura(26013);
                                 }
 
-                                JoinGroupArena2v2Rated(botPlayer);
+                                //JoinGroupArena2v2Rated(botPlayer);
 
-                                tracker.isQueued = true;
-                                tracker.rejoinTimer = 0;
+                                Group* checkGroup = botPlayer->GetGroup();
+
+                                if (checkGroup && checkGroup->IsLeader(botPlayer->GetGUID()))
+                                {
+                                    tracker.isQueued = true;
+                                    tracker.rejoinTimer = 0;
+                                    JoinGroupArena2v2Rated(botPlayer);
+                                }
+                                else
+                                {
+                                    // Daca este un simplu membru (ca Judy), nu ii setam isQueued = true acum.
+                                    // El isi va lua starea de true automat din ramura "else" a conditiei principale, 
+                                    // doar dupa ce liderul lui va fi apucat sa il bage efectiv in coada (areCoadaActiva va deveni true).
+                                    tracker.isQueued = false;
+                                }
                             }
                         }
                         else
@@ -958,14 +975,20 @@ private:
                 {
                     if (Player* member = itr->GetSource())
                     {
-                        member->AddBattlegroundQueueId(bgQueueTypeId);
+                        if (!member->InBattlegroundQueue())
+                        {
+                            member->AddBattlegroundQueueId(bgQueueTypeId);
+                        }
                     }
                 }
             }
-            else
+/*            else
             {
-                botPlayer->AddBattlegroundQueueId(bgQueueTypeId);
-            }
+                if (!botPlayer->InBattlegroundQueue())
+                {
+                    botPlayer->AddBattlegroundQueueId(bgQueueTypeId);
+                }
+            }*/
 
             // Pasul 7: Programeaza serverul sa caute meci pentru acest MMR
             sBattlegroundMgr->ScheduleQueueUpdate(matchmakerRating, bgQueueTypeId);
