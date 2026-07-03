@@ -1032,47 +1032,6 @@ private:
         }
     }
 
-    void CheckAndRewardArenaBotPersonalRatingOFF(Player* botPlayer)
-    {
-        if (!botPlayer)
-            return;
-
-        uint8 teamSizeIndex = 0; // 0 = 2v2
-        uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
-
-        if (arenaTeamId == 0)
-            return;
-
-        ArenaTeam* at = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
-        if (!at)
-            return;
-
-        uint32 currentPersonalRating = botPlayer->GetUInt32Value(PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + (teamSizeIndex * ARENA_TEAM_END) + ARENA_TEAM_PERSONAL_RATING);
-
-        if (currentPersonalRating < 1350)
-        {
-            uint32 bonusPoints = urand(150, 250);
-            uint32 newPersonalRating = currentPersonalRating + bonusPoints;
-
-            uint32 newMMR = newPersonalRating;
-            if (newMMR < 1500)
-            {
-                newMMR = 1500;
-            }
-
-            botPlayer->SetArenaTeamInfoField(teamSizeIndex, ARENA_TEAM_PERSONAL_RATING, newPersonalRating);
-
-            for (ArenaTeam::MemberList::iterator itr = at->m_membersBegin(); itr != at->m_membersEnd(); ++itr)
-            {
-                itr->PersonalRating = newPersonalRating;
-                itr->MatchMakerRating = newMMR;
-            }
-
-            TC_LOG_INFO("fakPlayer", "LOG CACHE RAM FIXED: S-au salvat in siguranta {} PR si {} MMR in cache-ul RAM al echipei {} pentru urmatorul meci!",
-                newPersonalRating, newMMR, arenaTeamId);
-        }
-    }
-
     void CheckAndRewardArenaBotPersonalRating(Player* botPlayer)
     {
         if (!botPlayer)
