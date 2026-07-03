@@ -143,7 +143,7 @@ namespace
         // Scoatem sesiunea si din managerul principal de sesiuni al serverului
         if (tracker.realSession)
         {
-            //sWorld->RemoveSession(tracker.realSession->GetAccountId());
+            sWorld->RemoveSession(tracker.realSession->GetAccountId());
         }
     }
 
