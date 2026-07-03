@@ -37,6 +37,10 @@
 #include "ObjectMgr.h"
 #include <unordered_map>
 #include <boost/asio.hpp>
+#include "Guild.h"
+#include "GuildMgr.h"
+#include "GuildPackets.h"
+#include "SocialMgr.h"
 
 
 extern void kitt_start_bot_pvp_AI(Player* botPlayer);
@@ -157,7 +161,7 @@ bool IsPlayerInBotTracker(uint32 charGuidLow)
     }
     return false;
 }
-
+/*
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
 {
 private:
@@ -171,7 +175,7 @@ public:
     uint32 GetAccountId() const { return m_accountId; }
     bool Initialize();
 };
-
+*/
 class kitt_bot_account_login_interceptor : public AccountScript
 {
 public:
@@ -264,11 +268,164 @@ public:
         fakeSession->LoadPermissions();
         sWorld->AddSession(fakeSession);
 
+        //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(charGuid);
+
+        //auto loginHolder = std::make_shared<LoginQueryHolder>(accountId, playerGuid);
+        //loginHolder->Initialize();
+
         ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(charGuid);
+        ObjectGuid::LowType lowGuid = playerGuid.GetCounter();
 
-        auto loginHolder = std::make_shared<LoginQueryHolder>(accountId, playerGuid);
-        loginHolder->Initialize();
+        // Folosim clasa oficiala, globala a serverului care nu cere header custom
+        auto loginHolder = std::make_shared<CharacterDatabaseQueryHolder>();
 
+        // Alocam manual dimensiunea de 34 de tabele definita in enum
+        loginHolder->SetSize(MAX_PLAYER_LOGIN_QUERY);
+
+        // 1. Incarcam tabelul characters (PLAYER_LOGIN_QUERY_LOAD_FROM = 0)
+        //CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
+        CharacterDatabasePreparedStatement* stmt = nullptr;
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_FROM, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GROUP_MEMBER);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GROUP, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_INSTANCE);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BOUND_INSTANCES, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_AURAS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_AURAS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SPELL);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SPELLS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_DAILY);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_DAILY_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_REPUTATION);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_REPUTATION, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_INVENTORY);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_INVENTORY, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ACTIONS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACTIONS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAIL);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MAILS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAILITEMS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MAIL_ITEMS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SOCIALLIST);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SOCIAL_LIST, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_HOMEBIND);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_HOME_BIND, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SPELLCOOLDOWNS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SPELL_COOLDOWNS, stmt);
+
+        if (sWorld->getBoolConfig(CONFIG_DECLINED_NAMES_USED))
+        {
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_DECLINEDNAMES);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_DECLINED_NAMES, stmt);
+        }
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GUILD_MEMBER);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GUILD, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ARENAINFO);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ARENA_INFO, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ACHIEVEMENTS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACHIEVEMENTS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_CRITERIAPROGRESS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_CRITERIA_PROGRESS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_EQUIPMENTSETS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_BGDATA);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BG_DATA, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_GLYPHS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GLYPHS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_TALENTS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_TALENTS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_PLAYER_ACCOUNT_DATA);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_DATA, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SKILLS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SKILLS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_WEEKLY);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_WEEKLY_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_RANDOMBG);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_RANDOM_BG, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_BANNED);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BANNED, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUSREW);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS_REW, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_SEASONAL);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SEASONAL_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_MONTHLY);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MONTHLY_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CORPSE_LOCATION);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_CORPSE_LOCATION, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_PETS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, stmt);
+
+        // Trimitem catre thread-ul MySQL
         SQLQueryHolderTask task(loginHolder);
 
         bool gasitInTracker = false;
@@ -354,12 +511,165 @@ public:
             fakeSession->LoadPermissions();
             sWorld->AddSession(fakeSession);
 
+            //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(bot.charGuid);
+
+            //auto loginHolder = std::make_shared<LoginQueryHolder>(bot.accountId, playerGuid);
+
+            //loginHolder->Initialize();
+
             ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(bot.charGuid);
+            ObjectGuid::LowType lowGuid = playerGuid.GetCounter();
 
-            auto loginHolder = std::make_shared<LoginQueryHolder>(bot.accountId, playerGuid);
+            // Folosim clasa oficiala, globala a serverului care nu cere header custom
+            auto loginHolder = std::make_shared<CharacterDatabaseQueryHolder>();
 
-            loginHolder->Initialize();
+            // Alocam manual dimensiunea de 34 de tabele definita in enum
+            loginHolder->SetSize(MAX_PLAYER_LOGIN_QUERY);
 
+            // 1. Incarcam tabelul characters (PLAYER_LOGIN_QUERY_LOAD_FROM = 0)
+            //CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
+            CharacterDatabasePreparedStatement* stmt = nullptr;
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_FROM, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GROUP_MEMBER);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GROUP, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_INSTANCE);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BOUND_INSTANCES, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_AURAS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_AURAS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SPELL);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SPELLS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_DAILY);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_DAILY_QUEST_STATUS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_REPUTATION);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_REPUTATION, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_INVENTORY);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_INVENTORY, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ACTIONS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACTIONS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAIL);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MAILS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAILITEMS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MAIL_ITEMS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SOCIALLIST);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SOCIAL_LIST, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_HOMEBIND);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_HOME_BIND, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SPELLCOOLDOWNS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SPELL_COOLDOWNS, stmt);
+
+            if (sWorld->getBoolConfig(CONFIG_DECLINED_NAMES_USED))
+            {
+                stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_DECLINEDNAMES);
+                stmt->setUInt32(0, lowGuid);
+                loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_DECLINED_NAMES, stmt);
+            }
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GUILD_MEMBER);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GUILD, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ARENAINFO);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ARENA_INFO, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ACHIEVEMENTS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACHIEVEMENTS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_CRITERIAPROGRESS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_CRITERIA_PROGRESS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_EQUIPMENTSETS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_BGDATA);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BG_DATA, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_GLYPHS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GLYPHS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_TALENTS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_TALENTS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_PLAYER_ACCOUNT_DATA);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_DATA, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SKILLS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SKILLS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_WEEKLY);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_WEEKLY_QUEST_STATUS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_RANDOMBG);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_RANDOM_BG, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_BANNED);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BANNED, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUSREW);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS_REW, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_SEASONAL);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SEASONAL_QUEST_STATUS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_MONTHLY);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MONTHLY_QUEST_STATUS, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CORPSE_LOCATION);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_CORPSE_LOCATION, stmt);
+
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_PETS);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, stmt);
+
+            // Trimitem catre thread-ul MySQL
             SQLQueryHolderTask task(loginHolder);
 
             BotAsyncTracker tracker;
@@ -542,6 +852,47 @@ public:
 
                     if (botPlayer->LoadFromDB(playerGuid, *tracker.holder))
                     {
+
+                        // ==================== ACTIVARE GUILDA REPARATA COMPLET ====================
+                        QueryResult dbGuildResult = CharacterDatabase.PQuery("SELECT `guildid`, `rank` FROM `guild_member` WHERE `guid` = {}", tracker.charGuid);
+
+                        if (dbGuildResult)
+                        {
+                            Field* fields = dbGuildResult->Fetch();
+                            uint32 dbGuildId = fields[0].GetUInt32(); // Coloana 0 = guildId
+                            uint8 dbRankId = fields[1].GetUInt8();   // Coloana 1 = rank
+
+                            if (dbGuildId > 0)
+                            {
+                                // 1. Setam ID-ul si rank-ul direct pe obiectul botului (reparam ce a omis LoadFromDB)
+                                botPlayer->SetInGuild(dbGuildId);
+                                botPlayer->SetGuildRank(dbRankId);
+
+                                // 2. Luam obiectul guildei din managerul global folosind ID-ul aflat
+                                if (Guild* guild = sGuildMgr->GetGuildById(dbGuildId))
+                                {
+                                    // 3. Apelam functia din header-ul tau pentru a-l trece online
+                                    // Parametrii: player-ul, tipul de flag (1 = online status), starea (true = online)
+                                    guild->OnPlayerStatusChange(botPlayer, 1, true);
+
+                                    // 4. Sincronizam zona si nivelul in lista interna a breslei
+                                    guild->UpdateMemberData(botPlayer, GUILD_MEMBER_DATA_ZONEID, botPlayer->GetZoneId());
+                                    guild->UpdateMemberData(botPlayer, GUILD_MEMBER_DATA_LEVEL, botPlayer->GetLevel());
+
+                                    TC_LOG_INFO("fakPlayer", "LOG GUILDA REUSIT: Botul {} (GUID: {}) este acum online in Guilda ID {}.", botPlayer->GetName(), tracker.charGuid, dbGuildId);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Daca nu are guilda in baza de date
+                            botPlayer->SetInGuild(0);
+                            botPlayer->SetGuildRank(0);
+                        }
+
+                        botPlayer->ForceValuesUpdateAtIndex(PLAYER_GUILDID);
+                        // =====================================================================
+
                         // protectie map instance
                         // nu se poate crea instata daca nu e jucator deja
                         uint32 botMapId = botPlayer->GetMapId();
@@ -613,6 +964,28 @@ public:
 
                             botPlayer->AddToWorld();
                             ObjectAccessor::AddObject(botPlayer);
+
+                            // Asta face ca botul sa fie vazut online la comanda /who sau pe panourile web (UCP/Armory)
+                            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_ONLINE);
+                            stmt->setUInt32(0, botPlayer->GetGUID().GetCounter());
+                            CharacterDatabase.Execute(stmt);
+
+                            // Toti jucatorii care il au la Friends vor primi notificarea vizuala "X has come online."
+                            sSocialMgr->SendFriendStatus(botPlayer, FRIEND_ONLINE, botPlayer->GetGUID(), true);
+
+                            // 4. COPIAT DIN CORE: Sincronizare si anunt in cadrul Grupului (daca botul era intr-un Party/Raid)
+                            if (Group* group = botPlayer->GetGroup())
+                            {
+                                group->SendUpdate();
+                                group->ResetMaxEnchantingLevel();
+                                if (group->GetLeaderGUID() == botPlayer->GetGUID())
+                                    group->StopLeaderOfflineTimer();
+                            }
+
+                            // 5. Sincronizam timpul intern de logare si fortam masca de update vizual pentru guilda sub cap
+                            botPlayer->SetInGameTime(GameTime::GetGameTimeMS());
+
+                            // ===========================================================
 
                             //botPlayer->SetPvP(true);
                             //botPlayer->SetGameMaster(true);
