@@ -25,6 +25,26 @@
 
 namespace
 {
+    bool IsValidTargetForBot(Player* botPlayer, Unit* victim, float dist)
+    {
+        if (!botPlayer || !victim)
+            return false;
+
+        // Sanity check pentru coordonate (previne trimiterea de raze in coordonate invalide/infinite)
+        if (!victim->IsPositionValid() || !botPlayer->IsPositionValid())
+            return false;
+
+        // Daca distanta raportata e gigantica din cauza unui desync de harti, ignoram tinta
+        if (dist > 160.0f)
+            return false;
+
+        // Abia acum verificam daca exista vizibilitate fizica
+        if (!botPlayer->IsWithinLOSInMap(victim))
+            return false;
+
+        return true;
+    }
+
     bool IncearcaSaFolosestiMedalionPvP(Player* botPlayer)
     {
         if (!botPlayer || !botPlayer->IsAlive())
@@ -72,6 +92,7 @@ namespace
             return;
 
         float targetDist = botPaladin->GetDistance(victim);
+        bool areLineOfSight = botPaladin->IsWithinLOSInMap(victim);
 
         if (!botPaladin->HasInArc(float(M_PI), victim))
         {
@@ -90,6 +111,21 @@ namespace
             }
 
             botPaladin->Attack(victim, false);
+        }
+
+        // Daca are deja MoveChase dar distanta nu scade si botul tremura dupa un perete (nu are LoS)
+        if (!areLineOfSight && botPaladin->HasUnitState(UNIT_STATE_CHASE))
+        {
+            // Verificam daca botul a ramas blocat pe loc (viteza reala zero desi are comanda de fuga)
+            if (botPaladin->GetSpeed(MOVE_RUN) > 0.0f && !botPaladin->isMoving())
+            {
+                // Oprim instant miscarea pentru a curata memoria si a sparge bucla VMAP
+                botPaladin->GetMotionMaster()->Clear();
+
+                // Ii dam o mica comanda de deplasare random sau spre victima modificata ca sa iasa din bug
+                botPaladin->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), true);
+                return;
+            }
         }
 
         // Medalionul de PvP se activeaza primul daca si-a pierdut controlul
@@ -337,13 +373,30 @@ namespace
             return;
 
         float dist = botPlayer->GetDistance(victim);
+        bool areLineOfSight = botPlayer->IsWithinLOSInMap(victim);
 
         if (dist > 30 && botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
         {
             botPlayer->GetMotionMaster()->MoveFollow(victim, 3.0f, float(M_PI));
         }
 
-        //botPaladin->Attack(victim, false);
+        // Daca are deja MoveChase dar distanta nu scade si botul tremura dupa un perete (nu are LoS)
+        if (!areLineOfSight && botPlayer->HasUnitState(UNIT_STATE_CHASE))
+        {
+            if (botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+            {
+                // Verificam daca botul a ramas blocat pe loc (viteza reala zero desi are comanda de fuga)
+                if (botPlayer->GetSpeed(MOVE_RUN) > 0.0f && !botPlayer->isMoving())
+                {
+                    // Oprim instant miscarea pentru a curata memoria si a sparge bucla VMAP
+                    botPlayer->GetMotionMaster()->Clear();
+
+                    // Ii dam o mica comanda de deplasare random sau spre victima modificata ca sa iasa din bug
+                    botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), true);
+                    return;
+                }
+            }
+        }
 
         if (!botPlayer->IsWithinMeleeRange(victim))
         {
