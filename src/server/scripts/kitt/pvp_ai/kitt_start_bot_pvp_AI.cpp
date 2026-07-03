@@ -71,9 +71,25 @@ namespace
         if (!botPaladin || !botPaladin->IsAlive())
             return;
 
+        float targetDist = botPaladin->GetDistance(victim);
+
         if (!botPaladin->HasInArc(float(M_PI), victim))
         {
             botPaladin->SetFacingToObject(victim);
+        }
+
+        if (targetDist > 30 && botPaladin->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
+        {
+            botPaladin->GetMotionMaster()->MoveFollow(victim, 3.0f, float(M_PI));
+        }
+        else
+        {
+            if (targetDist > 5 && botPaladin->GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
+            {
+                botPaladin->GetMotionMaster()->MoveChase(victim, 3.0f);
+            }
+
+            botPaladin->Attack(victim, false);
         }
 
         // Medalionul de PvP se activeaza primul daca si-a pierdut controlul
@@ -250,7 +266,7 @@ namespace
                 botPaladin->GetMotionMaster()->MoveChase(victim);
             }
 
-            if (targetDist <= 10.0f)
+            if (targetDist <= 5.0f)
             {
                 if (!botPaladin->HasInArc(float(M_PI), victim))
                 {
@@ -322,9 +338,15 @@ namespace
 
         float dist = botPlayer->GetDistance(victim);
 
+        if (dist > 30 && botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
+        {
+            botPlayer->GetMotionMaster()->MoveFollow(victim, 3.0f, float(M_PI));
+        }
+
+        //botPaladin->Attack(victim, false);
+
         if (!botPlayer->IsWithinMeleeRange(victim))
         {
-            botPlayer->GetMotionMaster()->Clear();
             if (botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
             {
                 botPlayer->GetMotionMaster()->MoveChase(victim);
@@ -562,7 +584,7 @@ void kitt_start_bot_pvp_AI(Player* botPlayer)
                 currentVictim = targetPlayer;
                 botPlayer->SetSelection(targetPlayer->GetGUID());
                 //botPlayer->SendMeleeAttackStart(targetPlayer);
-                //botPlayer->SetInCombatWith(targetPlayer);
+                botPlayer->SetInCombatWith(targetPlayer);
                 //botPlayer->Attack(targetPlayer, true);
                 //botPlayer->GetMotionMaster()->MoveChase(targetPlayer);
                 break;
@@ -572,13 +594,6 @@ void kitt_start_bot_pvp_AI(Player* botPlayer)
 
     if (currentVictim && currentVictim->IsAlive())
     {
-        if (botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
-        {
-            botPlayer->GetMotionMaster()->MoveFollow(currentVictim, 3.0f, float(M_PI));
-        }
-
-        //botPlayer->Attack(currentVictim, true);
-
         uint8 botClass = botPlayer->GetClass();
         switch (botClass)
         {
