@@ -767,6 +767,11 @@ void kitt_start_bot_pvp_AI(Player* botPlayer)
             if (!targetPlayer || !targetPlayer->IsAlive() || targetPlayer == botPlayer || targetPlayer->IsGameMaster())
                 continue;
 
+            // daca e invizibil nu il ataca
+            if (!botPlayer->CanSeeOrDetect(targetPlayer, false, true))
+                continue;
+
+
             if (botPlayer->IsHostileTo(targetPlayer))
             {
                 currentVictim = targetPlayer;
