@@ -22,29 +22,231 @@
 #include "PointMovementGenerator.h"
 #include "Vehicle.h"
 #include "G3D/Vector3.h"
+#include "TalentPackets.h"
 
 namespace
 {
-    bool IsValidTargetForBot(Player* botPlayer, Unit* victim, float dist)
+    // daca este melee sau nu
+    bool GhostIsMelee(Player* botPlayer)
     {
-        if (!botPlayer || !victim)
+        if (!botPlayer)
             return false;
 
-        // Sanity check pentru coordonate (previne trimiterea de raze in coordonate invalide/infinite)
-        if (!victim->IsPositionValid() || !botPlayer->IsPositionValid())
+        uint8 clasa = botPlayer->GetClass();
+
+        // 1. Clase care sunt intotdeauna Melee
+        if (clasa == CLASS_WARRIOR || clasa == CLASS_ROGUE || clasa == CLASS_DEATH_KNIGHT)
+            return true;
+
+        // 2. Clase care sunt intotdeauna Ranged/Casteri
+        if (clasa == CLASS_MAGE || clasa == CLASS_PRIEST || clasa == CLASS_WARLOCK || clasa == CLASS_HUNTER)
             return false;
 
-        // Daca distanta raportata e gigantica din cauza unui desync de harti, ignoram tinta
-        if (dist > 160.0f)
+        // 3. Clase hibride: Preluam spec-ul activ si numaram punctele direct pe baza structurii tale
+        uint8 activeSpec = botPlayer->GetActiveSpec();
+        PlayerTalentMap const* talentMap = botPlayer->GetTalentMap(activeSpec);
+        if (!talentMap)
             return false;
 
-        // Abia acum verificam daca exista vizibilitate fizica
-        if (!botPlayer->IsWithinLOSInMap(victim))
-            return false;
+        uint32 pointsTab1 = 0;
+        uint32 pointsTab2 = 0;
+        uint32 pointsTab3 = 0;
 
-        return true;
+        // Parcurgem harta si numaram pur si simplu punctele bazat pe membrul .spec din structura ta
+        for (auto const& pair : *talentMap)
+        {
+            // pair.second este structura PlayerTalent stocata direct (folosim operatorul .)
+            uint8 talentSpecTab = pair.second.spec;
+
+            if (talentSpecTab == 0) pointsTab1++;
+            else if (talentSpecTab == 1) pointsTab2++;
+            else if (talentSpecTab == 2) pointsTab3++;
+        }
+
+        // PALADIN (Tab 0: Holy, Tab 1: Protection, Tab 2: Retribution)
+        if (clasa == CLASS_PALADIN)
+        {
+            if (pointsTab3 > pointsTab1 || pointsTab2 > pointsTab1)
+                return true; // Retri sau Prot
+            return false;   // Holy
+        }
+
+        // SHAMAN (Tab 0: Elemental, Tab 1: Enhancement, Tab 2: Restoration)
+        if (clasa == CLASS_SHAMAN)
+        {
+            if (pointsTab2 > pointsTab1 && pointsTab2 > pointsTab3)
+                return true; // Doar Enhancement este Melee
+            return false;
+        }
+
+        // DRUID (Tab 0: Balance, Tab 1: Feral, Tab 2: Restoration)
+        if (clasa == CLASS_DRUID)
+        {
+            if (pointsTab2 > pointsTab1 && pointsTab2 > pointsTab3)
+                return true; // Doar Feral (Pisica/Urs) este Melee
+            return false;
+        }
+
+        return false;
     }
 
+    // miscarea catre victima si attack start si se uitea la victima
+    void GhostMoveAndAttack(Player* botPlayer, Unit* victim)
+    {
+        if (!botPlayer || !victim || !botPlayer->IsAlive() || !victim->IsAlive())
+            return;
+
+        bool esteMelee = GhostIsMelee(botPlayer);
+        float dist = botPlayer->GetDistance(victim);
+        uint32 miscareCurenta = botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType();
+
+        // --- REPARATIE CRITICA 1: SELECTIA TINTEI PENTRU CHARGE/SPELLS ---
+        // Sursa ta are nevoie de un target valid in memorie ca sa aprobe Charge-ul din DBC
+        if (botPlayer->GetTarget() != victim->GetGUID())
+        {
+            botPlayer->SetSelection(victim->GetGUID()); // Schimba cu SetTarget daca SetSelection da eroare
+        }
+
+        // --- 1. GESTIONARE ATAC SI COMBAT PENTRU CHARGE / SPELLS ---
+        if (esteMelee)
+        {
+            if (!botPlayer->IsInCombat())
+            {
+                botPlayer->SetInCombatWith(victim, true); // True pentru surpriza tactica
+                botPlayer->Attack(victim, false);
+            }
+
+            if (dist <= 5.0f && !botPlayer->HasUnitState(UNIT_STATE_MELEE_ATTACKING))
+            {
+                botPlayer->Attack(victim, true);
+            }
+        }
+        else
+        {
+            if (botPlayer->HasUnitState(UNIT_STATE_MELEE_ATTACKING))
+            {
+                botPlayer->AttackStop();
+            }
+        }
+
+        // --- REPARATIE CRITICA 2: PROTECTIE CASTERI (ZAP, FROSTBOLT ETC.) ---
+        // Daca botul da cast la un spell, inghetam miscarea ca sa nu isi dea intrerupere singur
+        if (botPlayer->IsNonMeleeSpellCast(false, false, true) || botPlayer->HasUnitState(UNIT_STATE_CASTING))
+        {
+            return;
+        }
+
+        if (dist > 100.0f)
+        {
+            if (miscareCurenta != POINT_MOTION_TYPE)
+            {
+                botPlayer->GetMotionMaster()->Clear();
+                botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), true); // Fortat 100% pe MMAP
+            }
+            return;
+        }
+
+        // --- 2. GESTIONARE MISCARE UNIVERSALA ---
+        if (dist > 2.0f)
+        {
+            static std::map<ObjectGuid, uint32> tickCounters;
+            static std::map<ObjectGuid, float> lastDistances;
+            static std::map<ObjectGuid, bool> ghostModeActive;
+
+            ObjectGuid botGuid = botPlayer->GetGUID();
+
+            // --- REPARATIE CRITICA 3: INITIALIZARE START MECI ---
+            // Daca botul abia a intrat in arena, ii salvam distanta actuala si il FORTAM pe drumul normal (true)
+            if (lastDistances.find(botGuid) == lastDistances.end())
+            {
+                lastDistances[botGuid] = dist;
+                tickCounters[botGuid] = 0;
+                ghostModeActive[botGuid] = false; // GARANTAT porneste pe drumul normal!
+            }
+
+            tickCounters[botGuid]++;
+
+            // Verificam o data la ~50 de rulari (aprox. 2 secunde de alergare efectiva)
+            if (tickCounters[botGuid] >= 50)
+            {
+                tickCounters[botGuid] = 0;
+
+                // Activam modul fantoma DOAR daca distanta fata de tinta NU scade (semn clar de blocaj pe rampa/pilon)
+                if (abs(dist - lastDistances[botGuid]) < 1.0f && botPlayer->GetSpeed(MOVE_RUN) > 0.0f)
+                {
+                    ghostModeActive[botGuid] = true;
+                }
+                else
+                {
+                    ghostModeActive[botGuid] = false;
+                }
+
+                lastDistances[botGuid] = dist;
+            }
+
+            if (dist <= 4.0f)
+            {
+                ghostModeActive[botGuid] = false;
+            }
+
+            // Daca trackerul independent zice ca e blocat -> devine fantoma (false), altfel ocoleste peretii (true)
+            bool folosestePathfinding = !ghostModeActive[botGuid];
+
+            if (miscareCurenta != POINT_MOTION_TYPE)
+            {
+                botPlayer->GetMotionMaster()->Clear();
+                botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), folosestePathfinding);
+            }
+            else
+            {
+                float destX, destY, destZ;
+                botPlayer->GetMotionMaster()->GetDestination(destX, destY, destZ);
+
+                bool aIesitDinUnghi = !botPlayer->HasInArc(1.74f, victim);
+                bool sAVariatDistanta = victim->GetDistance(destX, destY, destZ) > 3.0f;
+
+                // Schimbam MovePoint-ul DOAR daca s-a mutat inamicul considerabil, prevenind spam-ul de frame-uri de la start
+                if (aIesitDinUnghi || sAVariatDistanta || ghostModeActive[botGuid])
+                {
+                    botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), folosestePathfinding);
+                }
+            }
+        }
+        else // Distanta este sub 2 metri (Suntem corp la corp)
+        {
+            if (esteMelee)
+            {
+                if (miscareCurenta != CHASE_MOTION_TYPE)
+                {
+                    botPlayer->GetMotionMaster()->Clear();
+                    botPlayer->GetMotionMaster()->MoveChase(victim);
+                    botPlayer->Attack(victim, true);
+                }
+                else
+                {
+                    if (!botPlayer->HasInArc(1.74f, victim))
+                    {
+                        botPlayer->SetFacingToObject(victim);
+                    }
+                }
+            }
+            else
+            {
+                if (miscareCurenta == POINT_MOTION_TYPE || miscareCurenta == CHASE_MOTION_TYPE)
+                {
+                    botPlayer->GetMotionMaster()->Clear();
+                    botPlayer->StopMoving();
+                }
+
+                if (!botPlayer->HasInArc(1.74f, victim))
+                {
+                    botPlayer->SetFacingToObject(victim);
+                }
+            }
+        }
+    }
+
+    // foloseste medalionul PVP
     bool IncearcaSaFolosestiMedalionPvP(Player* botPlayer)
     {
         if (!botPlayer || !botPlayer->IsAlive())
@@ -64,6 +266,7 @@ namespace
         return false;
     }
 
+    // rank maxim disponibil pt spell id
     uint32 ObtineRankMaximSpell(uint32 spellId)
     {
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
@@ -91,42 +294,9 @@ namespace
         if (!botPaladin || !botPaladin->IsAlive())
             return;
 
-        float targetDist = botPaladin->GetDistance(victim);
-        bool areLineOfSight = botPaladin->IsWithinLOSInMap(victim);
+        //float targetDist = botPaladin->GetDistance(victim);
 
-        if (!botPaladin->HasInArc(float(M_PI), victim))
-        {
-            botPaladin->SetFacingToObject(victim);
-        }
-
-        if (targetDist > 30 && botPaladin->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
-        {
-            botPaladin->GetMotionMaster()->MoveFollow(victim, 3.0f, float(M_PI));
-        }
-        else
-        {
-            if (targetDist > 5 && botPaladin->GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
-            {
-                botPaladin->GetMotionMaster()->MoveChase(victim, 3.0f);
-            }
-
-            botPaladin->Attack(victim, false);
-        }
-
-        // Daca are deja MoveChase dar distanta nu scade si botul tremura dupa un perete (nu are LoS)
-        if (!areLineOfSight && botPaladin->HasUnitState(UNIT_STATE_CHASE))
-        {
-            // Verificam daca botul a ramas blocat pe loc (viteza reala zero desi are comanda de fuga)
-            if (botPaladin->GetSpeed(MOVE_RUN) > 0.0f && !botPaladin->isMoving())
-            {
-                // Oprim instant miscarea pentru a curata memoria si a sparge bucla VMAP
-                botPaladin->GetMotionMaster()->Clear();
-
-                // Ii dam o mica comanda de deplasare random sau spre victima modificata ca sa iasa din bug
-                botPaladin->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), true);
-                return;
-            }
-        }
+        GhostMoveAndAttack(botPaladin, victim);
 
         // Medalionul de PvP se activeaza primul daca si-a pierdut controlul
         if (botPaladin->HasUnitState(UNIT_STATE_LOST_CONTROL) &&
@@ -287,7 +457,9 @@ namespace
         if (victim && victim->IsAlive() && botPaladin->IsHostileTo(victim))
         {
             float targetDist = botPaladin->GetDistance(victim);
-            botPaladin->Attack(victim, false);
+
+            // Porneste urmarirea fizica
+            GhostMoveAndAttack(botPaladin, victim);
 
             // Repentance (ID: 20066) - Il folosim automat pe inamicul curent din argument daca viata grupului e sigura
             if (targetDist <= 20.0f && !botPaladin->GetSpellHistory()->HasCooldown(20066))
@@ -296,11 +468,7 @@ namespace
                 return;
             }
 
-            // Porneste urmarirea fizica
-            if (botPaladin->GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
-            {
-                botPaladin->GetMotionMaster()->MoveChase(victim);
-            }
+            
 
             if (targetDist <= 5.0f)
             {
@@ -309,7 +477,12 @@ namespace
                     botPaladin->SetFacingToObject(victim);
                 }
 
-                botPaladin->Attack(victim, true);
+                if (!botPaladin->HasUnitState(UNIT_STATE_MELEE_ATTACKING))
+                {
+                    botPaladin->Attack(victim, true);
+                }
+
+                //botPaladin->Attack(victim, true);
 
                 // Judgement of Light
                 if (!botPaladin->GetSpellHistory()->HasCooldown(20271))
@@ -372,55 +545,17 @@ namespace
         if (!botPlayer->IsHostileTo(victim))
             return;
 
+        // Adauga doar aceasta linie. Ea rezolva automat miscarea (Point/Chase), unghiul de 100 grade si auto-atacul.
+        GhostMoveAndAttack(botPlayer, victim);
+
+        // Preluam distanta simplu pentru restul vrajilor de mai jos (Charge, Intercept, etc.)
         float dist = botPlayer->GetDistance(victim);
-        bool areLineOfSight = botPlayer->IsWithinLOSInMap(victim);
 
-        if (dist > 30 && botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE)
-        {
-            botPlayer->GetMotionMaster()->MoveFollow(victim, 3.0f, float(M_PI));
-        }
-
-        // Daca are deja MoveChase dar distanta nu scade si botul tremura dupa un perete (nu are LoS)
-        if (!areLineOfSight && botPlayer->HasUnitState(UNIT_STATE_CHASE))
-        {
-            if (botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
-            {
-                // Verificam daca botul a ramas blocat pe loc (viteza reala zero desi are comanda de fuga)
-                if (botPlayer->GetSpeed(MOVE_RUN) > 0.0f && !botPlayer->isMoving())
-                {
-                    // Oprim instant miscarea pentru a curata memoria si a sparge bucla VMAP
-                    botPlayer->GetMotionMaster()->Clear();
-
-                    // Ii dam o mica comanda de deplasare random sau spre victima modificata ca sa iasa din bug
-                    botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), true);
-                    return;
-                }
-            }
-        }
-
-        if (!botPlayer->IsWithinMeleeRange(victim))
-        {
-            if (botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
-            {
-                botPlayer->GetMotionMaster()->MoveChase(victim);
-                botPlayer->Attack(victim, true);
-            }
-
-            //return;
-        }
-
-        if (!botPlayer->HasInArc(float(M_PI), victim))
+        // se intoarce cu fata la victima
+        /*if (!botPlayer->HasInArc(float(M_PI), victim))
         {
             botPlayer->SetFacingToObject(victim);
-        }
-
-        if (dist <= 20.0f)
-        {
-            if (!botPlayer->HasUnitState(UNIT_STATE_MELEE_ATTACKING)/* || dist > 2.0f*/)
-            {
-                botPlayer->Attack(victim, true);
-            }
-        }
+        }*/
 
         // 1. MANAGEMENTUL DE RESURSE (Furia nativa a jucatorului)
         uint32 rage = botPlayer->GetPower(POWER_RAGE);
@@ -637,7 +772,7 @@ void kitt_start_bot_pvp_AI(Player* botPlayer)
                 currentVictim = targetPlayer;
                 botPlayer->SetSelection(targetPlayer->GetGUID());
                 //botPlayer->SendMeleeAttackStart(targetPlayer);
-                botPlayer->SetInCombatWith(targetPlayer);
+                //botPlayer->SetInCombatWith(targetPlayer);
                 //botPlayer->Attack(targetPlayer, true);
                 //botPlayer->GetMotionMaster()->MoveChase(targetPlayer);
                 break;
