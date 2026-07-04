@@ -1063,7 +1063,14 @@ public:
                                             if (!botPlayer->IsAlive())
                                             {
                                                 botPlayer->ResurrectPlayer(1.0f);
-                                                botPlayer->SpawnCorpseBones();
+                                                botPlayer->RemoveAllAuras();
+                                                //botPlayer->SpawnCorpseBones();
+                                            }
+
+                                            if (botPlayer->IsInCombat())
+                                            {
+                                                botPlayer->AttackStop();
+                                                botPlayer->ClearInCombat();
                                             }
 
                                             Team botTeamFromQueue = ginfoData.Team;
@@ -1086,6 +1093,19 @@ public:
 
                                             if (startPos)
                                             {
+                                                if (!botPlayer->IsAlive())
+                                                {
+                                                    botPlayer->ResurrectPlayer(1.0f);
+                                                    botPlayer->AttackStop();
+                                                    botPlayer->ClearInCombat();
+                                                }
+
+                                                if (botPlayer->IsInCombat())
+                                                {
+                                                    botPlayer->AttackStop();
+                                                    botPlayer->ClearInCombat();
+                                                }
+
                                                 tracker.isQueued = true;
                                                 
                                                 //TC_LOG_INFO("fakPlayer", "LOG ARENA: Botul {} accepta invitatia nativ...", botPlayer->GetName().c_str());
