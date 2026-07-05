@@ -1060,7 +1060,6 @@ public:
                                                 TC_LOG_INFO("fakPlayer", " !isalive");
                                                 botPlayer->ResurrectPlayer(1.0f);
                                                 botPlayer->SpawnCorpseBones();
-                                                botPlayer->RemoveAllAuras();
 
                                                 botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
 
@@ -1069,6 +1068,9 @@ public:
                                                     WorldPacket pachetGol;
                                                     botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
                                                 }
+
+                                                botPlayer->DurabilityRepairAll(false, 0, false);
+                                                botPlayer->RemoveAllAuras();
                                             }
 
                                             if (botPlayer->IsInCombat())
