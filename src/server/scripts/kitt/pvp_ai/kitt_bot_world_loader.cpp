@@ -1054,23 +1054,53 @@ public:
 
                                         if (bg)
                                         {
-                                            Map* actualArenaMap = sMapMgr->FindMap(bg->GetMapId(), bg->GetInstanceID());
-                                            if (!actualArenaMap)
-                                            {
-                                                continue;
-                                            }
-
+                                            // === reinvie si tele home ===
                                             if (!botPlayer->IsAlive())
                                             {
+                                                TC_LOG_INFO("fakPlayer", " !isalive");
                                                 botPlayer->ResurrectPlayer(1.0f);
+                                                botPlayer->SpawnCorpseBones();
                                                 botPlayer->RemoveAllAuras();
-                                                //botPlayer->SpawnCorpseBones();
+
+                                                botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
+
+                                                if (botPlayer->GetSession())
+                                                {
+                                                    WorldPacket pachetGol;
+                                                    botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                                                }
                                             }
 
                                             if (botPlayer->IsInCombat())
                                             {
                                                 botPlayer->AttackStop();
                                                 botPlayer->ClearInCombat();
+                                            }
+
+                                            float groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
+
+                                            if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
+                                                botPlayer->IsFalling() ||
+                                                botPlayer->IsUnderWater() ||
+                                                botPlayer->IsInWater() ||
+                                                botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
+                                            {
+                                                TC_LOG_INFO("fakPlayer", " in apa sau... cade... Falling....");
+                                                // Jucatorul pica in gol sub harta
+                                                botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
+
+                                                if (botPlayer->GetSession())
+                                                {
+                                                    WorldPacket pachetGol;
+                                                    botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                                                }
+                                            }
+                                            // ================
+
+                                            Map* actualArenaMap = sMapMgr->FindMap(bg->GetMapId(), bg->GetInstanceID());
+                                            if (!actualArenaMap)
+                                            {
+                                                continue;
                                             }
 
                                             Team botTeamFromQueue = ginfoData.Team;
@@ -1093,19 +1123,6 @@ public:
 
                                             if (startPos)
                                             {
-                                                if (!botPlayer->IsAlive())
-                                                {
-                                                    botPlayer->ResurrectPlayer(1.0f);
-                                                    botPlayer->AttackStop();
-                                                    botPlayer->ClearInCombat();
-                                                }
-
-                                                if (botPlayer->IsInCombat())
-                                                {
-                                                    botPlayer->AttackStop();
-                                                    botPlayer->ClearInCombat();
-                                                }
-
                                                 tracker.isQueued = true;
                                                 
                                                 //TC_LOG_INFO("fakPlayer", "LOG ARENA: Botul {} accepta invitatia nativ...", botPlayer->GetName().c_str());
