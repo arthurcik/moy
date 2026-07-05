@@ -343,6 +343,11 @@ namespace
             if (!botPlayer->GetSpellHistory()->HasCooldown(42292))
             {
                 botPlayer->CastSpell(botPlayer, 42292, true); // true pentru a ignora GCD sau alte blocaje de cast
+
+                // add cd for spell
+                using namespace std::chrono_literals;
+                botPlayer->GetSpellHistory()->AddCooldown(42292, 0, 2min);
+
                 return true;
             }
         }
