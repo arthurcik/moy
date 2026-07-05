@@ -346,7 +346,7 @@ namespace
 
                 // add cd for spell
                 using namespace std::chrono_literals;
-                botPlayer->GetSpellHistory()->AddCooldown(42292, 0, 2min);
+                botPlayer->GetSpellHistory()->AddCooldown(42292, 0, 30s); // normal 2min
 
                 return true;
             }
