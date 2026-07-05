@@ -1209,6 +1209,25 @@ public:
                             tracker.isQueued = false;
                             tracker.rejoinTimer = urand(15000, 35000);
                             TC_LOG_INFO("fakPlayer", "LOG STATUS: Botul {} a iesit din query sau meci. Pornesc cronometrul de re-inscriere...", botPlayer->GetName().c_str());
+
+                            // verificare si la iesire din bg
+                            float groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
+                            if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
+                                botPlayer->IsFalling() ||
+                                botPlayer->IsUnderWater() ||
+                                botPlayer->IsInWater() ||
+                                botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
+                            {
+                                TC_LOG_INFO("fakPlayer", "22222 in apa sau... cade... Falling....");
+                                // Jucatorul pica in gol sub harta
+                                botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
+
+                                if (botPlayer->GetSession())
+                                {
+                                    WorldPacket pachetGol;
+                                    botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                                }
+                            }
                         }
 
                         if (tracker.rejoinTimer <= diff)
