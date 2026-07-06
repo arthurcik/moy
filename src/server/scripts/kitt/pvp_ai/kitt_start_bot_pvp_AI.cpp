@@ -394,10 +394,10 @@ namespace
         uint32 myHp = botPaladin->GetHealthPct();
 
         // Divine Shield (Bula Mare - ID: 642) - Urgenta pentru Paladin
-        if (myHp < 25 && !botPaladin->GetSpellHistory()->HasCooldown(642) && !botPaladin->HasAura(25))
+        if (myHp < 25 && !botPaladin->GetSpellHistory()->HasCooldown(642) && (!botPaladin->HasAura(25) && !botPaladin->HasAura(25771)))
         {
             botPaladin->CastSpell(botPaladin, ObtineRankMaximSpell(642), true);
-            return;
+            //return;
         }
 
         // Buff-uri si resurse pasive inainte de lupta
@@ -453,7 +453,7 @@ namespace
                 }
 
                 // Hand of Protection (Bula fizica la viata critica de arena)
-                if (viataMembru < 30 && !membruGrup->HasAura(25) && !botPaladin->GetSpellHistory()->HasCooldown(1022) && !membruGrup->getAttackers().empty())
+                if (viataMembru < 30 && !membruGrup->HasAura(25) && !membruGrup->HasAura(25771) && !botPaladin->GetSpellHistory()->HasCooldown(1022) && !membruGrup->getAttackers().empty())
                 {
                     botPaladin->CastSpell(membruGrup, ObtineRankMaximSpell(1022), true);
                     return;
@@ -486,7 +486,7 @@ namespace
             uint32 currentMana = botPaladin->GetPower(POWER_MANA);
 
             // A. Lay on Hands (Ultima instanta - sub 15% viata) - NU COSTA MANA!
-            if (ceaMaiMicaViataGrup <= 15 && !coechipierDeVindecat->HasAura(25) && !botPaladin->GetSpellHistory()->HasCooldown(633))
+            if (ceaMaiMicaViataGrup <= 15 && !coechipierDeVindecat->HasAura(25) && !coechipierDeVindecat->HasAura(25771) && !botPaladin->GetSpellHistory()->HasCooldown(633))
             {
                 if (botPaladin->HasUnitState(UNIT_STATE_CASTING))
                     botPaladin->InterruptNonMeleeSpells(false);
