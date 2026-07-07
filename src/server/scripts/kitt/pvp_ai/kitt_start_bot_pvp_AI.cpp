@@ -97,7 +97,7 @@ namespace
 
 
     // daca este melee sau nu
-    bool GhostIsMelee(Player* botPlayer)
+    bool GhostIsMeleeOFF(Player* botPlayer)
     {
         if (!botPlayer)
             return false;
@@ -159,6 +159,77 @@ namespace
 
         return false;
     }
+
+    // daca este melee sau nu
+    bool GhostIsMelee(Player* botPlayer)
+    {
+        if (!botPlayer)
+            return false;
+
+        uint8 clasa = botPlayer->GetClass();
+
+        // 1. Clase care sunt intotdeauna Melee
+        if (clasa == CLASS_WARRIOR || clasa == CLASS_ROGUE || clasa == CLASS_DEATH_KNIGHT)
+            return true;
+
+        // 2. Clase care sunt intotdeauna Ranged/Casteri
+        if (clasa == CLASS_MAGE || clasa == CLASS_PRIEST || clasa == CLASS_WARLOCK || clasa == CLASS_HUNTER)
+            return false;
+
+        // 3. Clase hibride: Verificam dupa spell-urile cheie (Talente de 31/41/51 puncte)
+        uint8 activeSpec = botPlayer->GetActiveSpec();
+
+        // --- PALADIN ---
+        if (clasa == CLASS_PALADIN)
+        {
+            // Daca are Beacon of Light (Holy 51) sau Holy Shock -> Caster
+            if (botPlayer->HasTalent(53563, activeSpec) || botPlayer->HasTalent(20473, activeSpec))
+                return false;
+
+            // Daca are Hammer of the Righteous (Prot 51) sau Divine Storm (Retri 51) -> Melee
+            if (botPlayer->HasTalent(53595, activeSpec) || botPlayer->HasTalent(53385, activeSpec))
+                return true;
+
+            // Siguranta/Failsafe: Daca nu are talente finale, verificam daca are active aure/spell-uri de tank/dps
+            return true;
+        }
+
+        // --- SHAMAN ---
+        if (clasa == CLASS_SHAMAN)
+        {
+            // Daca are Stormstrike (Enhancement 31) sau Feral Spirit (Enhancement 51) -> Melee
+            if (botPlayer->HasTalent(17364, activeSpec) || botPlayer->HasTalent(51533, activeSpec))
+                return true;
+
+            // Daca are Thunderstorm (Ele 51) sau Earth Shield (Resto 51) -> Caster
+            if (botPlayer->HasTalent(51490, activeSpec) || botPlayer->HasTalent(974, activeSpec))
+                return false;
+
+            return false;
+        }
+
+        // --- DRUID ---
+        if (clasa == CLASS_DRUID)
+        {
+            // Daca are Mangle (Feral 41) sau Berserk (Feral 51) -> Melee
+            if (botPlayer->HasTalent(33876, activeSpec) || botPlayer->HasTalent(50334, activeSpec))
+                return true;
+
+            // Daca are Tree of Life (Resto 41) sau Starfall (Balance 51) -> Caster
+            if (botPlayer->HasTalent(33891, activeSpec) || botPlayer->HasTalent(48505, activeSpec))
+                return false;
+
+            // Failsafe pentru Druid: Daca este in forma de pisica sau urs -> Melee
+            uint8 shapeshift = botPlayer->GetShapeshiftForm();
+            if (shapeshift == FORM_CAT || shapeshift == FORM_BEAR || shapeshift == FORM_DIREBEAR)
+                return true;
+
+            return false;
+        }
+
+        return false;
+    }
+
 
     // miscarea catre victima si attack start si se uitea la victima
     void GhostMoveAndAttack(Player* botPlayer, Unit* victim)
@@ -877,7 +948,10 @@ namespace
             }
             else if (formaCurenta == FORM_BEAR)
             {
-                //botPlayer->SetShapeshiftForm(FORM_NONE);
+                if (!botPlayer->HasAura(ObtineRankMaximSpell(5487)))
+                {
+                    botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(5487), true);
+                }
                 botPlayer->SetShapeshiftForm(FORM_BEAR); // Reintra instant in Urs
                 return;
             }
@@ -974,6 +1048,11 @@ namespace
         // Fortam starea corecta de Pisica pentru lupta melee apropiata
         if (formaCurenta != FORM_CAT)
         {
+            if (!botPlayer->HasAura(ObtineRankMaximSpell(768)))
+            {
+                botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(768), true);
+            }
+            
             botPlayer->SetShapeshiftForm(FORM_CAT);
             return;
         }
@@ -1052,20 +1131,19 @@ namespace
 
     void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit* victim)
     {
-        // Folosim true pentru ca este Healer: copiaza automat tinta Druidului pentru asistenta
-        victim = GhostSelectTarget(botPriest, victim, true);
-
-        // 1. VERIFICARI STRICTE DE SIGURANTA
+        // --- 1. VERIFICARI STRICTE DE SIGURANTA SI TARGETING ---
         if (!botPriest || !botPriest->IsAlive())
             return;
 
-        // Pornim miscarea si atacul de baza chiar aici sus, pentru ca botul sa fie mereu in raza echipei
+        // Folosim true pentru ca este Healer: copiaza automat tinta colegului pentru asistenta
+        victim = GhostSelectTarget(botPriest, victim, true);
+
         if (victim && victim->IsAlive())
         {
             GhostMoveAndAttack(botPriest, victim);
         }
 
-        // Medalionul de PvP se activeaza primul daca si-a pierdut controlul (Stun, Fear, etc.)
+        // Medalionul de PvP se activeaza primul la pierderea controlului
         if (botPriest->HasUnitState(UNIT_STATE_LOST_CONTROL) &&
             !botPriest->HasUnitState(UNIT_STATE_JUMPING | UNIT_STATE_CHARGING))
         {
@@ -1075,33 +1153,34 @@ namespace
         uint32 myHp = botPriest->GetHealthPct();
         uint32 currentMana = botPriest->GetPower(POWER_MANA);
 
-        // Desperate Prayer (ID 19236) - Urgenta maxima de auto-heal instant, nu are GCD, costa foarte putin (~150 mana)
+        // Desperate Prayer (Fara GCD, urgenta maxima auto-heal instant)
+        using namespace std::chrono_literals;
+
         if (myHp < 30 && currentMana >= 150 && !botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(19236)))
         {
             botPriest->CastSpell(botPriest, ObtineRankMaximSpell(19236), true);
+            botPriest->GetSpellHistory()->AddCooldown(ObtineRankMaximSpell(19236), 0, 15s);
         }
 
-        // Buff-uri si resurse pasive inainte de lupta
-        // Inner Fire (ID 588) - Ofera armura si spell power obligatoriu in arena
+        // Buff obligatoriu Inner Fire
         if (!botPriest->HasAura(ObtineRankMaximSpell(588)) && currentMana >= 300)
+        {
             botPriest->CastSpell(botPriest, ObtineRankMaximSpell(588), false);
+        }
 
-        // Shadowfiend (ID 34433) - Regenerare mana daca scade sub 40% si avem o tinta valabila pe care sa atace
-        if (botPriest->GetPower(POWER_MANA) * 100 / botPriest->GetMaxPower(POWER_MANA) < 40 && victim && victim->IsAlive())
+        // Shadowfiend pentru regenerare mana
+        if ((currentMana * 100 / botPriest->GetMaxPower(POWER_MANA)) < 40 && victim && victim->IsAlive())
         {
             if (!botPriest->GetSpellHistory()->HasCooldown(34433))
+            {
                 botPriest->CastSpell(victim, ObtineRankMaximSpell(34433), false);
+            }
         }
 
-        // --- 2. SCANAREA GRUPULUI PENTRU PROTEJARE SI HEAL ---
-        Player* coechipierDeVindecat = nullptr;
-        uint32 ceaMaiMicaViataGrup = 100;
-
-        if (myHp < 85)
-        {
-            coechipierDeVindecat = botPriest;
-            ceaMaiMicaViataGrup = myHp;
-        }
+        // --- 2. SCANAREA GRUPULUI (DETERMINAREA TINTELOR DE TOP) ---
+        Player* coechipierDeVindecat = botPriest;
+        uint32 ceaMaiMicaViataGrup = myHp;
+        Player* cineAreNevoieDeDispel = nullptr;
 
         if (Group* arenaGroup = botPriest->GetGroup())
         {
@@ -1116,132 +1195,172 @@ namespace
 
                 uint32 viataMembru = membruGrup->GetHealthPct();
 
-                // A. LOGICA DE SUPORT FLUIDA (Cu verificari de mana)
-
-                // Power Word: Shield (ID 17) - Costa in jur de 600 mana la lvl 80
-                if (viataMembru < 90 && currentMana >= 600 && !membruGrup->HasAura(ObtineRankMaximSpell(6788)))
-                {
-                    botPriest->CastSpell(membruGrup, ObtineRankMaximSpell(17), false);
-                }
-
-                // Power Word: Shield (ID 17) pe el insusi daca el este cel atacat
-                if (myHp < 90 && currentMana >= 600 && !botPriest->HasAura(ObtineRankMaximSpell(6788)))
-                {
-                    botPriest->CastSpell(botPriest, ObtineRankMaximSpell(17), false);
-                }
-
-                // Prayer of Mending (ID 33076) - Se pune preventiv pe partener, costa ~550 mana
-                if (viataMembru < 95 && currentMana >= 550 && !membruGrup->HasAura(ObtineRankMaximSpell(41635)) && !botPriest->GetSpellHistory()->HasCooldown(33076))
-                {
-                    botPriest->CastSpell(membruGrup, ObtineRankMaximSpell(33076), false);
-                }
-
-                // Pain Suppression (ID 33206) - Bula de reducere damage 40% la viata critica. Nu are cost mare de mana (~200)
-                if (viataMembru < 30 && currentMana >= 200 && !botPriest->GetSpellHistory()->HasCooldown(33206) && !membruGrup->getAttackers().empty())
-                {
-                    botPriest->CastSpell(membruGrup, ObtineRankMaximSpell(33206), true);
-                    return;
-                }
-
-                // Dispel Magic defensiv (ID 527) - Curata CC-urile de tip Magic, costa ~400 mana
-                if (membruGrup->HasUnitState(UNIT_STATE_LOST_CONTROL) && currentMana >= 400 && !botPriest->HasUnitState(UNIT_STATE_CASTING))
-                {
-                    botPriest->CastSpell(membruGrup, ObtineRankMaximSpell(527), false);
-                }
-
-                // B. DETERMINAM CINE ARE CEA MAI MICA VIATA
+                // Determinam coechipierul cel mai avariat
                 if (viataMembru < ceaMaiMicaViataGrup)
                 {
                     ceaMaiMicaViataGrup = viataMembru;
                     coechipierDeVindecat = membruGrup;
                 }
+
+                // Verificam cine are nevoie de Dispel Magic defensiv (este in CC)
+                if (membruGrup->HasUnitState(UNIT_STATE_LOST_CONTROL) && !cineAreNevoieDeDispel)
+                {
+                    cineAreNevoieDeDispel = membruGrup;
+                }
             }
         }
 
-        // --- 3. EXECUTIA ROTATIEI DE HEAL (HP < 85%) ---
-        if (coechipierDeVindecat && ceaMaiMicaViataGrup < 85)
+        // Failsafe pentru Dispel pe el insusi (daca CC-ul permite actiuni ca Root/Silence)
+        if (botPriest->HasUnitState(UNIT_STATE_LOST_CONTROL) && !cineAreNevoieDeDispel)
         {
-            // Opreste miscarea de tip urmarire doar cand urmeaza sa dam un cast lung, ca sa nu se rupa vraja
-            if (botPriest->GetMotionMaster()->GetCurrentMovementGeneratorType() == CHASE_MOTION_TYPE)
-                botPriest->GetMotionMaster()->Clear();
+            cineAreNevoieDeDispel = botPriest;
+        }
 
-            // A. Penance (ID 47540) - Costa in jur de 600 mana
-            if (ceaMaiMicaViataGrup < 55 && currentMana >= 600 && !botPriest->GetSpellHistory()->HasCooldown(47540))
+        // --- 3. EXECUTIE UTILITIES SI DEFENSIVE ---
+        if (!botPriest->HasUnitState(UNIT_STATE_CASTING))
+        {
+            // A. Pain Suppression (CD normal: 3 minute = 180s)
+            if (ceaMaiMicaViataGrup < 30 && currentMana >= 200 && !botPriest->GetSpellHistory()->HasCooldown(33206))
             {
-                if (botPriest->HasUnitState(UNIT_STATE_CASTING))
-                    botPriest->InterruptNonMeleeSpells(false);
-
-                botPriest->CastSpell(coechipierDeVindecat, ObtineRankMaximSpell(47540), false);
+                botPriest->CastSpell(coechipierDeVindecat, ObtineRankMaximSpell(33206), true);
+                botPriest->GetSpellHistory()->AddCooldown(33206, 0, 180s);
                 return;
             }
 
+            // B. Dispel Magic defensiv (CD artificial de 1.5s pentru siguranta GCD)
+            if (cineAreNevoieDeDispel && currentMana >= 400 && !botPriest->GetSpellHistory()->HasCooldown(527))
+            {
+                botPriest->CastSpell(cineAreNevoieDeDispel, ObtineRankMaximSpell(527), false);
+                botPriest->GetSpellHistory()->AddCooldown(527, 0, 1500ms);
+                return;
+            }
+
+            // C. Power Word: Shield (ID debuff Weakened Soul = 6788, CD artificial de 1.5s)
+            if (ceaMaiMicaViataGrup < 90 && currentMana >= 600 && !coechipierDeVindecat->HasAura(6788) && !botPriest->GetSpellHistory()->HasCooldown(17))
+            {
+                botPriest->CastSpell(coechipierDeVindecat, ObtineRankMaximSpell(17), false);
+                botPriest->GetSpellHistory()->AddCooldown(17, 0, 1500ms);
+                return;
+            }
+
+            // D. Prayer of Mending (ID Buff ProM = 41635, CD normal: 10 secunde)
+            if (ceaMaiMicaViataGrup < 95 && currentMana >= 550 && !coechipierDeVindecat->HasAura(41635) && !botPriest->GetSpellHistory()->HasCooldown(33076))
+            {
+                botPriest->CastSpell(coechipierDeVindecat, ObtineRankMaximSpell(33076), false);
+                botPriest->GetSpellHistory()->AddCooldown(33076, 0, 10s);
+                return;
+            }
+        }
+
+        // --- 4. EXECUTIA ROTATIEI DE HEAL PRIN CASTING (HP < 85%) ---
+        if (coechipierDeVindecat && ceaMaiMicaViataGrup < 85)
+        {
+            // A. Penance (CD normal: 10-12s, punem 10s)
+            if (ceaMaiMicaViataGrup < 60 && currentMana >= 600 && !botPriest->GetSpellHistory()->HasCooldown(47540))
+            {
+                // Intrerupem un cast activ doar daca NU este vorba de Penance insusi
+                if (botPriest->HasUnitState(UNIT_STATE_CASTING))
+                {
+                    // Penance este vraja de tip Channeled (2)
+                    if (Spell* chanSpell = botPriest->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+                    {
+                        // Daca da channel la altceva (ex: Mind Flay/Divine Hymn), ii dam intrerupere
+                        if (chanSpell->GetSpellInfo()->Id != 47540)
+                        {
+                            botPriest->InterruptNonMeleeSpells(false);
+                        }
+                    }
+                    // Daca da un cast normal (Flash Heal), acesta este GENERIC_SPELL (1) si il oprim instant pentru urgenta
+                    else if (botPriest->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                    {
+                        botPriest->InterruptNonMeleeSpells(false);
+                    }
+                }
+
+                botPriest->CastSpell(coechipierDeVindecat, ObtineRankMaximSpell(47540), false);
+                botPriest->GetSpellHistory()->AddCooldown(47540, 0, 10s);
+                return;
+            }
+
+
+            // Daca robotul incarca deja o alta vraja (Flash Heal), lasam serverul sa termine
             if (botPriest->HasUnitState(UNIT_STATE_CASTING))
                 return;
 
-            // B. Flash Heal (ID 2061) - Costa in jur de 400 mana
-            if (ceaMaiMicaViataGrup < 75 && currentMana >= 400)
+            // B. Flash Heal (Timp cast 1.5s - Adaugam CD egal cu castul pentru a bloca frame-urile)
+            if (ceaMaiMicaViataGrup < 75 && currentMana >= 400 && !botPriest->GetSpellHistory()->HasCooldown(2061))
             {
-                // Power Infusion (ID 10060) - Se pune instant pentru a grabi castul, nu are cost mare de mana
+                // Power Infusion (CD normal: 2 minute = 120s)
                 if (!botPriest->GetSpellHistory()->HasCooldown(10060) && !botPriest->HasAura(ObtineRankMaximSpell(10060)))
                 {
                     botPriest->CastSpell(botPriest, ObtineRankMaximSpell(10060), true);
+                    botPriest->GetSpellHistory()->AddCooldown(10060, 0, 120s);
                 }
 
                 botPriest->CastSpell(coechipierDeVindecat, ObtineRankMaximSpell(2061), false);
+                botPriest->GetSpellHistory()->AddCooldown(2061, 0, 1500ms);
                 return;
             }
 
-            // C. Renew (ID 139) - Costa in jur de 450 mana
-            if (currentMana >= 450 && !coechipierDeVindecat->HasAura(ObtineRankMaximSpell(139)))
+            // C. Renew (HoT instant - CD artificial de 1.5s sa nu faca spam pe aceeasi tinta)
+            if (ceaMaiMicaViataGrup < 85 && currentMana >= 450 && !coechipierDeVindecat->HasAura(ObtineRankMaximSpell(139)) && !botPriest->GetSpellHistory()->HasCooldown(139))
             {
                 botPriest->CastSpell(coechipierDeVindecat, ObtineRankMaximSpell(139), false);
+                botPriest->GetSpellHistory()->AddCooldown(139, 0, 1500ms);
                 return;
             }
 
-            return; // Oprim executia aici pentru a proteja viata echipei
+            return; // Protejam viata echipei, oprim executia ofensiva
         }
 
-        // --- 4. LOGICA OFENSIVA (HP >= 85%) ---
+        // --- 5. LOGICA OFENSIVA (Echipa este in siguranta, HP >= 85%) ---
+        if (botPriest->HasUnitState(UNIT_STATE_CASTING))
+            return;
+
         if (victim && victim->IsAlive() && botPriest->IsHostileTo(victim))
         {
             float targetDist = botPriest->GetDistance(victim);
 
-            // Psychic Scream / Fear (ID 8122) - Costa ~350 mana
+            // Psychic Scream (Fear de zona, CD normal: 30s)
             if (targetDist <= 8.0f && currentMana >= 350 && !botPriest->GetSpellHistory()->HasCooldown(8122))
             {
                 botPriest->CastSpell(botPriest, ObtineRankMaximSpell(8122), false);
+                botPriest->GetSpellHistory()->AddCooldown(8122, 0, 30s);
                 return;
             }
 
-            // Mass Dispel (ID 32375) - Extrem de scump, cere minim 1500 mana!
-            if (victim->HasAura(ObtineRankMaximSpell(642)) || victim->HasAura(ObtineRankMaximSpell(45438)))
+            // Mass Dispel (ID 32375) - Sparge Bubble de Paladin (642) si Ice Block de Mage (45438)
+            if (victim->HasAura(642) || victim->HasAura(45438))
             {
                 if (currentMana >= 1500 && !botPriest->GetSpellHistory()->HasCooldown(32375))
                 {
-                    botPriest->CastSpell(victim, ObtineRankMaximSpell(32375), false);
+                    // Corectie TrinityCore: Invocam pe obiect de pozitie XYZ pentru vraji AOE pe sol
+                    Position pozitieTinta(victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), victim->GetOrientation());
+                    botPriest->CastSpell(pozitieTinta, ObtineRankMaximSpell(32375), false);
+                    botPriest->GetSpellHistory()->AddCooldown(32375, 0, 1500ms); // CD artificial scurt de siguranta
                     return;
                 }
             }
 
-            if (botPriest->HasUnitState(UNIT_STATE_CASTING))
-                return;
-
-            // Shadow Word: Pain (ID 589) - Costa ~450 mana
-            if (currentMana >= 450 && !victim->HasAura(ObtineRankMaximSpell(589)))
+            // Shadow Word: Pain (ID 589, DoT instant - CD artificial de 1.5s sa nu dea spam)
+            if (currentMana >= 450 && !victim->HasAura(ObtineRankMaximSpell(589)) && targetDist <= 30.0f && !botPriest->GetSpellHistory()->HasCooldown(589))
             {
                 botPriest->CastSpell(victim, ObtineRankMaximSpell(589), false);
+                botPriest->GetSpellHistory()->AddCooldown(589, 0, 1500ms);
             }
 
-            // Devouring Plague (ID 2944) - Costa ~700 mana
-            if (currentMana >= 700 && !victim->HasAura(ObtineRankMaximSpell(2944)) && !botPriest->GetSpellHistory()->HasCooldown(2944))
+            // Devouring Plague (ID 2944, DoT instant - Fara CD in 3.3.5, adaugam 1.5s CD artificial)
+            if (currentMana >= 700 && !victim->HasAura(ObtineRankMaximSpell(2944)) && targetDist <= 30.0f && !botPriest->GetSpellHistory()->HasCooldown(2944))
             {
                 botPriest->CastSpell(victim, ObtineRankMaximSpell(2944), false);
+                botPriest->GetSpellHistory()->AddCooldown(2944, 0, 1500ms);
             }
 
-            // Smite (ID 585) - Costa ~350 mana
-            if (victim->GetHealthPct() <= 40 && currentMana >= 350 && targetDist <= 30.0f)
+            // Smite (ID 585, Vraja castabila de executie/presiune)
+            if (victim->GetHealthPct() <= 40 && currentMana >= 350 && targetDist <= 30.0f && !botPriest->GetSpellHistory()->HasCooldown(585))
             {
                 botPriest->CastSpell(victim, ObtineRankMaximSpell(585), false);
+                botPriest->GetSpellHistory()->AddCooldown(585, 0, 2000ms); // Timp de cast standard + delay frame
                 return;
             }
         }
