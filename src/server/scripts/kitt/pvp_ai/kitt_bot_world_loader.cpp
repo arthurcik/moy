@@ -1,3 +1,9 @@
+// ----- Kitt Arthur -----
+// full config by kittArthur
+// ----------- & -----------
+// ----- Arthur_19` -----
+
+#include "kitt_bot_world_loader.h"
 #include "ScriptMgr.h"
 #include "Player.h"
 #include "World.h"
@@ -85,7 +91,7 @@ namespace
         { 1244, 1577 }  // Bot 2
     };*/
 
-    struct BotAsyncTracker
+    /*struct BotAsyncTracker
     {
         uint32 accountId = 0;
         uint32 charGuid = 0;
@@ -101,7 +107,7 @@ namespace
         bool RemoveFromWorld = false;
         bool AddFromChatCmd = false;
     };
-    static std::vector<BotAsyncTracker> g_MultiBotTracker;
+    static std::vector<BotAsyncTracker> g_MultiBotTracker;*/
 
     // Vector pentru a pastra sesiunile ghost active in memorie fara sa fie sterse
     static std::vector<std::unique_ptr<WorldSession>> g_GhostSessionsStorage;

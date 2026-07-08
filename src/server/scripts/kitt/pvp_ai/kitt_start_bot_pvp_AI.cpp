@@ -3,6 +3,7 @@
 // ----------- & -----------
 // ----- Arthur_19` -----
 
+#include "kitt_bot_world_loader.h"
 #include "ScriptMgr.h"
 #include "Player.h"
 #include "PlayerAI.h"
@@ -26,7 +27,6 @@
 #include "PathGenerator.h"
 #include "Unit.h"
 #include "MoveSpline.h"
-
 
 namespace
 {
@@ -59,7 +59,7 @@ namespace
         {
             for (Player* coechipier : playersInCell)
             {
-                if (!coechipier || !coechipier->IsAlive() || coechipier == botPlayer || coechipier->IsGameMaster())
+                if (!coechipier || !coechipier->IsAlive() || coechipier == botPlayer || coechipier->IsGameMaster() || !botPlayer->InSamePhase(coechipier))
                     continue;
 
                 // Verificam daca este in aceeasi echipa (coechipier in arena)
@@ -79,7 +79,7 @@ namespace
         // --- SCENARIUL 2: ESTE DPS SAU COECHPIERUL NU ARE INCA TINTA (Scanare normala) ---
         for (Player* targetPlayer : playersInCell)
         {
-            if (!targetPlayer || !targetPlayer->IsAlive() || targetPlayer == botPlayer || targetPlayer->IsGameMaster())
+            if (!targetPlayer || !targetPlayer->IsAlive() || targetPlayer == botPlayer || targetPlayer->IsGameMaster() || !botPlayer->InSamePhase(targetPlayer))
                 continue;
 
             if (!botPlayer->CanSeeOrDetect(targetPlayer, false, true))
@@ -258,39 +258,17 @@ namespace
             return;
         }
 
-        // --- 5. LOGICA DE VALIDARE CONFORM ENUM-ULUI TAU ---
-        bool folosestePathfinding = true;
-        bool esteTimpulPentruPath = (acum - lastPathTime[botGuid] > (esteMelee ? ((dist >= 8.0f && dist <= 25.0f) ? 800U : 400U) : 600U));
-
-        if (esteTimpulPentruPath || miscareCurenta != POINT_MOTION_TYPE)
-        {
-            PathGenerator path(botPlayer);
-            bool pathResult = path.CalculatePath(victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), false);
-
-            // Preluam tipul de drum returnat de generatorul tau
-            uint32 tipDrum = path.GetPathType();
-
-            // VALIDARE STRUCTURA: Daca functia a intors esec SAU tipul de drum contine flag-uri de blocaj total
-            if (!pathResult ||
-                (tipDrum & PATHFIND_NOPATH) ||
-                (tipDrum & PATHFIND_FARFROMPOLY_END) ||
-                (tipDrum & PATHFIND_INCOMPLETE))
-            {
-                folosestePathfinding = false; // Tinta e pe sfoara/pilon izolat -> devine fantoma pe linie dreapta
-            }
-        }
-
         // --- 6. LOGICA DE DEPLASARE DINAMICA ---
         if (esteMelee)
         {
-            if (miscareCurenta != POINT_MOTION_TYPE || esteTimpulPentruPath)
+            if (miscareCurenta != POINT_MOTION_TYPE)
             {
                 lastPathTime[botGuid] = acum;
                 botPlayer->GetMotionMaster()->Clear();
 
                 // Daca folosestePathfinding e false, trece prin obstacole exact ca vechiul tau comportament (PATHFIND_SHORTCUT)
-                botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), folosestePathfinding);
-                botPlayer->Attack(victim, false);
+                botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
+                botPlayer->Attack(victim, true);
             }
 
             if (!botPlayer->HasInArc(1.74f, victim)) // 0.5
@@ -301,23 +279,23 @@ namespace
         else // HEALER / CASTER
         {
             // Daca nu exista drum valid (e pe pilon), fortam casterul sa ignore distanta maxima si sa vina direct pe sfoara
-            if (dist > 30.0f || !folosestePathfinding)
+            if (dist > 30.0f)
             {
-                if (miscareCurenta != POINT_MOTION_TYPE || esteTimpulPentruPath)
+                if (miscareCurenta != POINT_MOTION_TYPE)
                 {
                     lastPathTime[botGuid] = acum;
                     botPlayer->GetMotionMaster()->Clear();
-                    botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), folosestePathfinding);
+                    botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
                 }
             }
             else
             {
-                if (miscareCurenta == POINT_MOTION_TYPE || esteTimpulPentruPath)
+                if (miscareCurenta == POINT_MOTION_TYPE)
                 {
                     lastPathTime[botGuid] = acum;
                     botPlayer->GetMotionMaster()->Clear();
                     //botPlayer->StopMoving();
-                    botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ(), folosestePathfinding);
+                    botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
                     botPlayer->Attack(victim, false);
 
                 }
