@@ -52,6 +52,8 @@
 extern void kitt_start_bot_pvp_AI(Player* botPlayer);
 using namespace Trinity::ChatCommands;
 
+std::vector<BotAsyncTracker> g_MultiBotTracker;
+
 namespace
 {
     // config

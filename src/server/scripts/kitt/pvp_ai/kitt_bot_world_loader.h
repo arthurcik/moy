@@ -30,4 +30,25 @@ struct BotAsyncTracker
     bool AddFromChatCmd = false;
     BotRole determinatRol = BOT_ROLE_NONE;
 };
-static std::vector<BotAsyncTracker> g_MultiBotTracker;
+extern std::vector<BotAsyncTracker> g_MultiBotTracker;
+
+BotRole DefinesteSiSalveazaRolulBotului(Player* botPlayer);
+Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeColeg);
+uint32 ObtineRankMaximSpell(uint32 spellId);
+bool GhostIsMelee(Player* botPlayer);
+
+// miscarea si attack
+void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim);
+void GhostMoveAndAttackCaster(Player* botPlayer, Unit* victim);
+void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget);
+
+bool IncearcaSaFolosestiMedalionPvP(Player* botPlayer);
+
+void kitt_start_bot_pvp_AI(Player* botPlayer);
+
+void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot);
+void ExecutaLogicaMage(Player* botPlayer, Unit* victim, BotRole rolBot);
+void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit* victim, BotRole rolBot);
+void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit* victim, BotRole rolBot);
+void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit* victim, BotRole rolBot);
+void ExecutaLogicaRogue(Player* botPlayer, Unit* victim, BotRole rolBot);
