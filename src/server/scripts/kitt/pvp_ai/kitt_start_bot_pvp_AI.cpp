@@ -531,27 +531,22 @@ void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff)
 
     ObjectGuid botGuid = botPlayer->GetGUID();
 
-    // ==================== FRANA DE MANA (COOLDOWN AI) ====================
-    // Cautam daca botul are deja un timer activ in map-ul global
+    // ==================== COOLDOWN AI ====================
     auto it = G_BotAITimers.find(botGuid);
     if (it != G_BotAITimers.end())
     {
-        // Daca diff-ul de 50ms este mai mare sau egal cu timpul ramas, stergem cooldown-ul
         if (diff >= it->second)
         {
             G_BotAITimers.erase(it);
         }
         else
         {
-            // Scadem cei 50ms din timpul ramas si tragem frana de mana (sarem peste executie)
             it->second -= diff;
             return;
         }
     }
 
-    // Daca codul a trecut de verificare, inseamna ca este timpul sa execute un tick de AI!
-    // Setam cooldown-ul pentru urmatorul ciclu (250ms = o reactie excelenta o data la 5 tick-uri de server)
-    G_BotAITimers[botGuid] = 500;
+    G_BotAITimers[botGuid] = 250; // 250 ms
     // ====================================================================
 
     BotRole rolBot = DefinesteSiSalveazaRolulBotului(botPlayer);
@@ -615,6 +610,7 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
     if (esteHealer)
     {
         GhostMoveAndAttackMelee(botPaladin, victim);
+        //GhostMoveAndHeal(botPaladin, victim);
     }
     else
     {
@@ -716,7 +712,7 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
         uint32 currentMana = botPaladin->GetPower(POWER_MANA);
 
         // A. Lay on Hands (Ultima instanta - sub 15% viata) - NU COSTA MANA!
-        if (ceaMaiMicaViataGrup <= 15 && !coechipierDeVindecat->HasAura(25) && !coechipierDeVindecat->HasAura(25771) && !botPaladin->GetSpellHistory()->HasCooldown(633))
+        if (ceaMaiMicaViataGrup <= 15 && !coechipierDeVindecat->HasAura(25) && !coechipierDeVindecat->HasAura(25771) && !botPaladin->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(633)))
         {
             if (botPaladin->HasUnitState(UNIT_STATE_CASTING))
                 botPaladin->InterruptNonMeleeSpells(false);
@@ -726,13 +722,13 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
         }
 
         // B. Urgen?e: Holy Shock (Sub 40% viata) - Costa in jur de 550 Mana la lvl 80
-        if (ceaMaiMicaViataGrup < 40 && currentMana >= 550 && !botPaladin->GetSpellHistory()->HasCooldown(20473))
+        if (ceaMaiMicaViataGrup < 40 && currentMana >= 550 && !botPaladin->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(20473)))
         {
             if (botPaladin->HasUnitState(UNIT_STATE_CASTING))
                 botPaladin->InterruptNonMeleeSpells(false);
 
             // Reparare tremurat: Activam Divine Favor (100% critic) DOAR daca nu il are deja activ pasiv
-            if (!botPaladin->GetSpellHistory()->HasCooldown(20216) && !botPaladin->HasAura(20216))
+            if (!botPaladin->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(20216)) && !botPaladin->HasAura(ObtineRankMaximSpell(20216)))
             {
                 botPaladin->CastSpell(botPaladin, ObtineRankMaximSpell(20216), true); // true = ignora GCD si se pune instant
             }
@@ -746,10 +742,10 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
             return;
 
         // C. Holy Light (Heal-ul mare - Sub 60% viata) - Costa in jur de 1200 Mana la lvl 80 (Foarte scump!)
-        if (ceaMaiMicaViataGrup < 60 && currentMana >= 1200 && !botPaladin->GetSpellHistory()->HasCooldown(635))
+        if (ceaMaiMicaViataGrup < 60 && currentMana >= 1200 && !botPaladin->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(635)))
         {
             // Reparare tremurat: Activam Aura Mastery (Imun la kick) in aceeasi milisecunda cu inceputul castului
-            if (!botPaladin->GetSpellHistory()->HasCooldown(31821) && !botPaladin->HasAura(31821))
+            if (!botPaladin->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(31821)) && !botPaladin->HasAura(ObtineRankMaximSpell(31821)))
             {
                 botPaladin->CastSpell(botPaladin, ObtineRankMaximSpell(31821), true);
             }
@@ -759,7 +755,7 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
         }
 
         // D. Flash of Light (Mentinere rapida) - Costa doar in jur de 300 Mana la lvl 80 (Ieftin)
-        if (currentMana >= 300 && !botPaladin->GetSpellHistory()->HasCooldown(19750))
+        if (currentMana >= 300 && !botPaladin->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(19750)))
         {
             botPaladin->CastSpell(coechipierDeVindecat, ObtineRankMaximSpell(19750), false);
             //return;
