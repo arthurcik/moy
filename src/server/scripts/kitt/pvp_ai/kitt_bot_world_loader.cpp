@@ -115,7 +115,6 @@ namespace
     static std::vector<std::unique_ptr<WorldSession>> g_GhostSessionsStorage;
 
     static uint32 g_BootSequenceTimer = 10000;
-    static uint32 G_KittWorldUpdateTimer = 200; // 200 ms
 
     void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
     {
@@ -788,23 +787,6 @@ public:
     {
         if (!KittBotGhostLoader)
             return;
-
-        // =======================================
-        // FRANA DE MANA GLOBALA (200ms Cooldown)
-        // =======================================
-        if (G_KittWorldUpdateTimer > 0)
-        {
-            if (diff >= G_KittWorldUpdateTimer)
-                G_KittWorldUpdateTimer = 0;
-            else
-            {
-                G_KittWorldUpdateTimer -= diff;
-                return;
-            }
-        }
-
-        G_KittWorldUpdateTimer = 200; // 200 ms
-        // =======================================
 
         if (g_BootSequenceTimer > 0)
         {
