@@ -28,6 +28,7 @@
 #include "Unit.h"
 #include "MoveSpline.h"
 #include "Log.h"
+#include "Pet.h"
 
 namespace
 {
@@ -153,6 +154,27 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
     std::list<Player*> playersInCell;
     botPlayer->GetPlayerListInGrid(playersInCell, 50.0f, true);
 
+    std::list<Unit*> peturiInamice;
+
+    for (Player* targetPlayer : playersInCell)
+    {
+        if (!targetPlayer || !targetPlayer->IsAlive() || targetPlayer == botPlayer || !botPlayer->InSamePhase(targetPlayer))
+            continue;
+
+        // Daca jucatorul gasit este inamic (chiar daca e Hunter si va da Feign Death imediat dupa)
+        if (botPlayer->IsHostileTo(targetPlayer))
+        {
+            // Extragem pet-ul lui direct din memorie fara sa mai apelam functii de grid defecte
+            if (Pet* tPet = targetPlayer->GetPet())
+            {
+                if (tPet->IsAlive() && botPlayer->InSamePhase(tPet))
+                {
+                    peturiInamice.push_back(tPet);
+                }
+            }
+        }
+    }
+
     playersInCell.remove_if([botPlayer, focusPeColeg](Player* target) {
          return !target || !target->IsAlive() || target == botPlayer || target->IsGameMaster() ||
              !botPlayer->InSamePhase(target) || !botPlayer->CanSeeOrDetect(target, false, true) ||
@@ -212,6 +234,20 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
         {
             botPlayer->SetSelection(targetPlayer->GetGUID());
             return targetPlayer; // A gasit o tinta ostila libera
+        }
+    }
+
+    // pet-uri
+    for (Unit* targetPet : peturiInamice)
+    {
+        if (!targetPet || !targetPet->IsInWorld() || !targetPet->IsAlive())
+            continue;
+
+        // Daca botul poate vedea pet-ul si este in raza de 50m
+        if (botPlayer->CanSeeOrDetect(targetPet, false, true) && botPlayer->IsWithinDistInMap(targetPet, 50.0f))
+        {
+            botPlayer->SetSelection(targetPet->GetGUID());
+            return targetPet; // Botul selecteaza si ataca pet-ul hunterului!
         }
     }
 
