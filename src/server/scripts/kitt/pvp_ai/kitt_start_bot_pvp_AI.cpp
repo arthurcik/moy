@@ -27,6 +27,7 @@
 #include "PathGenerator.h"
 #include "Unit.h"
 #include "MoveSpline.h"
+#include "Log.h"
 
 namespace
 {
@@ -344,23 +345,45 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
     // Daca are deja o tinta valida, vie si vizibila, nu o schimbam aiurea
     if (currentVictim && currentVictim->IsAlive() && botPlayer->IsWithinDistInMap(currentVictim, 160.0f))
     {
-        if (botPlayer->CanSeeOrDetect(currentVictim, false, true))
+        // invisible & Feign Death
+        if (botPlayer->CanSeeOrDetect(currentVictim, false, true) && !currentVictim->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH))
         {
             return currentVictim; // Pastreaza focusul curent
         }
     }
-
     // Daca tinta veche a murit sau a disparut, curatam starea
     if (currentVictim)
     {
         botPlayer->AttackStop();
         botPlayer->CombatStop();
-        botPlayer->GetMotionMaster()->Clear();
+        //botPlayer->GetMotionMaster()->Clear();
         currentVictim = nullptr;
     }
 
     std::list<Player*> playersInCell;
-    botPlayer->GetPlayerListInGrid(playersInCell, 160.0f);
+    botPlayer->GetPlayerListInGrid(playersInCell, 50.0f, true);
+
+    playersInCell.remove_if([botPlayer, focusPeColeg](Player* target) {
+         return !target || !target->IsAlive() || target == botPlayer || target->IsGameMaster() ||
+             !botPlayer->InSamePhase(target) || !botPlayer->CanSeeOrDetect(target, false, true) ||
+             target->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH) || // hunter Feign Death
+             (!focusPeColeg && !botPlayer->IsHostileTo(target));
+        });
+
+    //TC_LOG_INFO("server.loading", "GHOST_LOG: La 50m au fost gasiti {} jucatori in grid. Dupa filtrare au ramas valabili: {}.", (uint32)gasitiLa50m, (uint32)playersInCell.size());
+
+    if (playersInCell.empty())
+    {
+        playersInCell.clear();
+        botPlayer->GetPlayerListInGrid(playersInCell, 160.0f, true);
+
+        playersInCell.remove_if([botPlayer, focusPeColeg](Player* target) {
+            return !target || !target->IsAlive() || target == botPlayer || target->IsGameMaster() ||
+                !botPlayer->InSamePhase(target) || !botPlayer->CanSeeOrDetect(target, false, true) ||
+                target->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH) || // hunter Feign Death
+                (!focusPeColeg && !botPlayer->IsHostileTo(target));
+            });
+    }
 
     // --- SCENARIUL 1: ESTE HEALER (Vrea sa ia tinta coechipierului) ---
     if (focusPeColeg)
@@ -375,7 +398,9 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
             {
                 // Preluam victima pe care o ataca coechipierul nostru in acest moment
                 Unit* tintaColegului = coechipier->GetVictim();
-                if (tintaColegului && tintaColegului->IsAlive() && botPlayer->CanSeeOrDetect(tintaColegului, false, true))
+                if (tintaColegului && tintaColegului->IsInWorld() && tintaColegului->IsAlive() &&
+                    botPlayer->CanSeeOrDetect(tintaColegului, false, true) &&
+                    !tintaColegului->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH))
                 {
                     botPlayer->SetSelection(tintaColegului->GetGUID());
                     return tintaColegului; // Healerul a copiat cu succes tinta DPS-ului!
@@ -387,10 +412,10 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
     // --- SCENARIUL 2: ESTE DPS SAU COECHPIERUL NU ARE INCA TINTA (Scanare normala) ---
     for (Player* targetPlayer : playersInCell)
     {
-        if (!targetPlayer || !targetPlayer->IsAlive() || targetPlayer == botPlayer || targetPlayer->IsGameMaster() || !botPlayer->InSamePhase(targetPlayer))
+        if (!targetPlayer || !targetPlayer->IsInWorld() || !targetPlayer->IsAlive() || targetPlayer == botPlayer || targetPlayer->IsGameMaster() || !botPlayer->InSamePhase(targetPlayer))
             continue;
 
-        if (!botPlayer->CanSeeOrDetect(targetPlayer, false, true))
+        if (!botPlayer->CanSeeOrDetect(targetPlayer, false, true) || targetPlayer->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH))
             continue;
 
         if (botPlayer->IsHostileTo(targetPlayer))
@@ -449,7 +474,7 @@ void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim)
 
     float dist = botPlayer->GetDistance(victim);
     uint32 miscareCurenta = botPlayer->GetMotionMaster()->GetCurrentMovementGeneratorType();
-    ObjectGuid botGuid = botPlayer->GetGUID();
+    //ObjectGuid botGuid = botPlayer->GetGUID();
 
     if (botPlayer->GetTarget() != victim->GetGUID())
         botPlayer->SetSelection(victim->GetGUID());
@@ -457,7 +482,7 @@ void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim)
     if (!botPlayer->IsInCombat())
         botPlayer->SetInCombatWith(victim, true);
 
-    if (botPlayer->IsNonMeleeSpellCast(false, false, true) || botPlayer->HasUnitState(UNIT_STATE_CASTING))
+    if (/*botPlayer->IsNonMeleeSpellCast(false, false, true) || */botPlayer->HasUnitState(UNIT_STATE_CASTING))
     {
         if (miscareCurenta == CHASE_MOTION_TYPE || miscareCurenta == POINT_MOTION_TYPE)
         {
@@ -468,7 +493,7 @@ void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim)
     }
 
     // Control Corp la Corp sub 4 metri pentru Melee
-    if (dist <= 2.0f)
+    if (dist <= 4.0f)
     {
         if (miscareCurenta != CHASE_MOTION_TYPE)
         {
@@ -477,22 +502,79 @@ void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim)
             botPlayer->Attack(victim, true);
         }
 
-        if (!botPlayer->HasInArc(1.74f, victim))
-            botPlayer->SetFacingToObject(victim);
+        if (!botPlayer->HasInArc(1.74f, victim) && botPlayer->IsWithinLOSInMap(victim))
+        {
+            botPlayer->StopMoving();
+            botPlayer->SetFacingToObject(victim); // intrerupe movement
+        }
 
         return;
     }
 
+    // arena dalaran
+    Map* botMap = botPlayer->GetMap();
+    if (!botMap)
+        return;
+
+    uint32 mapid = botMap->GetId();
+    
+    if (mapid && mapid == 617)
+    {
+        if (botPlayer->GetPositionZ() > 10.0f)
+        {
+            // verde start
+            float VposX = 1361.76f - 36.0f;
+            float VposY = 817.336f;
+            float VposZ = 14.8f - 10.0f;
+            if (botPlayer->GetPositionX() > VposX)
+            {
+                //botPlayer->Relocate(VposX, VposY);
+                botPlayer->GetMotionMaster()->MovePoint(1001, VposX, VposY, VposZ, false);
+                return;
+            }
+            // galben start
+            float GposX = 1218.00f + 42.00f;
+            float GposY = 764.795f;
+            float GposZ = 14.8f - 10.0f;
+            if (botPlayer->GetPositionX() < GposX)
+            {
+                //botPlayer->Relocate(GposX, GposY);
+                botPlayer->GetMotionMaster()->MovePoint(1001, GposX, GposY, GposZ, false);
+                return;
+            }
+        }
+    }
+    // ---------------------
+
     // Alergare pe linie dreapta catre tinta
+    // REZOLVARE ACTUAlIZARE POINT FARA LAG SAU FLOOD
     if (miscareCurenta != POINT_MOTION_TYPE)
     {
+        // Daca botul nu are deja un traseu activ de tip punct, ii dam comanda initiala
         botPlayer->GetMotionMaster()->Clear();
         botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
-        botPlayer->Attack(victim, true); // Pastrat din codul tau stabil
+        botPlayer->Attack(victim, true);
+    }
+    else
+    {
+        // Daca botul deja alearga prin MovePoint, aflam coordonata exacta spre care se indreapta acum
+        float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+        botPlayer->GetMotionMaster()->GetDestination(destX, destY, destZ);
+
+        // Calculam distanta la patrat dintre destinatia curenta a botului si pozitia noua a victimei
+        // GetExactDistSq este foarte rapida pentru ca nu foloseste radical (SqrRoot), economisind procesor
+        float distantaModificataSq = victim->GetExactDistSq(destX, destY, destZ);
+
+        // 4.0f inseamna 2 metri distanta reala (2 * 2 = 4). 
+        // Botul NU va da flood. El va rula MovePoint DOAR cand victima s-a mutat mai mult de 2 metri de vechiul punct.
+        if (distantaModificataSq > 4.0f)
+        {
+            botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
+        }
     }
 
-    if (!botPlayer->HasInArc(1.74f, victim))
-        botPlayer->SetFacingToObject(victim);
+    //if (!botPlayer->HasInArc(1.74f, victim) && botPlayer->IsWithinLOSInMap(victim) && (miscareCurenta != POINT_MOTION_TYPE && miscareCurenta != CHASE_MOTION_TYPE))
+      //  botPlayer->SetFacingToObject(victim);
 }
 
 // miscare si attack caster
@@ -926,7 +1008,7 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
     }
 }
 
-void ExecutaLogicaMage(Player* botPlayer, Unit* victim, BotRole rolBot)
+void ExecutaLogicaMage(Player* botPlayer, Unit* victim, BotRole /*rolBot*/)
 {
     if (!botPlayer->HasUnitState(UNIT_STATE_CASTING))
         botPlayer->CastSpell(victim, 116, false);
@@ -1175,7 +1257,7 @@ void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit* victim, BotRole rolBot) //
     }
 }
 
-void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit* victim, BotRole rolBot)
+void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit* victim, BotRole /*rolBot*/)
 {
     // Preluam tinta folosind sistemul tau global (false = scanare ca dps/ostil)
     victim = GhostSelectTarget(botPlayer, victim, false);
@@ -1399,7 +1481,7 @@ void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit* victim, BotRole rolBot)
     }
 }
 
-void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit* victim, BotRole rolBot)
+void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit* victim, BotRole /*rolBot*/)
 {
     // --- 1. VERIFICARI STRICTE DE SIGURANTA SI TARGETING ---
     if (!botPriest || !botPriest->IsAlive())
@@ -1636,7 +1718,7 @@ void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit* victim, BotRole rolBot)
     }
 }
 
-void ExecutaLogicaRogue(Player* botPlayer, Unit* victim, BotRole rolBot)
+void ExecutaLogicaRogue(Player* botPlayer, Unit* victim, BotRole /*rolBot*/)
 {
     botPlayer->SetPower(POWER_ENERGY, 100);
     if (botPlayer->IsWithinMeleeRange(victim))
