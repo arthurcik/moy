@@ -49,7 +49,7 @@
 #include "SocialMgr.h"
 
 
-extern void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff);
+//extern void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff);
 using namespace Trinity::ChatCommands;
 
 std::vector<BotAsyncTracker> g_MultiBotTracker;
