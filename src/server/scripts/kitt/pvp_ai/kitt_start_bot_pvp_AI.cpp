@@ -243,6 +243,9 @@ namespace
             }
         }
     }
+
+    // Container static privat pentru gestionarea timerelor de AI (retine GUID-ul si timpul ramas)
+    static std::unordered_map<ObjectGuid, uint32> G_BotAITimers;
 }
 
 BotRole DefinesteSiSalveazaRolulBotului(Player* botPlayer)
@@ -734,10 +737,35 @@ bool IncearcaSaFolosestiMedalionPvP(Player* botPlayer)
 }
 
 // pornire AI
-void kitt_start_bot_pvp_AI(Player* botPlayer)
+void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff)
 {
     if (!botPlayer || !botPlayer->IsAlive() || botPlayer->IsLoading())
         return;
+
+    ObjectGuid botGuid = botPlayer->GetGUID();
+
+    // ==================== FRANA DE MANA (COOLDOWN AI) ====================
+    // Cautam daca botul are deja un timer activ in map-ul global
+    auto it = G_BotAITimers.find(botGuid);
+    if (it != G_BotAITimers.end())
+    {
+        // Daca diff-ul de 50ms este mai mare sau egal cu timpul ramas, stergem cooldown-ul
+        if (diff >= it->second)
+        {
+            G_BotAITimers.erase(it);
+        }
+        else
+        {
+            // Scadem cei 50ms din timpul ramas si tragem frana de mana (sarem peste executie)
+            it->second -= diff;
+            return;
+        }
+    }
+
+    // Daca codul a trecut de verificare, inseamna ca este timpul sa execute un tick de AI!
+    // Setam cooldown-ul pentru urmatorul ciclu (250ms = o reactie excelenta o data la 5 tick-uri de server)
+    G_BotAITimers[botGuid] = 500;
+    // ====================================================================
 
     BotRole rolBot = DefinesteSiSalveazaRolulBotului(botPlayer);
 

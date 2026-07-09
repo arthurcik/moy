@@ -49,7 +49,7 @@
 #include "SocialMgr.h"
 
 
-extern void kitt_start_bot_pvp_AI(Player* botPlayer);
+extern void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff);
 using namespace Trinity::ChatCommands;
 
 std::vector<BotAsyncTracker> g_MultiBotTracker;
@@ -115,10 +115,15 @@ namespace
     static std::vector<std::unique_ptr<WorldSession>> g_GhostSessionsStorage;
 
     static uint32 g_BootSequenceTimer = 10000;
+    static uint32 G_KittWorldUpdateTimer = 200; // 200 ms
 
     void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
     {
-        tracker.RemoveFromWorld = true;
+        if (!tracker.kickedByPlayer && !tracker.AccRealBusy)
+        {
+            tracker.RemoveFromWorld = true;
+        }
+        //tracker.RemoveFromWorld = true;
         tracker.futureResult = {};
         tracker.holder = nullptr;
 
@@ -129,13 +134,20 @@ namespace
         if (Player* botPlayer = ObjectAccessor::FindConnectedPlayer(playerGuid))
         {
             botPlayer->CombatStop();
+            botPlayer->RemoveFromWorld();
+            ObjectAccessor::RemoveObject(botPlayer);
+            botPlayer->SaveToDB(false);
 
-            // TrinityCore va salva corect datele si va scoate playerul din harta/lume nativ
-            if (botPlayer->GetSession())
+            // CRITIC ANTI-CRASH: Daca sesiunea exista, rupem legatura dintre Player si Sesiune!
+            if (WorldSession* session = botPlayer->GetSession())
             {
-                botPlayer->GetSession()->LogoutPlayer(false); // save = true
-                botPlayer->GetSession()->KickPlayer("ghost bot");
+                // Setam player-ul din sesiune pe nullptr ca destructorul sesiunii sa nu mai apeleze LogoutPlayer pe un obiect mort
+                // sa putem da "delete" ....
+                session->SetPlayer(nullptr);
             }
+
+            botPlayer->CleanupsBeforeDelete();
+            delete botPlayer;
         }
 
         // Curatam sesiunea din stocarea noastra interna
@@ -154,8 +166,6 @@ namespace
             sWorld->RemoveSession(tracker.realSession->GetAccountId());
         }
     }
-
-
 }
 
 bool IsPlayerInBotTracker(uint32 charGuidLow)
@@ -195,6 +205,24 @@ public:
         {
             if (tracker.accountId == accountId && tracker.isProcessed && !tracker.kickedByPlayer)
             {
+                // 1. Marcam imediat trackerul ca fiind preluat de un jucator real
+                tracker.AccRelogDelay = 5000;
+                tracker.kickedByPlayer = true;
+                tracker.AccRealBusy = true;
+                tracker.isProcessed = false;
+
+                TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK: Jucatorul real s-a logat pe contul {}. Se porneste curatarea controlata a botului...", accountId);
+
+                // 2. Apelam functia noastra globala care are deja toata logica anti-crash
+                // Ea va rula SetPlayer(nullptr), delete botPlayer si va curata sWorld + g_GhostSessionsStorage in siguranta absoluta!
+                ForseazaStergereBotFantoma(tracker);
+
+                TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK: Curatare finalizata cu succes pentru contul {}.", accountId);
+                break;
+            }
+
+            /*if (tracker.accountId == accountId && tracker.isProcessed && !tracker.kickedByPlayer)
+            {
                 tracker.AccRelogDelay = 5000;
 
                 ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
@@ -209,24 +237,6 @@ public:
                     {
                         TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK: Jucatorul real s-a logat pe contul {}. Se curata imediat botul {} din lume...",
                             accountId, botPlayer->GetName());
-
-                        /*botPlayer->CombatStop();
-                        botPlayer->CleanupsBeforeDelete();
-                        botPlayer->RemoveAllAuras();
-
-                        if (botPlayer->IsInWorld())
-                        {
-                            if (Map* map = botPlayer->GetMap())
-                                map->RemovePlayerFromMap(botPlayer, true);
-                            else
-                                botPlayer->RemoveFromWorld();
-                        }
-
-                        ObjectAccessor::RemoveObject(botPlayer);*/
-                        //sWorld->RemoveSession(tracker.realSession->GetAccountId());
-
-                        //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
-                        //FictivBotsGuids.erase(playerGuid);
 
                         botPlayer->CombatStop();
                         if (botPlayer->GetSession())
@@ -251,7 +261,7 @@ public:
                 }
 
                 break;
-            }
+            }*/
         }
     }
 };
@@ -441,9 +451,17 @@ public:
         {
             if (tracker.accountId == accountId)
             {
+                // resetam
+                tracker.realSession = nullptr;
+                tracker.holder = nullptr;
+                tracker.futureResult = {};
+
+                // adaugam
                 tracker.realSession = fakeSession;
                 tracker.holder = loginHolder;
                 tracker.futureResult = task.GetFuture();
+
+                // resetare flags
                 tracker.isProcessed = false;
                 tracker.kickedByPlayer = false;
                 tracker.AccRelogDelay = 5000; // Sincronizam resetarea de siguranta
@@ -771,6 +789,23 @@ public:
         if (!KittBotGhostLoader)
             return;
 
+        // =======================================
+        // FRANA DE MANA GLOBALA (200ms Cooldown)
+        // =======================================
+        if (G_KittWorldUpdateTimer > 0)
+        {
+            if (diff >= G_KittWorldUpdateTimer)
+                G_KittWorldUpdateTimer = 0;
+            else
+            {
+                G_KittWorldUpdateTimer -= diff;
+                return;
+            }
+        }
+
+        G_KittWorldUpdateTimer = 200; // 200 ms
+        // =======================================
+
         if (g_BootSequenceTimer > 0)
         {
             if (g_BootSequenceTimer <= diff)
@@ -910,12 +945,6 @@ public:
                         {
                             ForseazaStergereBotFantoma(tracker);
 
-                            /*botPlayer->CombatStop();
-                            if (botPlayer->GetSession())
-                            {
-                                botPlayer->GetSession()->LogoutPlayer(true); // true = forteaza salvarea imediata in DB
-                            }*/
-
                             uint32 homeMapId = botPlayer->m_homebindMapId;
                             float homeX = botPlayer->m_homebindX;
                             float homeY = botPlayer->m_homebindY;
@@ -924,30 +953,8 @@ public:
                             //botPlayer->TeleportTo(homeMapId, homeX, homeY, homeZ, homeO);
                             CharacterDatabase.PExecute("UPDATE characters SET position_x = {}, position_y = {}, position_z = {}, orientation = {}, map = {}, instance_id = 0 WHERE guid = {};",
                                 homeX, homeY, homeZ, homeO, homeMapId, tracker.charGuid);
-                            /*
-                            tracker.RemoveFromWorld = true;
-                            tracker.futureResult = {};
-                            tracker.holder = nullptr;
-                            tracker.AccRelogDelay = 5000;
 
 
-                            // Scoatem sesiunea artificiala din managerul global de sesiuni
-                            auto accountId = tracker.accountId;
-                            g_GhostSessionsStorage.erase(
-                                std::remove_if(g_GhostSessionsStorage.begin(), g_GhostSessionsStorage.end(),
-                                    [accountId](const std::unique_ptr<WorldSession>& session) {
-                                        return session && session->GetAccountId() == accountId;
-                                    }),
-                                g_GhostSessionsStorage.end()
-                            );
-                            sWorld->RemoveSession(tracker.realSession->GetAccountId());
-
-                            // Stergem GUID-ul din set-ul de boti fictivi
-                            ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
-                            FictivBotsGuids.erase(playerGuid);
-
-                            TC_LOG_INFO("fakPlayer", "LOG GHOST PROTECTIE: Botul {} a fost mutat in memorie catre Homebind (Map: {}).", botPlayer->GetName().c_str(), homeMapId);
-                            */
                             TC_LOG_INFO("fakPlayer", "LOG GHOST PROTECTIE: Botul {} a fost mutat in memorie catre Homebind (Map: {}).", botPlayer->GetName().c_str(), homeMapId);
 
                             kitt_bot_world_loader::PornesteBotIndividual(tracker.accountId, tracker.charGuid);
@@ -995,8 +1002,6 @@ public:
 
                             // ===========================================================
 
-                            //botPlayer->SetPvP(true);
-                            //botPlayer->SetGameMaster(true);
                             FictivBotsGuids.insert(playerGuid);
 
                             TC_LOG_INFO("fakPlayer", "LOG CUSTOM REUSIT: {} (GUID: {}) a intrat online permanent pe sesiunea reala!", botPlayer->GetName().c_str(), tracker.charGuid);
@@ -1006,6 +1011,11 @@ public:
                     else
                     {
                         TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: LoadFromDB a refuzat structura holder-ului pentru GUID {}.", tracker.charGuid);
+
+                        if (WorldSession* ghostSession = botPlayer->GetSession())
+                        {
+                            ghostSession->SetPlayer(nullptr);
+                        }
 
                         botPlayer->CleanupsBeforeDelete();
                         delete botPlayer;
@@ -1186,7 +1196,7 @@ public:
                         {
                             if (FictivBotsGuids.find(botPlayer->GetGUID()) != FictivBotsGuids.end())
                             {
-                                kitt_start_bot_pvp_AI(botPlayer);
+                                kitt_start_bot_pvp_AI(botPlayer, diff);
                             }
                         }
 

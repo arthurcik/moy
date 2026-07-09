@@ -44,7 +44,7 @@ void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget);
 
 bool IncearcaSaFolosestiMedalionPvP(Player* botPlayer);
 
-void kitt_start_bot_pvp_AI(Player* botPlayer);
+void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff);
 
 void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot);
 void ExecutaLogicaMage(Player* botPlayer, Unit* victim, BotRole rolBot);
