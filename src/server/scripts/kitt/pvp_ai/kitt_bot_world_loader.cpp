@@ -217,7 +217,7 @@ void PornesteTotiBotii()
         fakeSession->SetRemoteAddress("127.0.0.1");
         fakeSession->m_timeOutTime = GameTime::GetGameTime() + 31536000;
         fakeSession->LoadPermissions();
-        //sWorld->AddSession(fakeSession);
+        sWorld->AddSession(fakeSession);
 
         //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(bot.charGuid);
 
@@ -378,20 +378,14 @@ void PornesteTotiBotii()
         loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, stmt);
 
         // Trimitem catre thread-ul MySQL
-        //SQLQueryHolderTask task(loginHolder);
-        std::future<void> tempFuture;
-        {
-            SQLQueryHolderTask task(loginHolder);
-            tempFuture = task.GetFuture();
-        }
+        SQLQueryHolderTask task(loginHolder);
 
         BotAsyncTracker tracker;
         tracker.accountId = bot.accountId;
         tracker.charGuid = bot.charGuid;
         tracker.realSession = fakeSession;
         tracker.holder = loginHolder;
-        //tracker.futureResult = task.GetFuture();
-        tracker.futureResult = std::move(tempFuture);
+        tracker.futureResult = task.GetFuture();
         tracker.isProcessed = false;
         tracker.isQueued = false;
 
@@ -417,7 +411,7 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
     fakeSession->SetRemoteAddress("127.0.0.1");
     fakeSession->m_timeOutTime = GameTime::GetGameTime() + 31536000;
     fakeSession->LoadPermissions();
-    //sWorld->AddSession(fakeSession);
+    sWorld->AddSession(fakeSession);
 
     //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(charGuid);
 
@@ -577,14 +571,8 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
     loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, stmt);
 
     // Trimitem catre thread-ul MySQL
-    //SQLQueryHolderTask task(loginHolder);
-    std::future<void> tempFuture;
-    {
-        SQLQueryHolderTask task(loginHolder);
-        tempFuture = task.GetFuture();
-    }
+    SQLQueryHolderTask task(loginHolder);
 
-    //sWorld->AddSession(fakeSession);
     CharacterDatabase.DelayQueryHolder(loginHolder);
     FictivBotsGuids.insert(playerGuid);
     
@@ -602,8 +590,7 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
             // adaugam
             tracker.realSession = fakeSession;
             tracker.holder = loginHolder;
-            //tracker.futureResult = task.GetFuture();
-            tracker.futureResult = std::move(tempFuture);
+            tracker.futureResult = task.GetFuture();
 
             // resetare flags
             tracker.isProcessed = false;
@@ -624,8 +611,7 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
         tracker.charGuid = charGuid;
         tracker.realSession = fakeSession;
         tracker.holder = loginHolder;
-        //tracker.futureResult = task.GetFuture();
-        tracker.futureResult = std::move(tempFuture);
+        tracker.futureResult = task.GetFuture();
         tracker.isProcessed = false;
         tracker.isQueued = false;
         tracker.rejoinTimer = 0;              // Completat
@@ -677,21 +663,21 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
     }
 
     // Curatam sesiunea din stocarea noastra interna
-    /*auto accountId = tracker.accountId;
+    auto accountId = tracker.accountId;
     g_GhostSessionsStorage.erase(
         std::remove_if(g_GhostSessionsStorage.begin(), g_GhostSessionsStorage.end(),
             [accountId](const std::unique_ptr<WorldSession>& session) {
                 return session && session->GetAccountId() == accountId;
             }),
         g_GhostSessionsStorage.end()
-    );*/
+    );
 
     // Scoatem sesiunea si din managerul principal de sesiuni al serverului
     if (tracker.realSession)
     {
         //sWorld->RemoveSession(tracker.realSession->GetAccountId());
 
-        delete tracker.realSession;
+        //delete tracker.realSession;
         tracker.realSession = nullptr;
     }
 }
@@ -1332,7 +1318,7 @@ public:
 
                     TC_LOG_INFO("fakPlayer", "LOG CUSTOM: Baza de date a returnat datele pentru GUID {}! Se forteaza intrarea...", tracker.charGuid);
 
-                    /*std::string tempName = "GHOST_SESSION_" + std::to_string(tracker.charGuid);
+                    std::string tempName = "GHOST_SESSION_" + std::to_string(tracker.charGuid);
                     std::shared_ptr<WorldSocket> nullSocket = nullptr;
 
                     auto ghostSession = std::make_unique<WorldSession>(tracker.accountId, std::move(tempName), nullSocket, SEC_PLAYER, 2, 0, std::chrono::minutes(0), LOCALE_enUS, 0, false);
@@ -1341,14 +1327,7 @@ public:
                     Player* botPlayer = new Player(ghostSession.get());
                     ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
 
-                    g_GhostSessionsStorage.push_back(std::move(ghostSession));*/
-
-                    tracker.realSession->LoadPermissions();
-                    Player* botPlayer = new Player(tracker.realSession);
-                    ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
-
-                    tracker.realSession->SetPlayer(botPlayer);
-                    //tracker.realSession->PlayerDisconnected();
+                    g_GhostSessionsStorage.push_back(std::move(ghostSession));
 
                     if (botPlayer->LoadFromDB(playerGuid, *tracker.holder))
                     {
@@ -1424,14 +1403,24 @@ public:
                         botPlayer->SendDungeonDifficulty(false);
 
                         //tracker.realSession->LoadPermissions();
-                        //tracker.realSession->SetPlayer(botPlayer);
+                        tracker.realSession->SetPlayer(botPlayer);
 
                         //sCharacterCache->AddCharacterCacheEntry(botPlayer->GetGUID(), tracker.accountId, botPlayer->GetName(), botPlayer->GetGender(), botPlayer->GetRace(), botPlayer->GetClass(), botPlayer->GetLevel());
 
                         Map* map = sMapMgr->CreateBaseMap(botPlayer->GetMapId());
+
                         if (map)
                         {
                             botPlayer->SetMap(map);
+
+                            // 1. Calculam coordonatele celulei si grid-ului unde se afla botul in Shattrath/lume
+                            GridCoord p = Trinity::ComputeGridCoord(botPlayer->GetPositionX(), botPlayer->GetPositionY());
+
+                            // 2. Fortam serverul sa incarce in memorie bucata de harta (Grid-ul) pentru acele coordonate
+                            // Fara asta, in Shattrath botul va cadea in gol sau va genera crash la tick-ul de update
+                            map->LoadGrid(botPlayer->GetPositionX(), botPlayer->GetPositionY());
+
+
                             botPlayer->GetMap()->AddPlayerToMap(botPlayer);
 
                             botPlayer->AddToWorld();
@@ -1469,20 +1458,7 @@ public:
                     {
                         TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: LoadFromDB a refuzat structura holder-ului pentru GUID {}.", tracker.charGuid);
 
-                        // Inchidem sesiunea reala din sWorld pentru a nu ramane blocata in memorie
-                        if (tracker.realSession)
-                        {
-                            //sWorld->RemoveSession(tracker.realSession->GetAccountId());
-                            delete tracker.realSession;
-                            tracker.realSession = nullptr;
-                        }
-
-                        botPlayer->CleanupsBeforeDelete();
-                        delete botPlayer;
-
-                        tracker.isProcessed = false;
-
-                        /*if (WorldSession* ghostSession = botPlayer->GetSession())
+                        if (WorldSession* ghostSession = botPlayer->GetSession())
                         {
                             ghostSession->SetPlayer(nullptr);
                         }
@@ -1500,7 +1476,7 @@ public:
                         );
 
                         tracker.realSession = nullptr;
-                        tracker.isProcessed = false;*/
+                        tracker.isProcessed = false;
                     }
                     return;
                 }
