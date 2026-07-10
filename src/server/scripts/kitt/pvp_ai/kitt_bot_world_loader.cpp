@@ -116,7 +116,7 @@ namespace
 
     static uint32 g_BootSequenceTimer = 10000;
 
-    void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
+    void ForseazaStergereBotFantomaOFF(BotAsyncTracker& tracker)
     {
         if (!tracker.kickedByPlayer && !tracker.AccRealBusy)
         {
@@ -193,6 +193,510 @@ public:
     bool Initialize();
 };
 */
+
+void PornesteTotiBotii()
+{
+    if (!KittBotGhostLoader)
+        return;
+
+    if (!g_MultiBotTracker.empty())
+        return;
+
+    TC_LOG_INFO("fakPlayer", "LOG CUSTOM: Se porneste incarcarea in masa pentru toti botii...");
+
+    for (const auto& bot : g_BotList)
+    {
+        std::string accountName = "REAL_BOT_ACC_" + std::to_string(bot.accountId);
+        std::shared_ptr<WorldSocket> dummySocket = nullptr;
+
+        WorldSession* fakeSession = new WorldSession(
+            bot.accountId, std::move(accountName), dummySocket,
+            SEC_PLAYER, 2, 0, std::chrono::minutes(0), LOCALE_enUS, 0, false
+        );
+
+        fakeSession->SetRemoteAddress("127.0.0.1");
+        fakeSession->m_timeOutTime = GameTime::GetGameTime() + 31536000;
+        fakeSession->LoadPermissions();
+        //sWorld->AddSession(fakeSession);
+
+        //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(bot.charGuid);
+
+        //auto loginHolder = std::make_shared<LoginQueryHolder>(bot.accountId, playerGuid);
+
+        //loginHolder->Initialize();
+
+        ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(bot.charGuid);
+        ObjectGuid::LowType lowGuid = playerGuid.GetCounter();
+
+        // Folosim clasa oficiala, globala a serverului care nu cere header custom
+        auto loginHolder = std::make_shared<CharacterDatabaseQueryHolder>();
+
+        // Alocam manual dimensiunea de 34 de tabele definita in enum
+        loginHolder->SetSize(MAX_PLAYER_LOGIN_QUERY);
+
+        // 1. Incarcam tabelul characters (PLAYER_LOGIN_QUERY_LOAD_FROM = 0)
+        //CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
+        CharacterDatabasePreparedStatement* stmt = nullptr;
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_FROM, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GROUP_MEMBER);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GROUP, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_INSTANCE);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BOUND_INSTANCES, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_AURAS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_AURAS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SPELL);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SPELLS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_DAILY);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_DAILY_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_REPUTATION);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_REPUTATION, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_INVENTORY);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_INVENTORY, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ACTIONS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACTIONS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAIL);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MAILS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAILITEMS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MAIL_ITEMS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SOCIALLIST);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SOCIAL_LIST, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_HOMEBIND);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_HOME_BIND, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SPELLCOOLDOWNS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SPELL_COOLDOWNS, stmt);
+
+        if (sWorld->getBoolConfig(CONFIG_DECLINED_NAMES_USED))
+        {
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_DECLINEDNAMES);
+            stmt->setUInt32(0, lowGuid);
+            loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_DECLINED_NAMES, stmt);
+        }
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GUILD_MEMBER);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GUILD, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ARENAINFO);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ARENA_INFO, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ACHIEVEMENTS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACHIEVEMENTS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_CRITERIAPROGRESS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_CRITERIA_PROGRESS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_EQUIPMENTSETS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_BGDATA);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BG_DATA, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_GLYPHS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GLYPHS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_TALENTS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_TALENTS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_PLAYER_ACCOUNT_DATA);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_DATA, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SKILLS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SKILLS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_WEEKLY);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_WEEKLY_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_RANDOMBG);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_RANDOM_BG, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_BANNED);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BANNED, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUSREW);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS_REW, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_SEASONAL);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SEASONAL_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_MONTHLY);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MONTHLY_QUEST_STATUS, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CORPSE_LOCATION);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_CORPSE_LOCATION, stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_PETS);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, stmt);
+
+        // Trimitem catre thread-ul MySQL
+        //SQLQueryHolderTask task(loginHolder);
+        std::future<void> tempFuture;
+        {
+            SQLQueryHolderTask task(loginHolder);
+            tempFuture = task.GetFuture();
+        }
+
+        BotAsyncTracker tracker;
+        tracker.accountId = bot.accountId;
+        tracker.charGuid = bot.charGuid;
+        tracker.realSession = fakeSession;
+        tracker.holder = loginHolder;
+        //tracker.futureResult = task.GetFuture();
+        tracker.futureResult = std::move(tempFuture);
+        tracker.isProcessed = false;
+        tracker.isQueued = false;
+
+        //sWorld->AddSession(fakeSession);
+        CharacterDatabase.DelayQueryHolder(loginHolder);
+        g_MultiBotTracker.push_back(std::move(tracker));
+        FictivBotsGuids.insert(playerGuid);
+    }
+
+    TC_LOG_INFO("fakPlayer", "LOG CUSTOM: Toate pachetele asincrone ruleaza in fundal pe thread-ul MySQL...");
+}
+
+void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
+{
+    std::string accountName = "REAL_BOT_ACC_" + std::to_string(accountId);
+    std::shared_ptr<WorldSocket> dummySocket = nullptr;
+
+    WorldSession* fakeSession = new WorldSession(
+        accountId, std::move(accountName), dummySocket,
+        SEC_PLAYER, 2, 0, std::chrono::minutes(0), LOCALE_enUS, 0, false
+    );
+
+    fakeSession->SetRemoteAddress("127.0.0.1");
+    fakeSession->m_timeOutTime = GameTime::GetGameTime() + 31536000;
+    fakeSession->LoadPermissions();
+    //sWorld->AddSession(fakeSession);
+
+    //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(charGuid);
+
+    //auto loginHolder = std::make_shared<LoginQueryHolder>(accountId, playerGuid);
+    //loginHolder->Initialize();
+
+    ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(charGuid);
+    ObjectGuid::LowType lowGuid = playerGuid.GetCounter();
+
+    // Folosim clasa oficiala, globala a serverului care nu cere header custom
+    auto loginHolder = std::make_shared<CharacterDatabaseQueryHolder>();
+
+    // Alocam manual dimensiunea de 34 de tabele definita in enum
+    loginHolder->SetSize(MAX_PLAYER_LOGIN_QUERY);
+
+    // 1. Incarcam tabelul characters (PLAYER_LOGIN_QUERY_LOAD_FROM = 0)
+    //CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
+    CharacterDatabasePreparedStatement* stmt = nullptr;
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_FROM, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GROUP_MEMBER);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GROUP, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_INSTANCE);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BOUND_INSTANCES, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_AURAS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_AURAS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SPELL);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SPELLS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_DAILY);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_DAILY_QUEST_STATUS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_REPUTATION);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_REPUTATION, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_INVENTORY);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_INVENTORY, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ACTIONS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACTIONS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAIL);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MAILS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_MAILITEMS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MAIL_ITEMS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SOCIALLIST);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SOCIAL_LIST, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_HOMEBIND);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_HOME_BIND, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SPELLCOOLDOWNS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SPELL_COOLDOWNS, stmt);
+
+    if (sWorld->getBoolConfig(CONFIG_DECLINED_NAMES_USED))
+    {
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_DECLINEDNAMES);
+        stmt->setUInt32(0, lowGuid);
+        loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_DECLINED_NAMES, stmt);
+    }
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GUILD_MEMBER);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GUILD, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ARENAINFO);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ARENA_INFO, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_ACHIEVEMENTS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACHIEVEMENTS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_CRITERIAPROGRESS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_CRITERIA_PROGRESS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_EQUIPMENTSETS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_BGDATA);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BG_DATA, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_GLYPHS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_GLYPHS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_TALENTS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_TALENTS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_PLAYER_ACCOUNT_DATA);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_DATA, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_SKILLS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SKILLS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_WEEKLY);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_WEEKLY_QUEST_STATUS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_RANDOMBG);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_RANDOM_BG, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_BANNED);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BANNED, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUSREW);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS_REW, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_SEASONAL);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_SEASONAL_QUEST_STATUS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_QUESTSTATUS_MONTHLY);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_MONTHLY_QUEST_STATUS, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CORPSE_LOCATION);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_CORPSE_LOCATION, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_PETS);
+    stmt->setUInt32(0, lowGuid);
+    loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, stmt);
+
+    // Trimitem catre thread-ul MySQL
+    //SQLQueryHolderTask task(loginHolder);
+    std::future<void> tempFuture;
+    {
+        SQLQueryHolderTask task(loginHolder);
+        tempFuture = task.GetFuture();
+    }
+
+    //sWorld->AddSession(fakeSession);
+    CharacterDatabase.DelayQueryHolder(loginHolder);
+    FictivBotsGuids.insert(playerGuid);
+    
+
+    bool gasitInTracker = false;
+    for (auto& tracker : g_MultiBotTracker)
+    {
+        if (tracker.accountId == accountId)
+        {
+            // resetam
+            tracker.realSession = nullptr;
+            tracker.holder = nullptr;
+            tracker.futureResult = {};
+
+            // adaugam
+            tracker.realSession = fakeSession;
+            tracker.holder = loginHolder;
+            //tracker.futureResult = task.GetFuture();
+            tracker.futureResult = std::move(tempFuture);
+
+            // resetare flags
+            tracker.isProcessed = false;
+            tracker.kickedByPlayer = false;
+            tracker.AccRelogDelay = 5000; // Sincronizam resetarea de siguranta
+            tracker.AccRealBusy = false;
+            tracker.RemoveFromWorld = false;
+
+            gasitInTracker = true;
+            break;
+        }
+    }
+
+    if (!gasitInTracker)
+    {
+        BotAsyncTracker tracker;
+        tracker.accountId = accountId;
+        tracker.charGuid = charGuid;
+        tracker.realSession = fakeSession;
+        tracker.holder = loginHolder;
+        //tracker.futureResult = task.GetFuture();
+        tracker.futureResult = std::move(tempFuture);
+        tracker.isProcessed = false;
+        tracker.isQueued = false;
+        tracker.rejoinTimer = 0;              // Completat
+        tracker.kickedByPlayer = false;
+        tracker.AccRelogDelay = 10000;        // Completat conform structurii
+        tracker.AccRealBusy = false;          // Completat conform structurii
+        tracker.RemoveFromWorld = false;
+
+        g_MultiBotTracker.push_back(std::move(tracker));
+    }
+
+    
+
+    TC_LOG_INFO("fakPlayer", "LOG REBOOT: Secventa asincrona a fost relansata curat pentru Cont ID: {}!", accountId);
+}
+
+void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
+{
+    if (!tracker.kickedByPlayer && !tracker.AccRealBusy)
+    {
+        tracker.RemoveFromWorld = true;
+    }
+    //tracker.RemoveFromWorld = true;
+    tracker.futureResult = {};
+    tracker.holder = nullptr;
+
+    ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
+    FictivBotsGuids.erase(playerGuid);
+
+    // Cautam daca jucatorul este inca in lume
+    if (Player* botPlayer = ObjectAccessor::FindConnectedPlayer(playerGuid))
+    {
+        botPlayer->CombatStop();
+        botPlayer->RemoveFromWorld();
+        ObjectAccessor::RemoveObject(botPlayer);
+        botPlayer->SaveToDB(false);
+
+        // CRITIC ANTI-CRASH: Daca sesiunea exista, rupem legatura dintre Player si Sesiune!
+        if (WorldSession* session = botPlayer->GetSession())
+        {
+            // Setam player-ul din sesiune pe nullptr ca destructorul sesiunii sa nu mai apeleze LogoutPlayer pe un obiect mort
+            // sa putem da "delete" ....
+            if (session)
+                session->SetPlayer(nullptr);
+        }
+
+        botPlayer->CleanupsBeforeDelete();
+        delete botPlayer;
+    }
+
+    // Curatam sesiunea din stocarea noastra interna
+    /*auto accountId = tracker.accountId;
+    g_GhostSessionsStorage.erase(
+        std::remove_if(g_GhostSessionsStorage.begin(), g_GhostSessionsStorage.end(),
+            [accountId](const std::unique_ptr<WorldSession>& session) {
+                return session && session->GetAccountId() == accountId;
+            }),
+        g_GhostSessionsStorage.end()
+    );*/
+
+    // Scoatem sesiunea si din managerul principal de sesiuni al serverului
+    if (tracker.realSession)
+    {
+        //sWorld->RemoveSession(tracker.realSession->GetAccountId());
+
+        delete tracker.realSession;
+        tracker.realSession = nullptr;
+    }
+}
+
+
 class kitt_bot_account_login_interceptor : public AccountScript
 {
 public:
@@ -212,55 +716,11 @@ public:
 
                 TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK: Jucatorul real s-a logat pe contul {}. Se porneste curatarea controlata a botului...", accountId);
 
-                // 2. Apelam functia noastra globala care are deja toata logica anti-crash
-                // Ea va rula SetPlayer(nullptr), delete botPlayer si va curata sWorld + g_GhostSessionsStorage in siguranta absoluta!
                 ForseazaStergereBotFantoma(tracker);
 
                 TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK: Curatare finalizata cu succes pentru contul {}.", accountId);
                 break;
             }
-
-            /*if (tracker.accountId == accountId && tracker.isProcessed && !tracker.kickedByPlayer)
-            {
-                tracker.AccRelogDelay = 5000;
-
-                ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
-                FictivBotsGuids.erase(playerGuid);
-                //tracker.isProcessed = false;
-                tracker.kickedByPlayer = true;
-                tracker.AccRealBusy = true;
-
-                if (tracker.realSession)
-                {
-                    if (Player* botPlayer = ObjectAccessor::FindConnectedPlayer(playerGuid))
-                    {
-                        TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK: Jucatorul real s-a logat pe contul {}. Se curata imediat botul {} din lume...",
-                            accountId, botPlayer->GetName());
-
-                        botPlayer->CombatStop();
-                        if (botPlayer->GetSession())
-                        {
-                            botPlayer->GetSession()->LogoutPlayer(true); // true = forteaza salvarea imediata in DB
-                        }
-                        //sWorld->RemoveSession(tracker.realSession->GetAccountId());
-
-                        auto it = std::remove_if(g_GhostSessionsStorage.begin(), g_GhostSessionsStorage.end(),
-                            [accountId](const std::unique_ptr<WorldSession>& session) {
-                                return session && session->GetAccountId() == accountId;
-                            });
-
-                        if (it != g_GhostSessionsStorage.end())
-                        {
-                            g_GhostSessionsStorage.erase(it, g_GhostSessionsStorage.end());
-                            TC_LOG_INFO("fakPlayer", "LOG CLEANUP: Sesiunea artificiala a contului {} a fost stearsa cu succes din stocarea de boti.", accountId);
-                        }
-
-                        tracker.isProcessed = false;
-                    }
-                }
-
-                break;
-            }*/
         }
     }
 };
@@ -270,7 +730,7 @@ class kitt_bot_world_loader : public WorldScript
 public:
     kitt_bot_world_loader() : WorldScript("kitt_bot_world_loader") {}
 
-    static void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
+    void PornesteBotIndividualOFF(uint32 accountId, uint32 charGuid)
     {
         std::string accountName = "REAL_BOT_ACC_" + std::to_string(accountId);
         std::shared_ptr<WorldSocket> dummySocket = nullptr;
@@ -511,7 +971,7 @@ public:
         }
     }
 
-    void PornesteTotiBotii()
+    void PornesteTotiBotiiOFF()
     {
         if (!KittBotGhostLoader)
             return;
@@ -695,20 +1155,28 @@ public:
             loginHolder->SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, stmt);
 
             // Trimitem catre thread-ul MySQL
-            SQLQueryHolderTask task(loginHolder);
+            //SQLQueryHolderTask task(loginHolder);
+            std::future<void> tempFuture;
+            {
+                SQLQueryHolderTask task(loginHolder);
+                tempFuture = task.GetFuture();
+            }
 
             BotAsyncTracker tracker;
             tracker.accountId = bot.accountId;
             tracker.charGuid = bot.charGuid;
             tracker.realSession = fakeSession;
             tracker.holder = loginHolder;
-            tracker.futureResult = task.GetFuture();
+            //tracker.futureResult = task.GetFuture();
+            tracker.futureResult = std::move(tempFuture);
             tracker.isProcessed = false;
             tracker.isQueued = false;
 
+            CharacterDatabase.DelayQueryHolder(loginHolder);
+
             g_MultiBotTracker.push_back(std::move(tracker));
 
-            CharacterDatabase.DelayQueryHolder(loginHolder);
+            //CharacterDatabase.DelayQueryHolder(loginHolder);
             FictivBotsGuids.insert(playerGuid);
         }
 
@@ -841,7 +1309,7 @@ public:
                 {
                     tracker.AccRelogDelay = 5000;
                     tracker.kickedByPlayer = false;
-                    kitt_bot_world_loader::PornesteBotIndividual(tracker.accountId, tracker.charGuid);
+                    PornesteBotIndividual(tracker.accountId, tracker.charGuid);
 
                     TC_LOG_INFO("fakPlayer", "LOG REJOIN: Contul {} a fost eliberat. Execut direct secventa de boot...", tracker.accountId);
                 }
@@ -864,7 +1332,7 @@ public:
 
                     TC_LOG_INFO("fakPlayer", "LOG CUSTOM: Baza de date a returnat datele pentru GUID {}! Se forteaza intrarea...", tracker.charGuid);
 
-                    std::string tempName = "GHOST_SESSION_" + std::to_string(tracker.charGuid);
+                    /*std::string tempName = "GHOST_SESSION_" + std::to_string(tracker.charGuid);
                     std::shared_ptr<WorldSocket> nullSocket = nullptr;
 
                     auto ghostSession = std::make_unique<WorldSession>(tracker.accountId, std::move(tempName), nullSocket, SEC_PLAYER, 2, 0, std::chrono::minutes(0), LOCALE_enUS, 0, false);
@@ -873,7 +1341,14 @@ public:
                     Player* botPlayer = new Player(ghostSession.get());
                     ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
 
-                    g_GhostSessionsStorage.push_back(std::move(ghostSession));
+                    g_GhostSessionsStorage.push_back(std::move(ghostSession));*/
+
+                    tracker.realSession->LoadPermissions();
+                    Player* botPlayer = new Player(tracker.realSession);
+                    ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
+
+                    tracker.realSession->SetPlayer(botPlayer);
+                    //tracker.realSession->PlayerDisconnected();
 
                     if (botPlayer->LoadFromDB(playerGuid, *tracker.holder))
                     {
@@ -939,7 +1414,7 @@ public:
 
                             TC_LOG_INFO("fakPlayer", "LOG GHOST PROTECTIE: Botul {} a fost mutat in memorie catre Homebind (Map: {}).", botPlayer->GetName().c_str(), homeMapId);
 
-                            kitt_bot_world_loader::PornesteBotIndividual(tracker.accountId, tracker.charGuid);
+                            PornesteBotIndividual(tracker.accountId, tracker.charGuid);
 
                             continue;
                         }
@@ -949,7 +1424,7 @@ public:
                         botPlayer->SendDungeonDifficulty(false);
 
                         //tracker.realSession->LoadPermissions();
-                        tracker.realSession->SetPlayer(botPlayer);
+                        //tracker.realSession->SetPlayer(botPlayer);
 
                         //sCharacterCache->AddCharacterCacheEntry(botPlayer->GetGUID(), tracker.accountId, botPlayer->GetName(), botPlayer->GetGender(), botPlayer->GetRace(), botPlayer->GetClass(), botPlayer->GetLevel());
 
@@ -994,7 +1469,20 @@ public:
                     {
                         TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: LoadFromDB a refuzat structura holder-ului pentru GUID {}.", tracker.charGuid);
 
-                        if (WorldSession* ghostSession = botPlayer->GetSession())
+                        // Inchidem sesiunea reala din sWorld pentru a nu ramane blocata in memorie
+                        if (tracker.realSession)
+                        {
+                            //sWorld->RemoveSession(tracker.realSession->GetAccountId());
+                            delete tracker.realSession;
+                            tracker.realSession = nullptr;
+                        }
+
+                        botPlayer->CleanupsBeforeDelete();
+                        delete botPlayer;
+
+                        tracker.isProcessed = false;
+
+                        /*if (WorldSession* ghostSession = botPlayer->GetSession())
                         {
                             ghostSession->SetPlayer(nullptr);
                         }
@@ -1012,7 +1500,7 @@ public:
                         );
 
                         tracker.realSession = nullptr;
-                        tracker.isProcessed = false;
+                        tracker.isProcessed = false;*/
                     }
                     return;
                 }
@@ -1709,7 +2197,7 @@ public:
         // --- GHOST START IN WORLD ---
         // =================================================================
         g_BootSequenceTimer = 5000;
-        kitt_bot_world_loader::PornesteBotIndividual(targetAccId, targetGuidLow);
+        PornesteBotIndividual(targetAccId, targetGuidLow);
 
         for (auto& tracker : g_MultiBotTracker)
         {

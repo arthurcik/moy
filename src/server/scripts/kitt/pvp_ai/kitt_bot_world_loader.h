@@ -31,6 +31,10 @@ struct BotAsyncTracker
     BotRole determinatRol = BOT_ROLE_NONE;
 };
 extern std::vector<BotAsyncTracker> g_MultiBotTracker;
+// load ghost
+void PornesteTotiBotii();
+void PornesteBotIndividual(uint32 accountId, uint32 charGuid);
+void ForseazaStergereBotFantoma(BotAsyncTracker& tracker);
 
 BotRole DefinesteSiSalveazaRolulBotului(Player* botPlayer);
 Unit* GhostSelectTarget(Player* botPlayer, Unit*& currentVictim, bool focusPeColeg);
