@@ -33,22 +33,23 @@ struct BotAsyncTracker
 extern std::vector<BotAsyncTracker> g_MultiBotTracker;
 
 BotRole DefinesteSiSalveazaRolulBotului(Player* botPlayer);
-Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeColeg);
+Unit* GhostSelectTarget(Player* botPlayer, Unit*& currentVictim, bool focusPeColeg);
+Unit* GhostSelectFriendlyTarget(Player* botPlayer);
 uint32 ObtineRankMaximSpell(uint32 spellId);
 bool GhostIsMelee(Player* botPlayer);
 
 // miscarea si attack
-void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim);
-void GhostMoveAndAttackCaster(Player* botPlayer, Unit* victim);
+void GhostMoveAndAttackMelee(Player* botPlayer, Unit*& victim);
+void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim);
 void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget);
 
 bool IncearcaSaFolosestiMedalionPvP(Player* botPlayer);
 
 void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff);
 
-void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot);
-void ExecutaLogicaMage(Player* botPlayer, Unit* victim, BotRole rolBot);
-void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit* victim, BotRole rolBot);
-void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit* victim, BotRole rolBot);
-void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit* victim, BotRole rolBot);
-void ExecutaLogicaRogue(Player* botPlayer, Unit* victim, BotRole rolBot);
+void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaMage(Player* botPlayer, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaRogue(Player* botPlayer, Unit*& victim, BotRole rolBot);

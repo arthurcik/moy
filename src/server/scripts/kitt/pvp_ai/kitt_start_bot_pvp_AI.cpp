@@ -131,23 +131,47 @@ BotRole DefinesteSiSalveazaRolulBotului(Player* botPlayer)
 }
 
 // selectarea victima. true = ataca ce ataca si colegu(daca are tinta). false = prima gasita
-Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeColeg)
+Unit* GhostSelectTarget(Player* botPlayer, Unit*& currentVictim, bool focusPeColeg)
 {
+    if (!currentVictim)
+    {
+        ObjectGuid targetGuid = botPlayer->GetTarget();
+        if (!targetGuid.IsEmpty())
+        {
+            botPlayer->SetSelection(ObjectGuid::Empty); // Sterge cercul rosu fizic din joc!
+            botPlayer->AttackStop();
+            botPlayer->CombatStop();
+            if (botPlayer->GetMotionMaster())
+            {
+                botPlayer->GetMotionMaster()->Clear();
+            }
+            currentVictim = nullptr;
+        }
+    }
+
     // Daca are deja o tinta valida, vie si vizibila, nu o schimbam aiurea
     if (currentVictim && currentVictim->IsAlive() && botPlayer->IsWithinDistInMap(currentVictim, 160.0f))
     {
         // invisible & Feign Death
-        if (botPlayer->CanSeeOrDetect(currentVictim, false, true) && !currentVictim->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH))
+        if (!currentVictim->HasUnitState(UNIT_STATE_DIED))
         {
-            return currentVictim; // Pastreaza focusul curent
+            if (botPlayer->CanSeeOrDetect(currentVictim, false, true))
+            {
+                return currentVictim; // Pastreaza focusul curent
+            }
         }
     }
+
     // Daca tinta veche a murit sau a disparut, curatam starea
     if (currentVictim)
     {
+        botPlayer->SetSelection(ObjectGuid::Empty);
         botPlayer->AttackStop();
         botPlayer->CombatStop();
-        //botPlayer->GetMotionMaster()->Clear();
+        if (botPlayer->GetMotionMaster())
+        {
+            botPlayer->GetMotionMaster()->Clear();
+        }
         currentVictim = nullptr;
     }
 
@@ -178,7 +202,7 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
     playersInCell.remove_if([botPlayer, focusPeColeg](Player* target) {
          return !target || !target->IsAlive() || target == botPlayer || target->IsGameMaster() ||
              !botPlayer->InSamePhase(target) || !botPlayer->CanSeeOrDetect(target, false, true) ||
-             target->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH) || // hunter Feign Death
+             target->HasUnitState(UNIT_STATE_DIED) || // hunter Feign Death
              (!focusPeColeg && !botPlayer->IsHostileTo(target));
         });
 
@@ -192,7 +216,7 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
         playersInCell.remove_if([botPlayer, focusPeColeg](Player* target) {
             return !target || !target->IsAlive() || target == botPlayer || target->IsGameMaster() ||
                 !botPlayer->InSamePhase(target) || !botPlayer->CanSeeOrDetect(target, false, true) ||
-                target->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH) || // hunter Feign Death
+                target->HasUnitState(UNIT_STATE_DIED) || // hunter Feign Death
                 (!focusPeColeg && !botPlayer->IsHostileTo(target));
             });
     }
@@ -212,7 +236,7 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
                 Unit* tintaColegului = coechipier->GetVictim();
                 if (tintaColegului && tintaColegului->IsInWorld() && tintaColegului->IsAlive() &&
                     botPlayer->CanSeeOrDetect(tintaColegului, false, true) &&
-                    !tintaColegului->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH))
+                    !tintaColegului->HasUnitState(UNIT_STATE_DIED))
                 {
                     botPlayer->SetSelection(tintaColegului->GetGUID());
                     return tintaColegului; // Healerul a copiat cu succes tinta DPS-ului!
@@ -227,7 +251,7 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
         if (!targetPlayer || !targetPlayer->IsInWorld() || !targetPlayer->IsAlive() || targetPlayer == botPlayer || targetPlayer->IsGameMaster() || !botPlayer->InSamePhase(targetPlayer))
             continue;
 
-        if (!botPlayer->CanSeeOrDetect(targetPlayer, false, true) || targetPlayer->HasUnitFlag2(UNIT_FLAG2_FEIGN_DEATH))
+        if (!botPlayer->CanSeeOrDetect(targetPlayer, false, true) || targetPlayer->HasUnitState(UNIT_STATE_DIED))
             continue;
 
         if (botPlayer->IsHostileTo(targetPlayer))
@@ -252,6 +276,41 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit* currentVictim, bool focusPeCole
     }
 
     return nullptr; // Nu a gasit pe nimeni in viata
+}
+
+// select prieten
+Unit* GhostSelectFriendlyTarget(Player* botPlayer)
+{
+    std::list<Player*> playersInCell;
+    botPlayer->GetPlayerListInGrid(playersInCell, 50.0f, true);
+
+    Player* celMaiRanitColeg = nullptr;
+    float celMaiMicProcentViata = 100.0f;
+
+    for (Player* targetPlayer : playersInCell)
+    {
+        if (!targetPlayer || !targetPlayer->IsAlive() || !botPlayer->InSamePhase(targetPlayer))
+            continue;
+
+        // Verificam sa NU fie inamic (adica sa fie coechipier sau el insusi)
+        if (!botPlayer->IsHostileTo(targetPlayer))
+        {
+            float procentViata = targetPlayer->GetHealthPct();
+
+            // Gasim colegul cu procentul cel mai mic de viata
+            if (procentViata < celMaiMicProcentViata)
+            {
+                celMaiMicProcentViata = procentViata;
+                celMaiRanitColeg = targetPlayer;
+            }
+        }
+    }
+
+    // Daca toti colegii au viata plina, healerul se selecteaza pe el insusi ca tinta implicita de urmarire
+    if (!celMaiRanitColeg)
+        return botPlayer;
+
+    return celMaiRanitColeg;
 }
 
 // rank maxim disponibil pt spell id
@@ -290,7 +349,7 @@ bool GhostIsMelee(Player* botPlayer)
 }
 
 // miscare si attack melee
-void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim)
+void GhostMoveAndAttackMelee(Player* botPlayer, Unit*& victim)
 {
     if (!botPlayer || !victim || !botPlayer->IsAlive() || !victim->IsAlive())
         return;
@@ -308,7 +367,7 @@ void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim)
     if (!botPlayer->IsInCombat())
         botPlayer->SetInCombatWith(victim, true);
 
-    if (/*botPlayer->IsNonMeleeSpellCast(false, false, true) || */botPlayer->HasUnitState(UNIT_STATE_CASTING))
+    if (botPlayer->IsNonMeleeSpellCast(false, false, true) || botPlayer->HasUnitState(UNIT_STATE_CASTING))
     {
         if (miscareCurenta == CHASE_MOTION_TYPE || miscareCurenta == POINT_MOTION_TYPE)
         {
@@ -321,17 +380,17 @@ void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim)
     // Control Corp la Corp sub 4 metri pentru Melee
     if (dist <= 4.0f)
     {
+        if (!botPlayer->HasInArc(1.74f, victim) && botPlayer->IsWithinLOSInMap(victim))
+        {
+            botPlayer->StopMoving();
+            botPlayer->SetFacingToObject(victim); // intrerupe movement
+        }
+
         if (miscareCurenta != CHASE_MOTION_TYPE)
         {
             botPlayer->GetMotionMaster()->Clear();
             botPlayer->GetMotionMaster()->MoveChase(victim);
             botPlayer->Attack(victim, true);
-        }
-
-        if (!botPlayer->HasInArc(1.74f, victim) && botPlayer->IsWithinLOSInMap(victim))
-        {
-            botPlayer->StopMoving();
-            botPlayer->SetFacingToObject(victim); // intrerupe movement
         }
 
         return;
@@ -404,7 +463,7 @@ void GhostMoveAndAttackMelee(Player* botPlayer, Unit* victim)
 }
 
 // miscare si attack caster
-void GhostMoveAndAttackCaster(Player* botPlayer, Unit* victim)
+void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim)
 {
     if (!botPlayer || !victim || !botPlayer->IsAlive() || !victim->IsAlive())
         return;
@@ -487,7 +546,8 @@ void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget)
     if (!botPlayer->IsInCombat())
         botPlayer->SetInCombatWith(friendlyTarget, true);
 
-    if (botPlayer->IsNonMeleeSpellCast(false, false, true) || botPlayer->HasUnitState(UNIT_STATE_CASTING))
+    // Daca botul casteaza deja un heal, oprim orice miscare si NU apelam nimic care poate reseta castul
+    if (botPlayer->HasUnitState(UNIT_STATE_CASTING))
     {
         if (miscareCurenta == CHASE_MOTION_TYPE || miscareCurenta == POINT_MOTION_TYPE)
         {
@@ -497,7 +557,31 @@ void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget)
         return;
     }
 
-    // Healerul sub 4 metri de coleg doar asigura orientarea, nu porneste auto-attack pe el
+    // --- FAZA 1: CONTROL LOS (LINIE VIZUALA) ---
+    // Chiar daca heal-ul merge cu spatele, avem nevoie de linie vizuala (LOS) ca sa nu dea eroare de texturi
+    bool areLOS = botPlayer->IsWithinLOSInMap(friendlyTarget);
+    if (!areLOS)
+    {
+        if (miscareCurenta != POINT_MOTION_TYPE)
+        {
+            botPlayer->GetMotionMaster()->Clear();
+            botPlayer->GetMotionMaster()->MovePoint(1001, friendlyTarget->GetPositionX(), friendlyTarget->GetPositionY(), friendlyTarget->GetPositionZ());
+        }
+        else
+        {
+            float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+            botPlayer->GetMotionMaster()->GetDestination(destX, destY, destZ);
+            float distantaModificataSq = friendlyTarget->GetExactDistSq(destX, destY, destZ);
+
+            if (distantaModificataSq > 4.0f)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, friendlyTarget->GetPositionX(), friendlyTarget->GetPositionY(), friendlyTarget->GetPositionZ());
+            }
+        }
+        return;
+    }
+
+    // --- FAZA 2: LOGICA DE POZITIONARE SUB 4 METRI ---
     if (dist <= 4.0f)
     {
         if (miscareCurenta == CHASE_MOTION_TYPE || miscareCurenta == POINT_MOTION_TYPE)
@@ -505,33 +589,65 @@ void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget)
             botPlayer->GetMotionMaster()->Clear();
             botPlayer->StopMoving();
         }
-
-        if (!botPlayer->HasInArc(1.74f, friendlyTarget))
-            botPlayer->SetFacingToObject(friendlyTarget);
-
         return;
     }
 
-    // Pozitionare in range de spell-uri de heal (35 de metri)
-    if (dist > 35.0f)
+    // --- FAZA 3: MECANICA SPECIFICA PENTRU ARENA DALARAN (Lift/Ziduri) ---
+    Map* botMap = botPlayer->GetMap();
+    if (botMap && botMap->GetId() == 617)
+    {
+        if (botPlayer->GetPositionZ() > 10.0f)
+        {
+            // verde start
+            float VposX = 1361.76f - 36.0f;
+            float VposY = 817.336f;
+            float VposZ = 14.8f - 10.0f;
+            if (botPlayer->GetPositionX() > VposX)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, VposX, VposY, VposZ, false);
+                return;
+            }
+            // galben start
+            float GposX = 1218.00f + 42.00f;
+            float GposY = 764.795f;
+            float GposZ = 14.8f - 10.0f;
+            if (botPlayer->GetPositionX() < GposX)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, GposX, GposY, GposZ, false);
+                return;
+            }
+        }
+    }
+
+    // --- FAZA 4: LOGICA DE POZITIONARE LA DISTANTA (30 de metri max) ---
+    if (dist > 30.0f)
     {
         if (miscareCurenta != POINT_MOTION_TYPE)
         {
             botPlayer->GetMotionMaster()->Clear();
             botPlayer->GetMotionMaster()->MovePoint(1001, friendlyTarget->GetPositionX(), friendlyTarget->GetPositionY(), friendlyTarget->GetPositionZ());
         }
+        else
+        {
+            float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+            botPlayer->GetMotionMaster()->GetDestination(destX, destY, destZ);
+            float distantaModificataSq = friendlyTarget->GetExactDistSq(destX, destY, destZ);
+
+            if (distantaModificataSq > 4.0f)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, friendlyTarget->GetPositionX(), friendlyTarget->GetPositionY(), friendlyTarget->GetPositionZ());
+            }
+        }
     }
     else
     {
+        // Suntem in range util (intre 4m si 30m) si avem LOS -> oprim miscarea ca sa poata casta liber
         if (miscareCurenta == POINT_MOTION_TYPE || miscareCurenta == CHASE_MOTION_TYPE)
         {
             botPlayer->GetMotionMaster()->Clear();
             botPlayer->StopMoving();
         }
     }
-
-    if (!botPlayer->HasInArc(1.74f, friendlyTarget))
-        botPlayer->SetFacingToObject(friendlyTarget);
 }
 
 // foloseste medalionul PVP
@@ -622,13 +738,13 @@ void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff)
 
 
 // ghost AI by class
-void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
+void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit*& victim, BotRole rolBot)
 {
-    victim = GhostSelectTarget(botPaladin, victim, true);
+    //victim = GhostSelectTarget(botPaladin, victim, true);
 
     // 1. VERIFICARI STRICTE DE SIGURANTA
-    if (!victim || !victim->IsAlive())
-        return;
+    /*if (!victim || !victim->IsAlive())
+        return;*/
 
     if (!botPaladin || !botPaladin->IsAlive())
         return;
@@ -642,18 +758,46 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
         IncearcaSaFolosestiMedalionPvP(botPaladin);
     }
 
+    uint32 myHp = botPaladin->GetHealthPct();
+
     bool esteHealer = (rolBot == BOT_ROLE_HEALER);
     if (esteHealer)
     {
-        GhostMoveAndAttackMelee(botPaladin, victim);
+        Unit* colegDeVindecat = GhostSelectFriendlyTarget(botPaladin);
+
+        if (colegDeVindecat && colegDeVindecat->IsAlive() && (colegDeVindecat->GetHealthPct() < 85 || myHp < 85))
+        {
+            // Setam selection pe el ca sa ii dea heal pe target-ul corect
+            botPaladin->SetSelection(colegDeVindecat->GetGUID());
+
+            // Trimitem colegul in functia ta, unde va rula perfect logica de 35 de metri!
+            GhostMoveAndHeal(botPaladin, colegDeVindecat);
+        }
+        //GhostMoveAndAttackMelee(botPaladin, victim);
         //GhostMoveAndHeal(botPaladin, victim);
+        else
+        {
+            victim = GhostSelectTarget(botPaladin, victim, true);
+
+            if (!victim || !victim->IsAlive())
+                return;
+
+            GhostMoveAndAttackMelee(botPaladin, victim);
+        }
     }
     else
     {
+        victim = GhostSelectTarget(botPaladin, victim, false);
+
+        if (!victim || !victim->IsAlive())
+            return;
+
+        // DPS-ul fuge si ataca inamicul normal corp la corp
         GhostMoveAndAttackMelee(botPaladin, victim);
+        //GhostMoveAndAttackMelee(botPaladin, victim);
     }
 
-    uint32 myHp = botPaladin->GetHealthPct();
+    //uint32 myHp = botPaladin->GetHealthPct();
 
     // Divine Shield (Bula Mare - ID: 642) - Urgenta pentru Paladin
     if (myHp < 25 && !botPaladin->GetSpellHistory()->HasCooldown(642) && (!botPaladin->HasAura(25) && !botPaladin->HasAura(25771)))
@@ -807,7 +951,7 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
         float targetDist = botPaladin->GetDistance(victim);
 
         // Porneste urmarirea fizica
-        GhostMoveAndAttackMelee(botPaladin, victim);
+        //GhostMoveAndAttackMelee(botPaladin, victim);
 
         // Repentance (ID: 20066) - Il folosim automat pe inamicul curent din argument daca viata grupului e sigura
         if (targetDist <= 20.0f && !botPaladin->GetSpellHistory()->HasCooldown(20066))
@@ -855,13 +999,13 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit* victim, BotRole rolBot)
     }
 }
 
-void ExecutaLogicaMage(Player* botPlayer, Unit* victim, BotRole /*rolBot*/)
+void ExecutaLogicaMage(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
 {
     if (!botPlayer->HasUnitState(UNIT_STATE_CASTING))
         botPlayer->CastSpell(victim, 116, false);
 }
 
-void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit* victim, BotRole rolBot) // warrior Arms
+void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit*& victim, BotRole rolBot) // warrior Arms
 {
     victim = GhostSelectTarget(botPlayer, victim, false);
 
@@ -1104,7 +1248,7 @@ void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit* victim, BotRole rolBot) //
     }
 }
 
-void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit* victim, BotRole /*rolBot*/)
+void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
 {
     // Preluam tinta folosind sistemul tau global (false = scanare ca dps/ostil)
     victim = GhostSelectTarget(botPlayer, victim, false);
@@ -1328,7 +1472,7 @@ void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit* victim, BotRole /*rolBo
     }
 }
 
-void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit* victim, BotRole /*rolBot*/)
+void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole /*rolBot*/)
 {
     // --- 1. VERIFICARI STRICTE DE SIGURANTA SI TARGETING ---
     if (!botPriest || !botPriest->IsAlive())
@@ -1565,7 +1709,7 @@ void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit* victim, BotRole /*rolBo
     }
 }
 
-void ExecutaLogicaRogue(Player* botPlayer, Unit* victim, BotRole /*rolBot*/)
+void ExecutaLogicaRogue(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
 {
     botPlayer->SetPower(POWER_ENERGY, 100);
     if (botPlayer->IsWithinMeleeRange(victim))
