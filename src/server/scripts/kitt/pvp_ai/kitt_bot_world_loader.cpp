@@ -2079,6 +2079,7 @@ public:
             { "access",     kittGhostPlayerCommandSubcommandTable1 },
             { "ghostList",  HandleShowGhostList,          rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
             { "ghost",      HandleStartGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "ghostbulk",  HandleStartBulkGhostsInWorld, rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
             { "remove",     HandleRemoveGhostFromWorld,   rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
         };
 
@@ -2182,6 +2183,136 @@ public:
                 tracker.AddFromChatCmd = true;
                 break;
             }
+        }
+
+        return true;
+    }
+
+    static bool HandleStartBulkGhostsInWorld(ChatHandler* handler, Trinity::ChatCommands::Tail args)
+    {
+        Player* me = handler->GetSession()->GetPlayer();
+        if (!me)
+            return true;
+
+        // 1. Convertim textul ramas in string standard de C++
+        std::string argsStr(args);
+
+        // Verificam daca s-au introdus argumente
+        if (argsStr.empty())
+        {
+            handler->SendSysMessage("Usage: |cffffffff.ztfcbot ghostbulk|r |cff00ff00[Count]-[Months]|r (Ex: .ztfcbot ghostbulk 10-3)");
+            return true;
+        }
+
+        uint32 botCount = 0;
+        uint32 monthsInactive = 0;
+
+        // 2. Parsam formatul specific cu cratima (Ex: 10-3)
+        if (sscanf(argsStr.c_str(), "%u-%u", &botCount, &monthsInactive) != 2)
+        {
+            handler->SendSysMessage("Format invalid! Foloseste formatul cu cratima. Usage: |cffffffff.ztfcbot ghostbulk|r |cff00ff00[Count]-[Months]|r (Ex: 10-3)");
+            return true;
+        }
+
+        // Validare ca numerele sunt mai mari decat 0
+        if (botCount == 0 || monthsInactive == 0)
+        {
+            handler->SendSysMessage("Valorile introduse trebuie sa fie mai mari decat 0!");
+            return true;
+        }
+
+        // Limitam numarul maxim de boti incarcati la o singura comanda pentru a preveni lag-ul masiv
+        if (botCount > 100)
+        {
+            handler->SendSysMessage("Ce cereai e prea mult! Limita maxima la o singura comanda este de 100 de boti.");
+            botCount = 100;
+        }
+
+        handler->PSendSysMessage("Cautam %u caractere cu conturi unice, nivel > 60 si inactivitate de peste %u luni...", botCount, monthsInactive);
+
+        // 3. Interogare SQL: Grupam dupa 'account' pentru unicitate deplina
+        QueryResult result = CharacterDatabase.PQuery(
+            "SELECT c.guid, c.account, c.name FROM characters c "
+            "WHERE c.level > 60 AND c.online = 0 "
+            "AND c.logout_time < (UNIX_TIMESTAMP() - ({} * 30 * 24 * 60 * 60)) "
+            "AND c.logout_time = (SELECT MAX(sub.logout_time) FROM characters sub WHERE sub.account = c.account) "
+            "ORDER BY c.logout_time DESC", monthsInactive);
+
+        if (!result)
+        {
+            handler->SendSysMessage("Nu s-a gasit niciun caracter care sa respecte aceste criterii in baza de date.");
+            return true;
+        }
+
+        uint32 successfullyStarted = 0;
+
+        // 4. Parcurgem rezultatele gasite
+        do
+        {
+            Field* fields = result->Fetch();
+
+            // EXPLICIT SI FIX: Folosim operatorul [] cu indecsi clari pentru a preveni inversarea datelor
+            uint32 targetGuidLow = fields[0].GetUInt32();   // Coloana 0 din SELECT: c.guid
+            uint32 targetAccId = fields[1].GetUInt32();   // Coloana 1 din SELECT: c.account
+            std::string targetName = fields[2].GetString(); // Coloana 2 din SELECT: c.name
+
+            ObjectGuid targetGuid = ObjectGuid::Create<HighGuid::Player>(targetGuidLow);
+
+            // A. Verificam daca caracterul este deja online in ObjectAccessor
+            if (ObjectAccessor::FindConnectedPlayer(targetGuid))
+                continue;
+
+            // B. Verificam daca contul are deja o sesiune activa (jucator real online sau alt bot activ)
+            if (sWorld->FindSession(targetAccId))
+                continue;
+
+            // C. Verificam trackerul global ca sa nu dublam botul
+            bool alreadyInTracker = false;
+            for (const auto& tracker : g_MultiBotTracker)
+            {
+                if (tracker.charGuid == targetGuidLow || (tracker.accountId == targetAccId && !tracker.RemoveFromWorld))
+                {
+                    alreadyInTracker = true;
+                    break;
+                }
+            }
+
+            if (alreadyInTracker)
+                continue;
+
+            // D. LOGARE ASINCRONA SECURIZATA
+            g_BootSequenceTimer = 5000;
+
+            // Trimitem parametrii mapati corect: Contul (666) si GUID-ul Low (478)
+            PornesteBotIndividual(targetAccId, targetGuidLow);
+
+            // Activam flag-ul in tracker exact dupa ID-ul de cont corectat
+            for (auto& tracker : g_MultiBotTracker)
+            {
+                if (tracker.accountId == targetAccId)
+                {
+                    tracker.AddFromChatCmd = true;
+                    break;
+                }
+            }
+
+            successfullyStarted++;
+
+            // Ne oprim cand am atins numarul cerut de boti solicitati de GM
+            if (successfullyStarted >= botCount)
+                break;
+
+        } while (result->NextRow());
+
+
+        // 5. Trimitem raportul final inapoi in chat GM-ului
+        if (successfullyStarted > 0)
+        {
+            handler->PSendSysMessage("|cff00ff00Succes!|r S-a inceput incarcarea pentru |cffffffff%u|r boti pe conturi complet diferite.", successfullyStarted);
+        }
+        else
+        {
+            handler->SendSysMessage("Nu s-a putut incarca niciun bot. Conturile gasite sunt deja ocupate sau logate.");
         }
 
         return true;
