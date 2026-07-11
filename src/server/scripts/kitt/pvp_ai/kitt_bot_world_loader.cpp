@@ -2444,8 +2444,8 @@ public:
         Player* player = session->GetPlayer();
         std::string botName = player ? player->GetName() : "In faza de Login";
 
-        //TC_LOG_INFO("server.loading", "[BotNetwork] S->C [TRIMIS] Catre Bot: {} (Acc: {}) | Opcode: 0x:{} (Size: {})",
-        //    botName.c_str(), accName.c_str(), opcode, (uint32)packet.size());
+        /*TC_LOG_INFO("server.loading", "[BotNetwork] S->C [TRIMIS] Catre Bot: {} (Acc: {}) | Opcode: 0x{:X} (Size: {})",
+            botName.c_str(), accName.c_str(), opcode, (uint32)packet.size());*/
 
         // Organizam totul sub forma de switch (opcode) conform protocolului nativ
         switch (opcode)
@@ -2474,7 +2474,7 @@ public:
         // SMSG_NEW_WORLD = 0x0BB. Cand primeste asta, raspundem cu ACK-ul de incarcare a hartii
         case SMSG_NEW_WORLD:
         {
-            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_NEW_WORLD! Procesam teleportarea asincrona...", botName.c_str());
+            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_NEW_WORLD!", botName.c_str());
 
             WorldPacket readPacket(packet);
             uint32 mapId;
@@ -2485,21 +2485,205 @@ public:
                 readPacket >> mapId;
                 readPacket >> x >> y >> z >> o;
 
-                TC_LOG_INFO("server.loading", "[BotNetwork] -> Teleportare nativa spre Map: {}, X: {}, Y: {}, Z: {}", mapId, x, y, z);
+                Player* botPlayer = session->GetPlayer();
+                if (!botPlayer)
+                    break;
 
-                // Construim pachetul CMSG_MOVE_WORLDPORT_ACK
-                WorldPacket* worldportAck = new WorldPacket(MSG_MOVE_WORLDPORT_ACK, 40);
-                *worldportAck << uint32(0); // Flags
-                *worldportAck << uint8(0);  // Extra flags
-                *worldportAck << uint32(GameTime::GetGameTimeMS()); // Timestamp local fictiv
-                *worldportAck << x << y << z << o;
-                *worldportAck << uint32(0); // Fall time
+                // 1. Pregatim terenul in memorie (varianta ta care a functionat)
+                botPlayer->SetSemaphoreTeleportFar(true);
+                botPlayer->GetTeleportDest() = WorldLocation(mapId, x, y, z, o);
 
-                session->QueuePacket(worldportAck);
-                TC_LOG_INFO("server.loading", "[BotNetwork] -> REUSIT: Pachetul CMSG_MOVE_WORLDPORT_ACK a fost trimis.");
+                // 2. Construim si trimitem pachetul ACK instantaneu
+                WorldPacket worldportAck(MSG_MOVE_WORLDPORT_ACK, 30);
+                worldportAck << uint8(0);
+                worldportAck << uint32(0);
+                worldportAck << uint8(0);
+                worldportAck << uint32(GameTime::GetGameTimeMS());
+                worldportAck << x << y << z << o;
+                worldportAck << uint32(0);
+
+                //OnPacketReceive(session, worldportAck);
+                session->HandleMoveWorldportAckOpcode(worldportAck);
+
+                // 3. IDEEA TA: Planificam DOAR stingerea flag-ului cu o intarziere de 500ms
+                // Acest basic event va rula separat in bucla de update a playerului
+                class BotResetTeleportEvent : public BasicEvent
+                {
+                public:
+                    BotResetTeleportEvent(WorldSession* _session) : session(_session) {}
+
+                    bool Execute(uint64 /*e_time*/, uint32 /*p_time*/) override
+                    {
+                        if (session)
+                        {
+                            if (Player* player = session->GetPlayer())
+                            {
+                                // Comutam fortat flag-ul pe false dupa ce tranzitul s-a asezat complet
+                                player->SetSemaphoreTeleportFar(false);
+                                player->StopMoving();
+                                TC_LOG_INFO("server.loading", "[BotNetwork] -> [DELAY] Semaforul de teleportare a fost resetat asincron pe FALSE pentru {}.", player->GetName().c_str());
+                            }
+                        }
+                        return true;
+                    }
+
+                private:
+                    WorldSession* session;
+                };
+
+                // Adaugam evenimentul de curatare cu 500ms delay in scheduler-ul botului
+                botPlayer->m_Events.AddEvent(new BotResetTeleportEvent(session), botPlayer->m_Events.CalculateTime(500ms));
+
+                TC_LOG_INFO("server.loading", "[BotNetwork] -> Teleportare instantanee executata. Resetarea flag-ului a fost programata.");
             }
             break;
         }
+
+        case MSG_MOVE_TELEPORT:
+        {
+            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit MSG_MOVE_TELEPORT (Teleportare de aproape)!", botName.c_str());
+
+            Player* botPlayer = session->GetPlayer();
+            if (!botPlayer)
+                break;
+
+            // 1. PREGATIRE NATIVA: Setam starea ceruta de functia pe care ai gasit-o
+            // Observa in cod: se verifica 'IsBeingTeleportedNear()', deci activam semaforul Near!
+            botPlayer->SetSemaphoreTeleportNear(true);
+
+            // Ne asiguram ca destinatia este aliniata cu pozitia ceruta de comanda .summon
+            WorldPacket readPacket(packet);
+            // In loc sa parsam manual structura complexa din MSG_MOVE_TELEPORT, 
+            // preluam direct locatia salvata nativ in memoria botului
+            //WorldLocation const& loc = botPlayer->GetTeleportDest();
+
+            // 2. CONSTRUCTIE PACHET EXACT CA PE RETEA: MSG_MOVE_TELEPORT_ACK (0x0C7)
+            // Alocam un pachet brut pe care functia ta 'HandleMoveTeleportAck' sa il poata citi byte cu byte
+            WorldPacket teleportAck(MSG_MOVE_TELEPORT_ACK, 20);
+
+            // Pasul A: guid.ReadAsPacked() -> Trimitem un packed GUID gol (1 byte cu valoarea 0)
+            teleportAck << uint8(0);
+
+            // Pasul B: sequenceIndex (uint32) -> Trimitem un index de miscare fictiv (0)
+            teleportAck << uint32(0);
+
+            // Pasul C: time (uint32) -> Trimitem timestamp-ul curent in milisecunde
+            teleportAck << uint32(GameTime::GetGameTimeMS());
+
+            // Declan?am log-ul tau de retea de siguranta (C->S primit se va aprinde cu Opcode 0xC7!)
+            //OnPacketReceive(session, teleportAck);
+
+            // 3. APELUL FUNCTIEI NATIVE GASITE DE TINE
+            // Pasam pachetul nostru perfect structurat direct in functia din core
+            session->HandleMoveTeleportAck(teleportAck);
+
+            // 4. IDEEA TA: Chiar daca functia opreste 'SetSemaphoreTeleportNear', 
+            // comanda asincrona .summon poate bloca si flag-ul Far. 
+            // Programam un BasicEvent la 500ms care curata definitiv TOATE semafoarele posibile.
+            class BotResetNearTeleportEvent : public BasicEvent
+            {
+            public:
+                BotResetNearTeleportEvent(WorldSession* _session) : session(_session) {}
+
+                bool Execute(uint64 /*e_time*/, uint32 /*p_time*/) override
+                {
+                    if (session && session->GetPlayer())
+                    {
+                        Player* player = session->GetPlayer();
+                        // Stingem absolut toate blocajele de tranzit posibile din core
+                        player->SetSemaphoreTeleportNear(false);
+                        player->SetSemaphoreTeleportFar(false);
+                        player->StopMoving();
+
+                        TC_LOG_INFO("server.loading", "[BotNetwork] -> [DELAY] Toate semafoarele (Near/Far) au fost resetate pe FALSE pentru {}.", player->GetName().c_str());
+                    }
+                    return true;
+                }
+
+            private:
+                WorldSession* session;
+            };
+
+            // Trimitem evenimentul in scheduler-ul botului
+            botPlayer->m_Events.AddEvent(new BotResetNearTeleportEvent(session), botPlayer->m_Events.CalculateTime(1500ms));
+
+            TC_LOG_INFO("server.loading", "[BotNetwork] -> Teleportare locala nativa executata. Curatarea de siguranta a fost programata.");
+            break;
+        }
+
+        case MSG_MOVE_TELEPORT_ACK:
+        {
+            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit MSG_MOVE_TELEPORT_ACK de la server! Trimitem confirmarea inapoi...", botName.c_str());
+
+            Player* botPlayer = session->GetPlayer();
+            if (!botPlayer)
+                break;
+
+            // 1. Pregatim starea nativa Near pe care o cere functia din core
+            botPlayer->SetSemaphoreTeleportNear(true);
+
+            // 2. Construim pachetul de raspuns (C->S) cu structura exacta citita de HandleMoveTeleportAck
+            WorldPacket teleportAck(MSG_MOVE_TELEPORT_ACK, 20);
+
+            // Pasul A: guid.ReadAsPacked() -> Trimitem un packed GUID gol (1 byte cu valoarea 0) pentru boti
+            teleportAck << uint8(0);
+
+            // Pasul B: sequenceIndex (uint32) -> Un index fictiv de miscare (0)
+            teleportAck << uint32(0);
+
+            // Pasul C: time (uint32) -> Timestamp-ul curent al jocului
+            teleportAck << uint32(GameTime::GetGameTimeMS());
+
+            // Aprindem log-ul tau de retea de siguranta (C->S PRIMIT)
+            //OnPacketReceive(session, teleportAck);
+
+            // 3. Executam direct functia nativa din sesiune gasita de tine
+            session->HandleMoveTeleportAck(teleportAck);
+
+            // 4. IDEEA TA: Curatam absolut toate semafoarele asincron la 500ms pentru a preveni blocarea la urmatorul summon
+            class BotResetNearEvent : public BasicEvent
+            {
+            public:
+                BotResetNearEvent(WorldSession* _session) : session(_session) {}
+                bool Execute(uint64, uint32) override
+                {
+                    if (session && session->GetPlayer())
+                    {
+                        Player* player = session->GetPlayer();
+                        player->SetSemaphoreTeleportNear(false);
+                        player->SetSemaphoreTeleportFar(false); // Curatam si Far preventiv
+                        player->StopMoving();
+                        TC_LOG_INFO("server.loading", "[BotNetwork] -> [DELAY] Semafoarele NEAR/FAR au fost deblocate asincron pentru {}.", player->GetName().c_str());
+                    }
+                    return true;
+                }
+            private:
+                WorldSession* session;
+            };
+            botPlayer->m_Events.AddEvent(new BotResetNearEvent(session), botPlayer->m_Events.CalculateTime(500ms));
+
+            TC_LOG_INFO("server.loading", "[BotNetwork] -> Confirmarea locala a fost procesata nativ.");
+            break;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         }
     }
 
