@@ -48,6 +48,8 @@
 #include "GuildPackets.h"
 #include "SocialMgr.h"
 
+#include "WorldPacket.h"
+#include "Opcodes.h"
 
 //extern void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff);
 using namespace Trinity::ChatCommands;
@@ -202,7 +204,7 @@ void PornesteTotiBotii()
         fakeSession->SetRemoteAddress("127.0.0.1");
         fakeSession->m_timeOutTime = GameTime::GetGameTime() + 31536000;
         fakeSession->LoadPermissions();
-        sWorld->AddSession(fakeSession);
+        //sWorld->AddSession(fakeSession);
 
         //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(bot.charGuid);
 
@@ -374,7 +376,7 @@ void PornesteTotiBotii()
         tracker.isProcessed = false;
         tracker.isQueued = false;
 
-        //sWorld->AddSession(fakeSession);
+        sWorld->AddSession(tracker.realSession);
         CharacterDatabase.DelayQueryHolder(loginHolder);
         g_MultiBotTracker.push_back(std::move(tracker));
         FictivBotsGuids.insert(playerGuid);
@@ -396,7 +398,7 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
     fakeSession->SetRemoteAddress("127.0.0.1");
     fakeSession->m_timeOutTime = GameTime::GetGameTime() + 31536000;
     fakeSession->LoadPermissions();
-    sWorld->AddSession(fakeSession);
+    //sWorld->AddSession(fakeSession);
 
     //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(charGuid);
 
@@ -584,6 +586,8 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
             tracker.AccRealBusy = false;
             tracker.RemoveFromWorld = false;
 
+            sWorld->AddSession(tracker.realSession);
+
             gasitInTracker = true;
             break;
         }
@@ -605,6 +609,7 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
         tracker.AccRealBusy = false;          // Completat conform structurii
         tracker.RemoveFromWorld = false;
 
+        sWorld->AddSession(tracker.realSession);
         g_MultiBotTracker.push_back(std::move(tracker));
     }
 
@@ -615,6 +620,13 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
 
 void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
 {
+    // test ....
+    if (!tracker.isProcessed)
+    {
+        TC_LOG_INFO("fakPlayer", "LOG CUSTOM AVERTISMENT: Botul cu GUID {} se afla in loading screen! Stergerea a fost blocata pentru siguranta.", tracker.charGuid);
+        return;
+    }
+
     if (!tracker.kickedByPlayer && !tracker.AccRealBusy)
     {
         tracker.RemoveFromWorld = true;
@@ -648,18 +660,30 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
     }
 
     // Curatam sesiunea din stocarea noastra interna
-    auto accountId = tracker.accountId;
+    /*auto accountId = tracker.accountId;
     g_GhostSessionsStorage.erase(
         std::remove_if(g_GhostSessionsStorage.begin(), g_GhostSessionsStorage.end(),
             [accountId](const std::unique_ptr<WorldSession>& session) {
                 return session && session->GetAccountId() == accountId;
             }),
         g_GhostSessionsStorage.end()
-    );
+    );*/
 
     // Scoatem sesiunea si din managerul principal de sesiuni al serverului
     if (tracker.realSession)
     {
+        uint32 accId = tracker.realSession->GetAccountId();
+        sWorld->RemoveSession(accId);
+
+        SessionMap& writableSessions = const_cast<SessionMap&>(sWorld->GetAllSessions());
+        auto itr = writableSessions.find(accId);
+        if (itr != writableSessions.end())
+        {
+            // IMPORTANT: NU MAI DAM "delete" direct aici (ca sa evitam crash-ul de double-free)!
+            // Doar o stergem din map-ul global pentru a debloca contul pe loc!
+            writableSessions.erase(itr);
+        }
+
         //sWorld->RemoveSession(tracker.realSession->GetAccountId());
 
         //delete tracker.realSession;
@@ -1302,17 +1326,27 @@ public:
                     g_BootSequenceTimer = 5000;
 
                     TC_LOG_INFO("fakPlayer", "LOG CUSTOM: Baza de date a returnat datele pentru GUID {}! Se forteaza intrarea...", tracker.charGuid);
-
+                    /*
                     std::string tempName = "GHOST_SESSION_" + std::to_string(tracker.charGuid);
                     std::shared_ptr<WorldSocket> nullSocket = nullptr;
 
                     auto ghostSession = std::make_unique<WorldSession>(tracker.accountId, std::move(tempName), nullSocket, SEC_PLAYER, 2, 0, std::chrono::minutes(0), LOCALE_enUS, 0, false);
                     //ghostSession->LoadPermissions();
-
+                    
                     Player* botPlayer = new Player(ghostSession.get());
                     ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
 
                     g_GhostSessionsStorage.push_back(std::move(ghostSession));
+                    */
+                    WorldSession* realSession = tracker.realSession;
+                    if (!realSession)
+                    {
+                        TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: Sesiunea reala a disparut din tracker pentru GUID {}.", tracker.charGuid);
+                        return;
+                    }
+
+                    Player* botPlayer = new Player(realSession);
+                    ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
 
                     if (botPlayer->LoadFromDB(playerGuid, *tracker.holder))
                     {
@@ -1443,7 +1477,14 @@ public:
                     {
                         TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: LoadFromDB a refuzat structura holder-ului pentru GUID {}.", tracker.charGuid);
 
-                        if (WorldSession* ghostSession = botPlayer->GetSession())
+                        realSession->SetPlayer(nullptr);
+                        botPlayer->CleanupsBeforeDelete();
+                        delete botPlayer;
+
+                        tracker.realSession = nullptr;
+                        tracker.isProcessed = false;
+
+                        /*if (WorldSession* ghostSession = botPlayer->GetSession())
                         {
                             ghostSession->SetPlayer(nullptr);
                         }
@@ -1461,7 +1502,7 @@ public:
                         );
 
                         tracker.realSession = nullptr;
-                        tracker.isProcessed = false;
+                        tracker.isProcessed = false;*/
                     }
                     return;
                 }
@@ -2347,6 +2388,12 @@ public:
         // 4. Cautam botul in tracker-ul nostru global
         for (auto& tracker : g_MultiBotTracker)
         {
+            if (!tracker.isProcessed)
+            {
+                handler->PSendSysMessage("Ghost character |cff00ff00%s|r is in loading... can't remove.", targetName.c_str());
+                break;
+            }
+
             if (tracker.charGuid == targetGuidLow)
             {
                 gasitSiSters = true;
@@ -2374,22 +2421,55 @@ public:
 
 
 
-
 class kitt_ghost_ack_packet : public ServerScript
 {
 public:
     kitt_ghost_ack_packet() : ServerScript("kitt_ghost_ack_packet") {}
 
+    // 1. CAPTURA PACHETE TRIMISE DE SERVER CATRE BOT (SMSG)
     void OnPacketSend(WorldSession* session, WorldPacket& packet) override
     {
+        if (!session || !session->GetPlayer())
+            return;
 
+        Player* player = session->GetPlayer();
+        uint16 opcode = packet.GetOpcode();
+        std::string const& accName = session->GetAccountName();
+
+        if (accName.find("REAL_BOT_ACC_") == std::string::npos)
+            return;
+
+        std::string botName = player->GetName();
+
+        // Verificam pachetul nativ de invitatie grup (0x06F)
+        if (opcode == 0x06F)  // invite
+        {
+            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_GROUP_INVITE! Injectam acceptul...", botName.c_str());
+
+            WorldPacket* acceptInvite = new WorldPacket(CMSG_GROUP_ACCEPT, 4);
+            *acceptInvite << uint32(0);
+            session->QueuePacket(acceptInvite);
+        }
     }
 
     void OnPacketReceive(WorldSession* session, WorldPacket& packet) override
     {
+        if (!session || !session->GetPlayer())
+            return;
 
+        Player* player = session->GetPlayer();
+        uint16 opcode = packet.GetOpcode();
+        std::string const& accName = session->GetAccountName();
+
+        if (accName.find("REAL_BOT_ACC_") == std::string::npos)
+            return;
+
+        // Acest log se va aprinde in sfarsit cand motorul extrage pachetul!
+        TC_LOG_INFO("server.loading", "[BotNetwork] C->S [PRIMIT] De la Bot: {} | Opcode: 0x{:X} (Size: {})",
+            player->GetName().c_str(), opcode, (uint32)packet.size());
     }
 };
+
 
 void AddSC_kitt_bot_world_loader()
 {
@@ -2398,4 +2478,5 @@ void AddSC_kitt_bot_world_loader()
     new kitt_bot_world_update();
     new kitt_bot_chat_handler();
     new kitt_ghost_player_command();
+    new kitt_ghost_ack_packet();
 }
