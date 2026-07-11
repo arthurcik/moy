@@ -422,7 +422,7 @@ namespace KittBotAI
 
                     if (GunshipStart == IN_PROGRESS)
                     {
-                        KittHandleGunship(bot, master, ai); // gunship
+                        //KittHandleGunship(bot, master, ai); // gunship
                     }
 
                     if (DeathSaurfangStart == IN_PROGRESS)

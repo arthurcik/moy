@@ -1971,7 +1971,7 @@ private:
 
     void CalculateDamage(SpellEffIndex /*effIndex*/)
     {
-        SetEffectValue(GetEffectValue() + _energyLeft * _energyLeft * 12); // ultima setare (* 28)  // kitt original (* 8)
+        SetEffectValue(GetEffectValue() + _energyLeft * _energyLeft * 40); // ultima setare (* 12)  // kitt original (* 8)
     }
 
     void Register() override
