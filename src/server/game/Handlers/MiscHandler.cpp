@@ -447,11 +447,18 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
                   break;
             } while (fakeresult->NextRow());
         }
+
+        data.put(0, matchCount);
     }
-    data.put(0, matchCount);
+    else
+    {
+        data.put(0, displayCount);
+    }
+
+    //data.put(0, matchCount);
     // data.put(0, displayCount);                            // insert right count, count displayed
     //data.put(4, matchCount + sWorld->getIntConfig(CONFIG_UINT32_WHO_COUNT_BASE));                              // insert right count, count of matches
-    if (matchCount >= 49)
+    if (matchCount >= 49 || displayCount >= 49)
     {
         data.put(4, matchCount + sWorld->getIntConfig(CONFIG_UINT32_WHO_COUNT_BASE));
     }
