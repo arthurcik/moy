@@ -1399,7 +1399,7 @@ public:
                             botPlayer->SetMap(map);
 
                             // 1. Calculam coordonatele celulei si grid-ului unde se afla botul in Shattrath/lume
-                            GridCoord p = Trinity::ComputeGridCoord(botPlayer->GetPositionX(), botPlayer->GetPositionY());
+                            //GridCoord p = Trinity::ComputeGridCoord(botPlayer->GetPositionX(), botPlayer->GetPositionY());
 
                             // 2. Fortam serverul sa incarce in memorie bucata de harta (Grid-ul) pentru acele coordonate
                             // Fara asta, in Shattrath botul va cadea in gol sau va genera crash la tick-ul de update
