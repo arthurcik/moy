@@ -641,6 +641,7 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
     // Cautam daca jucatorul este inca in lume
     if (Player* botPlayer = ObjectAccessor::FindConnectedPlayer(playerGuid))
     {
+        //botPlayer->GetSession()->LogoutPlayer(true);
         botPlayer->CombatStop();
         botPlayer->RemoveFromWorld();
         ObjectAccessor::RemoveObject(botPlayer);
