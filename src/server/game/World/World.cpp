@@ -3134,6 +3134,40 @@ void World::UpdateSessions(uint32 diff)
         [[maybe_unused]] uint32 currentSessionId = itr->first;
         TC_METRIC_DETAILED_TIMER("world_update_sessions_time", TC_METRIC_TAG("account_id", std::to_string(currentSessionId)));
 
+        // === PROCESARE RE?EA 100% NATIV? PENTRU BO?I (F?R? SOCKET) ===
+        if (pSession && pSession->GetAccountName().find("REAL_BOT_ACC_") != std::string::npos)
+        {
+            WorldPacket* packet = nullptr;
+
+            // Extragem pachetele din coada privat? a botului folosind filtrul updater nativ
+            while (pSession->_recvQueue.next(packet, updater))
+            {
+                if (!packet)
+                    continue;
+
+                OpcodeClient opcode = static_cast<OpcodeClient>(packet->GetOpcode());
+
+                // Prelu?m handlerul oficial din tabelul global de opcodes al serverului t?u
+                ClientOpcodeHandler const* opHandle = opcodeTable[opcode];
+
+                if (opHandle && pSession->GetPlayer() && pSession->GetPlayer()->IsInWorld())
+                {
+                    // 1. Declan??m managerul de scripturi pentru a aprinde OnPacketReceive în scriptul t?u!
+                    sScriptMgr->OnPacketReceive(pSession, *packet);
+
+                    // 2. APELUL NATIV: Trimitem pachetul direct în handlerul oficial C++ din Core (ex: GroupHandler)
+                    opHandle->Call(pSession, *packet);
+                }
+
+                // ?tergem pachetul conform logicii originale din Core
+                delete packet;
+            }
+
+            // P?streaz? sesiunea activ?, împiedicând ?tergerea automat? din lips? de socket
+            continue;
+        }
+        // ==========================================================
+
         if (!pSession->Update(diff, updater))    // As interval = 0
         {
             // === kitt IMUNIZARE PENTRU AMBELE TIPURI DE SESIUNI ===
