@@ -2375,6 +2375,22 @@ public:
 
 
 
+class kitt_ghost_ack_packet : public ServerScript
+{
+public:
+    kitt_ghost_ack_packet() : ServerScript("kitt_ghost_ack_packet") {}
+
+    void OnPacketSend(WorldSession* session, WorldPacket& packet) override
+    {
+
+    }
+
+    void OnPacketReceive(WorldSession* session, WorldPacket& packet) override
+    {
+
+    }
+};
+
 void AddSC_kitt_bot_world_loader()
 {
     new kitt_bot_world_loader();
