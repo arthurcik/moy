@@ -208,8 +208,21 @@ void WorldSession::SendPacket(WorldPacket const* packet)
 {
     ASSERT(packet->GetOpcode() != NULL_OPCODE);
 
+    /*if (!m_Socket)
+        return;*/
+
+        // kitt === INTERCEPTARE REPARATA PENTRU AMBELE SESIUNI DE BOTI ===
     if (!m_Socket)
+    {
+        std::string const& accName = this->GetAccountName();
+        if (accName.find("REAL_BOT_ACC_") != std::string::npos || accName.find("GHOST_SESSION_") != std::string::npos)
+        {
+            // Fortam trimiterea catre sScriptMgr pentru a porni hook-ul OnPacketSend din scriptul tau!
+            sScriptMgr->OnPacketSend(this, *packet);
+        }
         return;
+    }
+    // ====================================
 
 #ifdef TRINITY_DEBUG
     // Code for network use statistic

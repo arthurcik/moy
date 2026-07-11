@@ -3136,6 +3136,14 @@ void World::UpdateSessions(uint32 diff)
 
         if (!pSession->Update(diff, updater))    // As interval = 0
         {
+            // === kitt IMUNIZARE PENTRU AMBELE TIPURI DE SESIUNI ===
+            std::string const& accName = pSession->GetAccountName();
+            if (accName.find("REAL_BOT_ACC_") != std::string::npos || accName.find("GHOST_SESSION_") != std::string::npos)
+            {
+                continue;
+            }
+            // ====================================
+
             if (!RemoveQueuedPlayer(itr->second) && itr->second && getIntConfig(CONFIG_INTERVAL_DISCONNECT_TOLERANCE))
                 m_disconnects[itr->second->GetAccountId()] = GameTime::GetGameTime();
             RemoveQueuedPlayer(pSession);
