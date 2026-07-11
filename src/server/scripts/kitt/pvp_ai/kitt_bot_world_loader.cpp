@@ -2429,32 +2429,83 @@ public:
     // 1. CAPTURA PACHETE TRIMISE DE SERVER CATRE BOT (SMSG)
     void OnPacketSend(WorldSession* session, WorldPacket& packet) override
     {
-        if (!session || !session->GetPlayer())
+        if (!session)
             return;
 
-        Player* player = session->GetPlayer();
-        uint16 opcode = packet.GetOpcode();
         std::string const& accName = session->GetAccountName();
 
+        // Filtram instant: daca nu este un cont de bot de-al tau, ignoram pachetul
         if (accName.find("REAL_BOT_ACC_") == std::string::npos)
             return;
 
-        std::string botName = player->GetName();
+        uint16 opcode = packet.GetOpcode();
 
-        // Verificam pachetul nativ de invitatie grup (0x06F)
-        if (opcode == 0x06F)  // invite
+        // Preluam numele botului in siguranta (daca playerul nu e gata inca, punem un text de loading)
+        Player* player = session->GetPlayer();
+        std::string botName = player ? player->GetName() : "In faza de Login";
+
+        //TC_LOG_INFO("server.loading", "[BotNetwork] S->C [TRIMIS] Catre Bot: {} (Acc: {}) | Opcode: 0x:{} (Size: {})",
+        //    botName.c_str(), accName.c_str(), opcode, (uint32)packet.size());
+
+        // Organizam totul sub forma de switch (opcode) conform protocolului nativ
+        switch (opcode)
+        {
+            // === 1. PACHETUL NATIV DE INVITATIE GRUP (0x06F) ===
+        case SMSG_GROUP_INVITE:
         {
             TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_GROUP_INVITE! Injectam acceptul...", botName.c_str());
 
             WorldPacket* acceptInvite = new WorldPacket(CMSG_GROUP_ACCEPT, 4);
             *acceptInvite << uint32(0);
             session->QueuePacket(acceptInvite);
+            break;
+        }
+
+        // === 2. CONFIRMAREA LOGARII NATIVE IN LUME ===
+        // SMSG_LOGIN_VERIFY_WORLD = 0x042 (In standard 3.3.5a)
+        // Daca pe revizia ta compilatorul spune ca nu gaseste definitia textuala, poti folosi direct valoarea: case 0x042:
+        case SMSG_LOGIN_VERIFY_WORLD:
+        {
+            TC_LOG_INFO("server.loading", "[BotNetwork] === LOGARE NATIV? REU?IT? === Botul (Acc: {}) a fost inserat in lume de catre nucleul TrinityCore!", accName.c_str());
+            break;
+        }
+
+        // === 3. PACHETUL NATIV DE TELEPORTARE / SUMMON (0x0BB) ===
+        // SMSG_NEW_WORLD = 0x0BB. Cand primeste asta, raspundem cu ACK-ul de incarcare a hartii
+        case SMSG_NEW_WORLD:
+        {
+            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_NEW_WORLD! Procesam teleportarea asincrona...", botName.c_str());
+
+            WorldPacket readPacket(packet);
+            uint32 mapId;
+            float x, y, z, o;
+
+            if (readPacket.size() >= 20)
+            {
+                readPacket >> mapId;
+                readPacket >> x >> y >> z >> o;
+
+                TC_LOG_INFO("server.loading", "[BotNetwork] -> Teleportare nativa spre Map: {}, X: {}, Y: {}, Z: {}", mapId, x, y, z);
+
+                // Construim pachetul CMSG_MOVE_WORLDPORT_ACK
+                WorldPacket* worldportAck = new WorldPacket(MSG_MOVE_WORLDPORT_ACK, 40);
+                *worldportAck << uint32(0); // Flags
+                *worldportAck << uint8(0);  // Extra flags
+                *worldportAck << uint32(GameTime::GetGameTimeMS()); // Timestamp local fictiv
+                *worldportAck << x << y << z << o;
+                *worldportAck << uint32(0); // Fall time
+
+                session->QueuePacket(worldportAck);
+                TC_LOG_INFO("server.loading", "[BotNetwork] -> REUSIT: Pachetul CMSG_MOVE_WORLDPORT_ACK a fost trimis.");
+            }
+            break;
+        }
         }
     }
 
     void OnPacketReceive(WorldSession* session, WorldPacket& packet) override
     {
-        if (!session || !session->GetPlayer())
+        if (!session/* || !session->GetPlayer()*/)
             return;
 
         Player* player = session->GetPlayer();
