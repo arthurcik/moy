@@ -2077,15 +2077,15 @@ public:
         static std::vector<ChatCommandBuilder> kittGhostPlayerCommandSubcommandTable =
         {
             { "access",     kittGhostPlayerCommandSubcommandTable1 },
-            { "ghostList",  HandleShowGhostList,          rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "ghost",      HandleStartGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "ghostbulk",  HandleStartBulkGhostsInWorld, rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "list",  HandleShowGhostList,          rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "add",      HandleStartGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "addmass",  HandleStartBulkGhostsInWorld, rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
             { "remove",     HandleRemoveGhostFromWorld,   rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
         };
 
         static std::vector<ChatCommandBuilder> kittGhostPlayerCommandTable =
         {
-            { "ztfcGhost", kittGhostPlayerCommandSubcommandTable },
+            { "zGhost", kittGhostPlayerCommandSubcommandTable },
         };
 
         return kittGhostPlayerCommandTable;
