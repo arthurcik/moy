@@ -641,23 +641,24 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
     // Cautam daca jucatorul este inca in lume
     if (Player* botPlayer = ObjectAccessor::FindConnectedPlayer(playerGuid))
     {
-        //botPlayer->GetSession()->LogoutPlayer(true);
-        botPlayer->CombatStop();
-        botPlayer->RemoveFromWorld();
-        ObjectAccessor::RemoveObject(botPlayer);
-        botPlayer->SaveToDB(false);
+        botPlayer->GetSession()->LogoutPlayer(true);
+        botPlayer->GetSession()->PlayerLogout();
+        //botPlayer->CombatStop();
+        //botPlayer->RemoveFromWorld();
+        //ObjectAccessor::RemoveObject(botPlayer);
+        //botPlayer->SaveToDB(false);
 
         // CRITIC ANTI-CRASH: Daca sesiunea exista, rupem legatura dintre Player si Sesiune!
-        if (WorldSession* session = botPlayer->GetSession())
+        /*if (WorldSession* session = botPlayer->GetSession())
         {
             // Setam player-ul din sesiune pe nullptr ca destructorul sesiunii sa nu mai apeleze LogoutPlayer pe un obiect mort
             // sa putem da "delete" ....
             if (session)
                 session->SetPlayer(nullptr);
-        }
+        }*/
 
-        botPlayer->CleanupsBeforeDelete();
-        delete botPlayer;
+        //botPlayer->CleanupsBeforeDelete();
+        //delete botPlayer;
     }
 
     // Curatam sesiunea din stocarea noastra interna
@@ -670,11 +671,12 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
         g_GhostSessionsStorage.end()
     );*/
 
+
     // Scoatem sesiunea si din managerul principal de sesiuni al serverului
     if (tracker.realSession)
     {
         uint32 accId = tracker.realSession->GetAccountId();
-        sWorld->RemoveSession(accId);
+        //sWorld->RemoveSession(accId);
 
         SessionMap& writableSessions = const_cast<SessionMap&>(sWorld->GetAllSessions());
         auto itr = writableSessions.find(accId);
@@ -1394,6 +1396,8 @@ public:
 
                         // protectie map instance
                         // nu se poate crea instata daca nu e jucator deja
+                        tracker.realSession->SetPlayer(botPlayer); // test sa il gaseasca la stergere
+
                         uint32 botMapId = botPlayer->GetMapId();
                         MapEntry const* mapEntry = sMapStore.LookupEntry(botMapId);
 
@@ -1419,11 +1423,11 @@ public:
                         }
                         // -------------------
 
-                        botPlayer->GetMotionMaster()->Initialize();
-                        botPlayer->SendDungeonDifficulty(false);
+                        //botPlayer->GetMotionMaster()->Initialize();
+                        //botPlayer->SendDungeonDifficulty(false);
 
                         //tracker.realSession->LoadPermissions();
-                        tracker.realSession->SetPlayer(botPlayer);
+                        //tracker.realSession->SetPlayer(botPlayer);
 
                         //sCharacterCache->AddCharacterCacheEntry(botPlayer->GetGUID(), tracker.accountId, botPlayer->GetName(), botPlayer->GetGender(), botPlayer->GetRace(), botPlayer->GetClass(), botPlayer->GetLevel());
 
@@ -1440,11 +1444,52 @@ public:
                             // Fara asta, in Shattrath botul va cadea in gol sau va genera crash la tick-ul de update
                             map->LoadGrid(botPlayer->GetPositionX(), botPlayer->GetPositionY());
 
+                            // 2. CONFIGUR?M SESIUNEA ?I MI?CAREA (Doar dup? ce harta este valid?!)
+                            tracker.realSession->SetPlayer(botPlayer);
+                            botPlayer->GetMotionMaster()->Initialize();
+                            botPlayer->SendDungeonDifficulty(false);
 
+                            // Protectie anti-gravitate la spawn: Seta?i semafoarele pentru a bloca c?derea în gol în primul tick
+                            botPlayer->SetSemaphoreTeleportFar(true);
+                            botPlayer->SetSemaphoreTeleportNear(true);
+
+                            // 3. LOGARE ÎN LUME ÎN ORDINEA OFICIAL? TRINITYCORE
+                            // Pasul A: Ad?ug?m în Accessorul Global pentru ca thread-urile de h?r?i s? îl g?seasc? în RAM
+                            ObjectAccessor::AddObject(botPlayer);
+
+                            // Pasul B: Ad?ug?m playerul în registrul fizic al h?r?ii active
                             botPlayer->GetMap()->AddPlayerToMap(botPlayer);
 
+                            // Pasul C: Activ?m prezen?a lui global? în lume (Broadcast c?tre cei din jur)
                             botPlayer->AddToWorld();
-                            ObjectAccessor::AddObject(botPlayer);
+
+                            // 4. PLANIFIC?M DEBLOCAREA SEMAFOARELOR (Dup? ce se a?az? în Grid)
+                            class BotSpawnSafeEvent : public BasicEvent
+                            {
+                            public:
+                                BotSpawnSafeEvent(Player* _player) : player(_player) {}
+                                bool Execute(uint64, uint32) override
+                                {
+                                    if (player && player->IsInWorld())
+                                    {
+                                        player->SetSemaphoreTeleportFar(false);
+                                        player->SetSemaphoreTeleportNear(false);
+                                        player->StopMoving();
+                                        TC_LOG_INFO("fakPlayer", "[BotNetwork] -> [SPAWN-SAFE] Semafoarele de siguran?? au fost ridicate pentru {}.", player->GetName().c_str());
+                                    }
+                                    return true;
+                                }
+                            private:
+                                Player* player;
+                            };
+                            botPlayer->m_Events.AddEvent(new BotSpawnSafeEvent(botPlayer), botPlayer->m_Events.CalculateTime(800ms));
+
+
+
+                            //botPlayer->GetMap()->AddPlayerToMap(botPlayer);
+
+                            //botPlayer->AddToWorld();
+                            //ObjectAccessor::AddObject(botPlayer);
 
                             // Asta face ca botul sa fie vazut online la comanda /who sau pe panourile web (UCP/Armory)
                             CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_ONLINE);
@@ -1573,16 +1618,27 @@ public:
                                                     botPlayer->ClearInCombat();
                                                 }
 
-                                                float groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
+                                                // 1. Luam inaltimea curenta a botului ca fallback sigur
+                                                float groundHeight = botPlayer->GetPositionZ();
 
+                                                // 2. PROTECTIE: Rulam GetHeight DOAR daca coordonatele botului sunt valide matematic in RAM
+                                                if (!std::isnan(botPlayer->GetPositionX()) && !std::isinf(botPlayer->GetPositionX()) &&
+                                                    !std::isnan(botPlayer->GetPositionY()) && !std::isinf(botPlayer->GetPositionY()))
+                                                {
+                                                    groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
+                                                }
+
+                                                // 3. Verificam starea de cadere sau anomalie de pozitie
                                                 if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
                                                     botPlayer->IsFalling() ||
                                                     botPlayer->IsUnderWater() ||
                                                     botPlayer->IsInWater() ||
                                                     botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
                                                 {
-                                                    TC_LOG_INFO("fakPlayer", " in apa sau... cade... Falling....");
-                                                    // Jucatorul pica in gol sub harta
+                                                    TC_LOG_INFO("fakPlayer", "LOG PROTECTIE: Botul {} este in apa, cade sau e sub harta. Il trimitem acasa.", botPlayer->GetName().c_str());
+
+                                                    // Teleportam direct botul. NU mai apelam HandleMoveWorldportAckOpcode cu pachete goale aici!
+                                                    // Core-ul va cere singur ACK-ul pe canalul corect cand se va executa teleportarea.
                                                     botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
 
                                                     if (botPlayer->GetSession())
@@ -1591,6 +1647,7 @@ public:
                                                         botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
                                                     }
                                                 }
+
                                                 // ================
 
                                                 continue;
@@ -1714,21 +1771,29 @@ public:
                             TC_LOG_INFO("fakPlayer", "LOG STATUS: Botul {} a iesit din query sau meci. Pornesc cronometrul de re-inscriere...", botPlayer->GetName().c_str());
 
                             // verificare si la iesire din bg
-                            float groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
-                            if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
-                                botPlayer->IsFalling() ||
-                                botPlayer->IsUnderWater() ||
-                                botPlayer->IsInWater() ||
-                                botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
+                            if (!botPlayer->IsBeingTeleported() && !botPlayer->IsLoading() &&
+                                !std::isnan(botPlayer->GetPositionX()) && !std::isinf(botPlayer->GetPositionX()) &&
+                                !std::isnan(botPlayer->GetPositionY()) && !std::isinf(botPlayer->GetPositionY()))
                             {
-                                TC_LOG_INFO("fakPlayer", "22222 in apa sau... cade... Falling....");
-                                // Jucatorul pica in gol sub harta
-                                botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
+                                float groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
 
-                                if (botPlayer->GetSession())
+                                if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
+                                    botPlayer->IsFalling() ||
+                                    botPlayer->IsUnderWater() ||
+                                    botPlayer->IsInWater() ||
+                                    botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
                                 {
-                                    WorldPacket pachetGol;
-                                    botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                                    TC_LOG_INFO("fakPlayer", "LOG PROTECTIE: Botul {} cade sau e in apa dupa meci. Il trimitem la Homebind.", botPlayer->GetName().c_str());
+
+                                    // Teleportam curat. NU mai trimitem pachetGol in HandleMoveWorldportAckOpcode!
+                                    // Core-ul nativ isi va gestiona singur tranzitul la Homebind.
+                                    botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
+
+                                    if (botPlayer->GetSession())
+                                    {
+                                        WorldPacket pachetGol;
+                                        botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                                    }
                                 }
                             }
                         }
@@ -2495,16 +2560,17 @@ public:
                 botPlayer->GetTeleportDest() = WorldLocation(mapId, x, y, z, o);
 
                 // 2. Construim si trimitem pachetul ACK instantaneu
-                WorldPacket worldportAck(MSG_MOVE_WORLDPORT_ACK, 30);
-                worldportAck << uint8(0);
-                worldportAck << uint32(0);
-                worldportAck << uint8(0);
-                worldportAck << uint32(GameTime::GetGameTimeMS());
-                worldportAck << x << y << z << o;
-                worldportAck << uint32(0);
+                WorldPacket* worldportAck = new WorldPacket(MSG_MOVE_WORLDPORT_ACK, 30);
+                *worldportAck << uint8(0);
+                *worldportAck << uint32(0);
+                *worldportAck << uint8(0);
+                *worldportAck << uint32(GameTime::GetGameTimeMS());
+                *worldportAck << x << y << z << o;
+                *worldportAck << uint32(0);
+                //session->QueuePacket(worldportAck);
 
                 //OnPacketReceive(session, worldportAck);
-                session->HandleMoveWorldportAckOpcode(worldportAck);
+                session->HandleMoveWorldportAckOpcode(*worldportAck);
 
                 // 3. IDEEA TA: Planificam DOAR stingerea flag-ului cu o intarziere de 500ms
                 // Acest basic event va rula separat in bucla de update a playerului
@@ -2548,39 +2614,16 @@ public:
             if (!botPlayer)
                 break;
 
-            // 1. PREGATIRE NATIVA: Setam starea ceruta de functia pe care ai gasit-o
-            // Observa in cod: se verifica 'IsBeingTeleportedNear()', deci activam semaforul Near!
             botPlayer->SetSemaphoreTeleportNear(true);
 
-            // Ne asiguram ca destinatia este aliniata cu pozitia ceruta de comanda .summon
-            WorldPacket readPacket(packet);
-            // In loc sa parsam manual structura complexa din MSG_MOVE_TELEPORT, 
-            // preluam direct locatia salvata nativ in memoria botului
-            //WorldLocation const& loc = botPlayer->GetTeleportDest();
+            //WorldPacket readPacket(packet);
+            WorldPacket* teleportAck = new WorldPacket(MSG_MOVE_TELEPORT_ACK, 20);
+            *teleportAck << uint8(0);
+            *teleportAck << uint32(0);
+            *teleportAck << uint32(GameTime::GetGameTimeMS());
+            session->QueuePacket(teleportAck);
+            session->HandleMoveTeleportAck(*teleportAck);
 
-            // 2. CONSTRUCTIE PACHET EXACT CA PE RETEA: MSG_MOVE_TELEPORT_ACK (0x0C7)
-            // Alocam un pachet brut pe care functia ta 'HandleMoveTeleportAck' sa il poata citi byte cu byte
-            WorldPacket teleportAck(MSG_MOVE_TELEPORT_ACK, 20);
-
-            // Pasul A: guid.ReadAsPacked() -> Trimitem un packed GUID gol (1 byte cu valoarea 0)
-            teleportAck << uint8(0);
-
-            // Pasul B: sequenceIndex (uint32) -> Trimitem un index de miscare fictiv (0)
-            teleportAck << uint32(0);
-
-            // Pasul C: time (uint32) -> Trimitem timestamp-ul curent in milisecunde
-            teleportAck << uint32(GameTime::GetGameTimeMS());
-
-            // Declan?am log-ul tau de retea de siguranta (C->S primit se va aprinde cu Opcode 0xC7!)
-            //OnPacketReceive(session, teleportAck);
-
-            // 3. APELUL FUNCTIEI NATIVE GASITE DE TINE
-            // Pasam pachetul nostru perfect structurat direct in functia din core
-            session->HandleMoveTeleportAck(teleportAck);
-
-            // 4. IDEEA TA: Chiar daca functia opreste 'SetSemaphoreTeleportNear', 
-            // comanda asincrona .summon poate bloca si flag-ul Far. 
-            // Programam un BasicEvent la 500ms care curata definitiv TOATE semafoarele posibile.
             class BotResetNearTeleportEvent : public BasicEvent
             {
             public:
@@ -2591,7 +2634,6 @@ public:
                     if (session && session->GetPlayer())
                     {
                         Player* player = session->GetPlayer();
-                        // Stingem absolut toate blocajele de tranzit posibile din core
                         player->SetSemaphoreTeleportNear(false);
                         player->SetSemaphoreTeleportFar(false);
                         player->StopMoving();
@@ -2605,7 +2647,6 @@ public:
                 WorldSession* session;
             };
 
-            // Trimitem evenimentul in scheduler-ul botului
             botPlayer->m_Events.AddEvent(new BotResetNearTeleportEvent(session), botPlayer->m_Events.CalculateTime(1500ms));
 
             TC_LOG_INFO("server.loading", "[BotNetwork] -> Teleportare locala nativa executata. Curatarea de siguranta a fost programata.");
@@ -2620,28 +2661,15 @@ public:
             if (!botPlayer)
                 break;
 
-            // 1. Pregatim starea nativa Near pe care o cere functia din core
             botPlayer->SetSemaphoreTeleportNear(true);
 
-            // 2. Construim pachetul de raspuns (C->S) cu structura exacta citita de HandleMoveTeleportAck
-            WorldPacket teleportAck(MSG_MOVE_TELEPORT_ACK, 20);
+            WorldPacket* teleportAck = new WorldPacket(MSG_MOVE_TELEPORT_ACK, 20);
+            *teleportAck << uint8(0);
+            *teleportAck << uint32(0);
+            *teleportAck << uint32(GameTime::GetGameTimeMS());
+            session->QueuePacket(teleportAck);
+            session->HandleMoveTeleportAck(*teleportAck);
 
-            // Pasul A: guid.ReadAsPacked() -> Trimitem un packed GUID gol (1 byte cu valoarea 0) pentru boti
-            teleportAck << uint8(0);
-
-            // Pasul B: sequenceIndex (uint32) -> Un index fictiv de miscare (0)
-            teleportAck << uint32(0);
-
-            // Pasul C: time (uint32) -> Timestamp-ul curent al jocului
-            teleportAck << uint32(GameTime::GetGameTimeMS());
-
-            // Aprindem log-ul tau de retea de siguranta (C->S PRIMIT)
-            //OnPacketReceive(session, teleportAck);
-
-            // 3. Executam direct functia nativa din sesiune gasita de tine
-            session->HandleMoveTeleportAck(teleportAck);
-
-            // 4. IDEEA TA: Curatam absolut toate semafoarele asincron la 500ms pentru a preveni blocarea la urmatorul summon
             class BotResetNearEvent : public BasicEvent
             {
             public:
@@ -2652,7 +2680,7 @@ public:
                     {
                         Player* player = session->GetPlayer();
                         player->SetSemaphoreTeleportNear(false);
-                        player->SetSemaphoreTeleportFar(false); // Curatam si Far preventiv
+                        player->SetSemaphoreTeleportFar(false);
                         player->StopMoving();
                         TC_LOG_INFO("server.loading", "[BotNetwork] -> [DELAY] Semafoarele NEAR/FAR au fost deblocate asincron pentru {}.", player->GetName().c_str());
                     }
@@ -2685,20 +2713,22 @@ public:
 
 
 
+
+
         }
     }
 
     void OnPacketReceive(WorldSession* session, WorldPacket& packet) override
     {
-        if (!session/* || !session->GetPlayer()*/)
+        if (!session || !session->GetPlayer())
             return;
 
         Player* player = session->GetPlayer();
         uint16 opcode = packet.GetOpcode();
         std::string const& accName = session->GetAccountName();
 
-        if (accName.find("REAL_BOT_ACC_") == std::string::npos)
-            return;
+        //if (accName.find("REAL_BOT_ACC_") == std::string::npos)
+        //    return;
 
         // Acest log se va aprinde in sfarsit cand motorul extrage pachetul!
         TC_LOG_INFO("server.loading", "[BotNetwork] C->S [PRIMIT] De la Bot: {} | Opcode: 0x{:X} (Size: {})",
