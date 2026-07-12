@@ -55,6 +55,7 @@
 using namespace Trinity::ChatCommands;
 
 std::vector<BotAsyncTracker> g_MultiBotTracker;
+std::mutex g_BotTrackerMutex;
 
 namespace
 {
@@ -114,7 +115,7 @@ namespace
     static std::vector<BotAsyncTracker> g_MultiBotTracker;*/
 
     // Vector pentru a pastra sesiunile ghost active in memorie fara sa fie sterse
-    static std::vector<std::unique_ptr<WorldSession>> g_GhostSessionsStorage;
+    //static std::vector<std::unique_ptr<WorldSession>> g_GhostSessionsStorage;
 
     static uint32 g_BootSequenceTimer = 10000;
 
@@ -125,7 +126,7 @@ namespace
             tracker.RemoveFromWorld = true;
         }
         //tracker.RemoveFromWorld = true;
-        tracker.futureResult = {};
+        //tracker.futureResult = {};
         tracker.holder = nullptr;
 
         ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
@@ -152,14 +153,14 @@ namespace
         }
 
         // Curatam sesiunea din stocarea noastra interna
-        auto accountId = tracker.accountId;
+        /*auto accountId = tracker.accountId;
         g_GhostSessionsStorage.erase(
             std::remove_if(g_GhostSessionsStorage.begin(), g_GhostSessionsStorage.end(),
                 [accountId](const std::unique_ptr<WorldSession>& session) {
                     return session && session->GetAccountId() == accountId;
                 }),
             g_GhostSessionsStorage.end()
-        );
+        );*/
 
         // Scoatem sesiunea si din managerul principal de sesiuni al serverului
         if (tracker.realSession)
@@ -372,13 +373,43 @@ void PornesteTotiBotii()
         tracker.charGuid = bot.charGuid;
         tracker.realSession = fakeSession;
         tracker.holder = loginHolder;
-        tracker.futureResult = task.GetFuture();
+        //tracker.futureResult = task.GetFuture();
         tracker.isProcessed = false;
         tracker.isQueued = false;
+        tracker.isReady = false;
 
+
+
+        tracker.realSession->SetIsKittBot(true);
         sWorld->AddSession(tracker.realSession);
-        CharacterDatabase.DelayQueryHolder(loginHolder);
-        g_MultiBotTracker.push_back(std::move(tracker));
+        //CharacterDatabase.DelayQueryHolder(loginHolder);
+        uint32 currentAccountId = bot.accountId;
+
+        // 3. Inseram trackerul in vectorul global PROTEJAT DE MUTEX
+        {
+            std::lock_guard<std::mutex> lock(g_BotTrackerMutex);
+            g_MultiBotTracker.push_back(std::move(tracker));
+        }
+
+        // 4. FIX PENTRU E2634: Utilizam AddQueryHolderCallback din interiorul sesiunii create pentru bot
+        // Aceasta functie stie nativ sa trimita holderul catre CharacterDatabase fara erori de compilare.
+        fakeSession->AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(loginHolder))
+            .AfterComplete([currentAccountId](SQLQueryHolderBase const& /*holder*/)
+                {
+                    // Aceasta bucata se executa AUTOMAT pe thread-ul principal cand SQL-ul s-a terminat!
+                    std::lock_guard<std::mutex> lock(g_BotTrackerMutex);
+
+                    // Cautam botul in vector dupa accountId
+                    for (auto& t : g_MultiBotTracker)
+                    {
+                        if (t.accountId == currentAccountId)
+                        {
+                            t.isReady = true; // Activam flag-ul ca datele sunt complet incarcate in memorie
+                            break;
+                        }
+                    }
+                });
+        //g_MultiBotTracker.push_back(std::move(tracker));
         FictivBotsGuids.insert(playerGuid);
     }
 
@@ -560,60 +591,85 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
     // Trimitem catre thread-ul MySQL
     SQLQueryHolderTask task(loginHolder);
 
-    CharacterDatabase.DelayQueryHolder(loginHolder);
-    FictivBotsGuids.insert(playerGuid);
-    
+    //CharacterDatabase.DelayQueryHolder(loginHolder);
+    //FictivBotsGuids.insert(playerGuid);
 
-    bool gasitInTracker = false;
-    for (auto& tracker : g_MultiBotTracker)
+    fakeSession->SetIsKittBot(true);
+    sWorld->AddSession(fakeSession);
+    uint32 currentAccountId = accountId;
+
     {
-        if (tracker.accountId == accountId)
+        std::lock_guard<std::mutex> lock(g_BotTrackerMutex);
+        bool gasitInTracker = false;
+        for (auto& tracker : g_MultiBotTracker)
         {
-            // resetam
-            tracker.realSession = nullptr;
-            tracker.holder = nullptr;
-            tracker.futureResult = {};
+            if (tracker.accountId == accountId)
+            {
+                // resetam
+                //tracker.realSession = nullptr;
+                //tracker.holder = nullptr;
+                //tracker.futureResult = {};
+                tracker.isReady = false;
 
-            // adaugam
+                // adaugam
+                tracker.realSession = fakeSession;
+                tracker.holder = loginHolder;
+                //tracker.futureResult = task.GetFuture();
+
+                // resetare flags
+                tracker.isProcessed = false;
+                tracker.kickedByPlayer = false;
+                tracker.AccRelogDelay = 5000; // Sincronizam resetarea de siguranta
+                tracker.AccRealBusy = false;
+                tracker.RemoveFromWorld = false;
+
+                //sWorld->AddSession(tracker.realSession);
+
+                gasitInTracker = true;
+                break;
+            }
+        }
+
+        if (!gasitInTracker)
+        {
+            BotAsyncTracker tracker;
+            tracker.accountId = accountId;
+            tracker.charGuid = charGuid;
             tracker.realSession = fakeSession;
             tracker.holder = loginHolder;
-            tracker.futureResult = task.GetFuture();
-
-            // resetare flags
+            //tracker.futureResult = task.GetFuture();
+            tracker.isReady = false;
             tracker.isProcessed = false;
+            tracker.isQueued = false;
+            tracker.rejoinTimer = 0;              // Completat
             tracker.kickedByPlayer = false;
-            tracker.AccRelogDelay = 5000; // Sincronizam resetarea de siguranta
-            tracker.AccRealBusy = false;
+            tracker.AccRelogDelay = 10000;        // Completat conform structurii
+            tracker.AccRealBusy = false;          // Completat conform structurii
             tracker.RemoveFromWorld = false;
 
-            sWorld->AddSession(tracker.realSession);
-
-            gasitInTracker = true;
-            break;
+            //sWorld->AddSession(tracker.realSession);
+            g_MultiBotTracker.push_back(std::move(tracker));
         }
     }
 
-    if (!gasitInTracker)
-    {
-        BotAsyncTracker tracker;
-        tracker.accountId = accountId;
-        tracker.charGuid = charGuid;
-        tracker.realSession = fakeSession;
-        tracker.holder = loginHolder;
-        tracker.futureResult = task.GetFuture();
-        tracker.isProcessed = false;
-        tracker.isQueued = false;
-        tracker.rejoinTimer = 0;              // Completat
-        tracker.kickedByPlayer = false;
-        tracker.AccRelogDelay = 10000;        // Completat conform structurii
-        tracker.AccRealBusy = false;          // Completat conform structurii
-        tracker.RemoveFromWorld = false;
+    fakeSession->AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(loginHolder))
+        .AfterComplete([currentAccountId](SQLQueryHolderBase const& /*holder*/)
+            {
+                // Aceasta bucata se executa AUTOMAT cand thread-ul MySQL a terminat reincarcarea datelor botului!
+                std::lock_guard<std::mutex> lock(g_BotTrackerMutex);
 
-        sWorld->AddSession(tracker.realSession);
-        g_MultiBotTracker.push_back(std::move(tracker));
-    }
+                // Cautam botul in vector dupa accountId pentru a-l trece in starea pregatita
+                for (auto& t : g_MultiBotTracker)
+                {
+                    if (t.accountId == currentAccountId)
+                    {
+                        t.isReady = true;
+                        break;
+                    }
+                }
+            });
 
-    
+    FictivBotsGuids.insert(playerGuid);
 
     TC_LOG_INFO("fakPlayer", "LOG REBOOT: Secventa asincrona a fost relansata curat pentru Cont ID: {}!", accountId);
 }
@@ -632,7 +688,7 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
         tracker.RemoveFromWorld = true;
     }
     //tracker.RemoveFromWorld = true;
-    tracker.futureResult = {};
+    //tracker.futureResult = {};
     tracker.holder = nullptr;
 
     ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
@@ -675,21 +731,22 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
     // Scoatem sesiunea si din managerul principal de sesiuni al serverului
     if (tracker.realSession)
     {
-        uint32 accId = tracker.realSession->GetAccountId();
+        //uint32 accId = tracker.realSession->GetAccountId();
         //sWorld->RemoveSession(accId);
 
-        SessionMap& writableSessions = const_cast<SessionMap&>(sWorld->GetAllSessions());
+        /*SessionMap& writableSessions = const_cast<SessionMap&>(sWorld->GetAllSessions());
         auto itr = writableSessions.find(accId);
         if (itr != writableSessions.end())
         {
             // IMPORTANT: NU MAI DAM "delete" direct aici (ca sa evitam crash-ul de double-free)!
             // Doar o stergem din map-ul global pentru a debloca contul pe loc!
             writableSessions.erase(itr);
-        }
+        }*/
 
         //sWorld->RemoveSession(tracker.realSession->GetAccountId());
 
         //delete tracker.realSession;
+        tracker.realSession->SetIsKittBot(false);
         tracker.realSession = nullptr;
     }
 }
@@ -911,12 +968,12 @@ public:
                 // resetam
                 tracker.realSession = nullptr;
                 tracker.holder = nullptr;
-                tracker.futureResult = {};
+                //tracker.futureResult = {};
 
                 // adaugam
                 tracker.realSession = fakeSession;
                 tracker.holder = loginHolder;
-                tracker.futureResult = task.GetFuture();
+                //tracker.futureResult = task.GetFuture();
 
                 // resetare flags
                 tracker.isProcessed = false;
@@ -937,7 +994,7 @@ public:
             tracker.charGuid = charGuid;
             tracker.realSession = fakeSession;
             tracker.holder = loginHolder;
-            tracker.futureResult = task.GetFuture();
+            //tracker.futureResult = task.GetFuture();
             tracker.isProcessed = false;
             tracker.isQueued = false;
             tracker.rejoinTimer = 0;              // Completat
@@ -1166,7 +1223,7 @@ public:
             tracker.realSession = fakeSession;
             tracker.holder = loginHolder;
             //tracker.futureResult = task.GetFuture();
-            tracker.futureResult = std::move(tempFuture);
+            //tracker.futureResult = std::move(tempFuture);
             tracker.isProcessed = false;
             tracker.isQueued = false;
 
@@ -1234,7 +1291,7 @@ public:
 
                 // 3. Golim complet si vectorul de trackere pentru a reseta starea sistemului
                 g_MultiBotTracker.clear();
-                g_GhostSessionsStorage.clear();
+                //g_GhostSessionsStorage.clear();
 
                 TC_LOG_INFO("server.loading", ">> KITT [GHOST Loader] Toti botii fantoma au fost scosi din lume cu succes.");
             }
@@ -1323,10 +1380,17 @@ public:
                 if (g_BootSequenceTimer > 0)
                     return;
 
-                if (tracker.futureResult.valid() && tracker.futureResult.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                if (tracker.isReady)
                 {
                     tracker.isProcessed = true;
                     g_BootSequenceTimer = 5000;
+
+                    auto loginHolder = std::static_pointer_cast<CharacterDatabaseQueryHolder>(tracker.holder);
+                    if (!loginHolder)
+                    {
+                        tracker.isProcessed = true;
+                        continue;
+                    }
 
                     TC_LOG_INFO("fakPlayer", "LOG CUSTOM: Baza de date a returnat datele pentru GUID {}! Se forteaza intrarea...", tracker.charGuid);
                     /*
@@ -1345,7 +1409,7 @@ public:
                     if (!realSession)
                     {
                         TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: Sesiunea reala a disparut din tracker pentru GUID {}.", tracker.charGuid);
-                        return;
+                        continue;
                     }
 
                     Player* botPlayer = new Player(realSession);
@@ -1353,6 +1417,48 @@ public:
 
                     if (botPlayer->LoadFromDB(playerGuid, *tracker.holder))
                     {
+                        // protectie map instance
+                        // nu se poate crea instata daca nu e jucator deja
+                        tracker.realSession->SetPlayer(botPlayer); // test sa il gaseasca la stergere
+
+                        uint32 botMapId = botPlayer->GetMapId();
+                        MapEntry const* mapEntry = sMapStore.LookupEntry(botMapId);
+
+                        if (!mapEntry || mapEntry->Instanceable())
+                        {
+                            //ForseazaStergereBotFantoma(tracker);
+
+                            uint32 homeMapId = botPlayer->m_homebindMapId;
+                            float homeX = botPlayer->m_homebindX;
+                            float homeY = botPlayer->m_homebindY;
+                            float homeZ = botPlayer->m_homebindZ;
+                            float homeO = botPlayer->GetOrientation();
+                            //botPlayer->TeleportTo(homeMapId, homeX, homeY, homeZ, homeO);
+                            CharacterDatabase.PExecute("UPDATE characters SET position_x = {}, position_y = {}, position_z = {}, orientation = {}, map = {}, instance_id = 0 WHERE guid = {};",
+                                homeX, homeY, homeZ, homeO, homeMapId, tracker.charGuid);
+
+
+                            TC_LOG_INFO("fakPlayer", "LOG GHOST PROTECTIE: Botul {} a fost mutat in memorie catre Homebind (Map: {}).", botPlayer->GetName().c_str(), homeMapId);
+
+                            //PornesteBotIndividual(tracker.accountId, tracker.charGuid);
+
+                            botPlayer->CleanupsBeforeDelete();
+                            delete botPlayer;
+                            if (tracker.realSession)
+                            {
+                                tracker.realSession->SetIsKittBot(false); // Oprim imunitatea sesiunii vechi pentru a fi curatata de nucleu
+                                tracker.realSession->SetPlayer(nullptr);
+                                tracker.realSession = nullptr;
+                            }
+
+                            tracker.RemoveFromWorld = true;
+                            tracker.isProcessed = true;
+                            PornesteBotIndividual(tracker.accountId, tracker.charGuid);
+                            //realSession->SetPlayer(nullptr);
+
+                            continue;
+                        }
+                        // -------------------
 
                         // ==================== ACTIVARE GUILDA REPARATA COMPLET ====================
                         QueryResult dbGuildResult = CharacterDatabase.PQuery("SELECT `guildid`, `rank` FROM `guild_member` WHERE `guid` = {}", tracker.charGuid);
@@ -1394,35 +1500,6 @@ public:
                         botPlayer->ForceValuesUpdateAtIndex(PLAYER_GUILDID);
                         // =====================================================================
 
-                        // protectie map instance
-                        // nu se poate crea instata daca nu e jucator deja
-                        tracker.realSession->SetPlayer(botPlayer); // test sa il gaseasca la stergere
-
-                        uint32 botMapId = botPlayer->GetMapId();
-                        MapEntry const* mapEntry = sMapStore.LookupEntry(botMapId);
-
-                        if (!mapEntry || mapEntry->Instanceable())
-                        {
-                            ForseazaStergereBotFantoma(tracker);
-
-                            uint32 homeMapId = botPlayer->m_homebindMapId;
-                            float homeX = botPlayer->m_homebindX;
-                            float homeY = botPlayer->m_homebindY;
-                            float homeZ = botPlayer->m_homebindZ;
-                            float homeO = botPlayer->GetOrientation();
-                            //botPlayer->TeleportTo(homeMapId, homeX, homeY, homeZ, homeO);
-                            CharacterDatabase.PExecute("UPDATE characters SET position_x = {}, position_y = {}, position_z = {}, orientation = {}, map = {}, instance_id = 0 WHERE guid = {};",
-                                homeX, homeY, homeZ, homeO, homeMapId, tracker.charGuid);
-
-
-                            TC_LOG_INFO("fakPlayer", "LOG GHOST PROTECTIE: Botul {} a fost mutat in memorie catre Homebind (Map: {}).", botPlayer->GetName().c_str(), homeMapId);
-
-                            PornesteBotIndividual(tracker.accountId, tracker.charGuid);
-
-                            continue;
-                        }
-                        // -------------------
-
                         //botPlayer->GetMotionMaster()->Initialize();
                         //botPlayer->SendDungeonDifficulty(false);
 
@@ -1462,6 +1539,8 @@ public:
 
                             // Pasul C: Activ?m prezen?a lui global? în lume (Broadcast c?tre cei din jur)
                             botPlayer->AddToWorld();
+
+                            
 
                             // 4. PLANIFIC?M DEBLOCAREA SEMAFOARELOR (Dup? ce se a?az? în Grid)
                             class BotSpawnSafeEvent : public BasicEvent
@@ -1527,8 +1606,9 @@ public:
                         botPlayer->CleanupsBeforeDelete();
                         delete botPlayer;
 
+                        tracker.realSession->SetIsKittBot(false);
                         tracker.realSession = nullptr;
-                        tracker.isProcessed = false;
+                        tracker.isProcessed = true;
 
                         /*if (WorldSession* ghostSession = botPlayer->GetSession())
                         {
@@ -1550,7 +1630,8 @@ public:
                         tracker.realSession = nullptr;
                         tracker.isProcessed = false;*/
                     }
-                    return;
+                    //return;
+                    continue;
                 }
             }
 
@@ -2498,11 +2579,10 @@ public:
         if (!session)
             return;
 
-        std::string const& accName = session->GetAccountName();
-
-        // Filtram instant: daca nu este un cont de bot de-al tau, ignoram pachetul
-        if (accName.find("REAL_BOT_ACC_") == std::string::npos)
+        if (!session->IsKittBot())
             return;
+
+        std::string const& accName = session->GetAccountName();
 
         uint16 opcode = packet.GetOpcode();
 
@@ -2723,15 +2803,14 @@ public:
         if (!session || !session->GetPlayer())
             return;
 
+        if (!session->IsKittBot())
+            return;
+
         Player* player = session->GetPlayer();
         uint16 opcode = packet.GetOpcode();
-        std::string const& accName = session->GetAccountName();
-
-        //if (accName.find("REAL_BOT_ACC_") == std::string::npos)
-        //    return;
 
         // Acest log se va aprinde in sfarsit cand motorul extrage pachetul!
-        TC_LOG_INFO("server.loading", "[BotNetwork] C->S [PRIMIT] De la Bot: {} | Opcode: 0x{:X} (Size: {})",
+        TC_LOG_INFO("server.loading", "[BotNetwork] Bot->S [PRIMIT] De la Bot: {} | Opcode: 0x{:X} (Size: {})",
             player->GetName().c_str(), opcode, (uint32)packet.size());
     }
 };

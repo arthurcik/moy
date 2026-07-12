@@ -19,7 +19,8 @@ struct BotAsyncTracker
     uint32 charGuid = 0;
     WorldSession* realSession = nullptr;
     std::shared_ptr<CharacterDatabaseQueryHolder> holder = nullptr;
-    std::future<void> futureResult;
+    //std::future<void> futureResult;
+    bool isReady = false;
     bool isProcessed = false;
     bool isQueued = false;
     uint32 rejoinTimer = 0;
@@ -31,6 +32,9 @@ struct BotAsyncTracker
     BotRole determinatRol = BOT_ROLE_NONE;
 };
 extern std::vector<BotAsyncTracker> g_MultiBotTracker;
+extern std::mutex g_BotTrackerMutex;
+
+
 // load ghost
 void PornesteTotiBotii();
 void PornesteBotIndividual(uint32 accountId, uint32 charGuid);
