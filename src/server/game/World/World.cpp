@@ -3134,12 +3134,12 @@ void World::UpdateSessions(uint32 diff)
         [[maybe_unused]] uint32 currentSessionId = itr->first;
         TC_METRIC_DETAILED_TIMER("world_update_sessions_time", TC_METRIC_TAG("account_id", std::to_string(currentSessionId)));
 
-        // === PROCESARE RE?EA 100% NATIV? PENTRU BO?I (F?R? SOCKET) ===
-        if (pSession && pSession->GetAccountName().find("REAL_BOT_ACC_") != std::string::npos)
+        // === PROCESARE RETEA 100% NATIVA PENTRU BOTI (FARA SOCKET) ===
+        if (pSession && pSession->IsKittBot())
         {
             WorldPacket* packet = nullptr;
 
-            // Extragem pachetele din coada privat? a botului folosind filtrul updater nativ
+            // Extragem pachetele din coada privata a botului folosind filtrul updater nativ
             while (pSession->_recvQueue.next(packet, updater))
             {
                 if (!packet)
@@ -3147,43 +3147,62 @@ void World::UpdateSessions(uint32 diff)
 
                 OpcodeClient opcode = static_cast<OpcodeClient>(packet->GetOpcode());
 
-                // Prelu?m handlerul oficial din tabelul global de opcodes al serverului t?u
-                ClientOpcodeHandler const* opHandle = opcodeTable[opcode];
-
-                if (opHandle && pSession->GetPlayer() && pSession->GetPlayer()->IsInWorld())
+                // Validare stricta cu cast explicit pentru a elimina warning-ul C5054
+                if (static_cast<uint32>(opcode) >= static_cast<uint32>(NUM_OPCODE_HANDLERS))
                 {
-                    // 1. Declan??m managerul de scripturi pentru a aprinde OnPacketReceive în scriptul t?u!
-                    sScriptMgr->OnPacketReceive(pSession, *packet);
-
-                    // 2. APELUL NATIV: Trimitem pachetul direct în handlerul oficial C++ din Core (ex: GroupHandler)
-                    opHandle->Call(pSession, *packet);
+                    delete packet;
+                    continue;
                 }
 
-                // ?tergem pachetul conform logicii originale din Core
+                ClientOpcodeHandler const* opHandle = opcodeTable[opcode];
+
+                if (opHandle)
+                {
+                    // Declan?am managerul de scripturi pentru OnPacketReceive
+                    sScriptMgr->OnPacketReceive(pSession, *packet);
+
+                    // Verificam starea ceruta de opcode folosind campul Status din Core-ul tau.
+                    // STATUS_LOGGEDIN (sau valoarea echivalenta din core-ul tau pentru starea in joc) 
+                    // cere ca playerul sa fie complet incarcat in memorie.
+                    bool stareValida = true;
+
+                    if (opHandle->Status == STATUS_LOGGEDIN)
+                    {
+                        if (!pSession->GetPlayer() || !pSession->GetPlayer()->IsInWorld())
+                        {
+                            stareValida = false;
+                        }
+                    }
+                    else if (opHandle->Status == STATUS_NEVER)
+                    {
+                        stareValida = false;
+                    }
+
+                    // Daca botul se afla in starea corecta ceruta de packet handler, executam apelul nativ
+                    if (stareValida)
+                    {
+                        opHandle->Call(pSession, *packet);
+                    }
+                }
+
+                // Stergem pachetul in siguranta pentru a preveni memory leaks
                 delete packet;
             }
 
-            // P?streaz? sesiunea activ?, împiedicând ?tergerea automat? din lips? de socket
+            // Lasam sesiunea sa isi faca update-ul intern de timere (necesar pentru fluxul intern C++),
+            // dar fortam bypass pentru verificarea de deconectare din cauza lipsei de socket.
+            pSession->Update(diff, updater);
             continue;
         }
         // ==========================================================
 
         if (!pSession->Update(diff, updater))    // As interval = 0
         {
-            // === kitt IMUNIZARE PENTRU AMBELE TIPURI DE SESIUNI ===
-            std::string const& accName = pSession->GetAccountName();
-            if (accName.find("REAL_BOT_ACC_") != std::string::npos || accName.find("GHOST_SESSION_") != std::string::npos)
-            {
-                continue;
-            }
-            // ====================================
-
             if (!RemoveQueuedPlayer(itr->second) && itr->second && getIntConfig(CONFIG_INTERVAL_DISCONNECT_TOLERANCE))
                 m_disconnects[itr->second->GetAccountId()] = GameTime::GetGameTime();
             RemoveQueuedPlayer(pSession);
             m_sessions.erase(itr);
             delete pSession;
-
         }
     }
 }

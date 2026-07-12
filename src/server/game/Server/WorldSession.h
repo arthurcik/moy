@@ -646,6 +646,10 @@ class TC_GAME_API WorldSession
         time_t GetCalendarEventCreationCooldown() const { return _calendarEventCreationCooldown; }
         void SetCalendarEventCreationCooldown(time_t cooldown) { _calendarEventCreationCooldown = cooldown; }
 
+        // kitt bots ghost
+        void SetIsKittBot(bool val) { m_isKittBot = val; }
+        bool IsKittBot() const { return m_isKittBot; }
+
     public:                                                 // opcodes handlers
 
         void Handle_NULL(WorldPacket& recvPacket);          // not used
@@ -1294,6 +1298,9 @@ class TC_GAME_API WorldSession
 
         WorldSession(WorldSession const& right) = delete;
         WorldSession& operator=(WorldSession const& right) = delete;
+
+        // kitt bots ghost
+        bool m_isKittBot = false;
 };
 #endif
 /// @}

@@ -211,13 +211,11 @@ void WorldSession::SendPacket(WorldPacket const* packet)
     /*if (!m_Socket)
         return;*/
 
-        // kitt === INTERCEPTARE REPARATA PENTRU AMBELE SESIUNI DE BOTI ===
+    // kitt === INTERCEPTARE REPARATA PENTRU AMBELE SESIUNI DE BOTI ===
     if (!m_Socket)
     {
-        std::string const& accName = this->GetAccountName();
-        if (accName.find("REAL_BOT_ACC_") != std::string::npos || accName.find("GHOST_SESSION_") != std::string::npos)
+        if (this->IsKittBot())
         {
-            // Fortam trimiterea catre sScriptMgr pentru a porni hook-ul OnPacketSend din scriptul tau!
             sScriptMgr->OnPacketSend(this, *packet);
         }
         return;
