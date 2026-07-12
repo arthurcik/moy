@@ -2573,6 +2573,54 @@ class kitt_ghost_ack_packet : public ServerScript
 public:
     kitt_ghost_ack_packet() : ServerScript("kitt_ghost_ack_packet") {}
 
+    void LogheazaOpcodeLipsa(uint32 opcodeId)
+    {
+        // Deschidem fisierul in modul 'append' (adauga la final, nu sterge ce este deja)
+        std::ofstream logFile("boti_opcodes_lipsa.log", std::ios::app);
+        if (!logFile.is_open())
+            return;
+
+        std::string opcodeName = "UNKNOWN_OPCODE";
+
+        // REPARATIE NATIVA DEFINITIVA:
+        // Apelam functia oficiala gasita in Core-ul tau, facand cast explicit la tipul enum Opcodes
+        opcodeName = GetOpcodeNameForLogging(static_cast<Opcodes>(opcodeId));
+
+        // Daca numele returnat este gol, punem o siguranta sa stim ca e un opcode in afara listei
+        if (opcodeName.empty())
+        {
+            opcodeName = "UNKNOWN_OR_CUSTOM_OPCODE";
+        }
+
+        // Formatam timpul curent simplu pentru log
+        time_t acum = time(nullptr);
+        struct tm* tstruct = localtime(&acum);
+        char timpBuffer[80];
+        strftime(timpBuffer, sizeof(timpBuffer), "%Y-%m-%d %H:%M:%S", tstruct);
+
+        // Scriem in fisier: Data/Ora | ID Hexazecimal | Numele oficial din Core
+        logFile << "[" << timpBuffer << "] Opcode lipsa definitie -> ID: 0x"
+            << std::hex << std::uppercase << std::setw(3) << std::setfill('0') << opcodeId
+            << " | Nume: " << opcodeName << std::endl;
+
+        logFile.close();
+    }
+
+    void InjecteazaOpcodeBot(WorldSession* session, uint32 opcodeId, WorldPacket& data)
+    {
+        if (!session || !session->IsKittBot())
+            return;
+
+        WorldPacket* packet = new WorldPacket(opcodeId, data.size());
+        if (!data.empty())
+        {
+            packet->append(data.contents(), data.size());
+        }
+
+        //session->_recvQueue.add(packet);
+        session->QueuePacket(std::move(packet));
+    }
+
     // 1. CAPTURA PACHETE TRIMISE DE SERVER CATRE BOT (SMSG)
     void OnPacketSend(WorldSession* session, WorldPacket& packet) override
     {
@@ -2582,7 +2630,7 @@ public:
         if (!session->IsKittBot())
             return;
 
-        std::string const& accName = session->GetAccountName();
+        //std::string const& accName = session->GetAccountName();
 
         uint16 opcode = packet.GetOpcode();
 
@@ -2590,7 +2638,7 @@ public:
         Player* player = session->GetPlayer();
         std::string botName = player ? player->GetName() : "In faza de Login";
 
-        /*TC_LOG_INFO("server.loading", "[BotNetwork] S->C [TRIMIS] Catre Bot: {} (Acc: {}) | Opcode: 0x{:X} (Size: {})",
+        /*TC_LOG_INFO("server.loading", "[BotNetwork] S->Bot [TRIMIS] Catre Bot: {} (Acc: {}) | Opcode: 0x{:X} (Size: {})",
             botName.c_str(), accName.c_str(), opcode, (uint32)packet.size());*/
 
         // Organizam totul sub forma de switch (opcode) conform protocolului nativ
@@ -2610,15 +2658,15 @@ public:
         // === 2. CONFIRMAREA LOGARII NATIVE IN LUME ===
         // SMSG_LOGIN_VERIFY_WORLD = 0x042 (In standard 3.3.5a)
         // Daca pe revizia ta compilatorul spune ca nu gaseste definitia textuala, poti folosi direct valoarea: case 0x042:
-        case SMSG_LOGIN_VERIFY_WORLD:
+        /*case SMSG_LOGIN_VERIFY_WORLD:
         {
             TC_LOG_INFO("server.loading", "[BotNetwork] === LOGARE NATIV? REU?IT? === Botul (Acc: {}) a fost inserat in lume de catre nucleul TrinityCore!", accName.c_str());
             break;
-        }
+        }*/
 
         // === 3. PACHETUL NATIV DE TELEPORTARE / SUMMON (0x0BB) ===
         // SMSG_NEW_WORLD = 0x0BB. Cand primeste asta, raspundem cu ACK-ul de incarcare a hartii
-        case SMSG_NEW_WORLD:
+        /*case SMSG_NEW_WORLD:
         {
             TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_NEW_WORLD!", botName.c_str());
 
@@ -2659,7 +2707,7 @@ public:
                 public:
                     BotResetTeleportEvent(WorldSession* _session) : session(_session) {}
 
-                    bool Execute(uint64 /*e_time*/, uint32 /*p_time*/) override
+                    bool Execute(uint64 e_time, uint32 p_time) override
                     {
                         if (session)
                         {
@@ -2685,8 +2733,73 @@ public:
             }
             break;
         }
+        */
+
+        case SMSG_NEW_WORLD:
+        {
+            WorldPacket response(MSG_MOVE_WORLDPORT_ACK);
+            InjecteazaOpcodeBot(session, MSG_MOVE_WORLDPORT_ACK, response);
+            break;
+        }
 
         case MSG_MOVE_TELEPORT:
+        case MSG_MOVE_TELEPORT_ACK:
+        {
+            // SIGURANTA ANTI-BUCLA: Daca pachetul este gol sau generat de noi, dam break
+            if (packet.empty() || packet.size() < 20)
+            {
+                break;
+            }
+
+            Player* botPlayer = session->GetPlayer();
+            if (!botPlayer)
+            {
+                break;
+            }
+
+            // 1. SCENARIUL A: TELEPORTARE PE HARTA NOUA (Schimbare fizica de continent Map 0 -> Map 1)
+            if (!botPlayer->IsInWorld())
+            {
+                // Clonam si trimitem ACK-ul binar cerut de server pentru schimbarea hartiilor
+                WorldPacket response(MSG_MOVE_TELEPORT_ACK, packet.size());
+                if (packet.size() > 0)
+                {
+                    response.append(packet.contents(), packet.size());
+                }
+                InjecteazaOpcodeBot(session, MSG_MOVE_TELEPORT_ACK, response);
+
+                // Adaugam si heartbeat-ul de siguranta pe harta noua
+                uint32 moveTime = GameTime::GetGameTimeMS();
+                WorldPacket heartbeat(MSG_MOVE_HEARTBEAT, 32);
+                heartbeat << botPlayer->GetGUID().WriteAsPacked();
+                heartbeat << uint32(0); // Flags
+                heartbeat << uint16(0); // Flags extra
+                heartbeat << moveTime;
+                heartbeat << botPlayer->GetPositionX() << botPlayer->GetPositionY() << botPlayer->GetPositionZ() << botPlayer->GetOrientation();
+                heartbeat << uint32(0); // Fall time
+
+                InjecteazaOpcodeBot(session, MSG_MOVE_HEARTBEAT, heartbeat);
+
+                TC_LOG_INFO("fakPlayer", "[BotNetwork] -> Teleportare HARTA NOUA confirmata pentru {}.", botPlayer->GetName().c_str());
+            }
+            else
+            {
+                // 2. SCENARIUL B: TELEPORTARE PE ACEEASI HARTA (.summon scurt sau aceeasi locatie)
+                // REPARATIE FINALA: Fortam stingerea semaforului de miscare scurta direct pe obiectul Player.
+                // Aceasta linie face exact ce ar fi facut HandleMoveTeleportAck daca pachetul trecea de socket!
+                botPlayer->SetSemaphoreTeleportNear(false);
+
+                // Procesam operatiunile amanate si oprim eventualele miscari vechi
+                botPlayer->ProcessDelayedOperations();
+                botPlayer->StopMoving();
+
+                TC_LOG_INFO("fakPlayer", "[BotNetwork] -> Teleportare ACEEASI HARTA deblocata cu succes in memorie pentru {}.", botPlayer->GetName().c_str());
+            }
+            break;
+        }
+
+
+        /*case MSG_MOVE_TELEPORT:
         {
             TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit MSG_MOVE_TELEPORT (Teleportare de aproape)!", botName.c_str());
 
@@ -2709,7 +2822,7 @@ public:
             public:
                 BotResetNearTeleportEvent(WorldSession* _session) : session(_session) {}
 
-                bool Execute(uint64 /*e_time*/, uint32 /*p_time*/) override
+                bool Execute(uint64 e_time, uint32 p_time) override
                 {
                     if (session && session->GetPlayer())
                     {
@@ -2774,6 +2887,176 @@ public:
             TC_LOG_INFO("server.loading", "[BotNetwork] -> Confirmarea locala a fost procesata nativ.");
             break;
         }
+        */
+        case SMSG_PONG:
+        {
+            uint32 pingId = 0;
+            if (packet.size() >= sizeof(uint32)) { packet >> pingId; }
+            WorldPacket response(CMSG_PING, 12);
+            response << pingId << uint32(0) << uint32(0);
+            InjecteazaOpcodeBot(session, CMSG_PING, response);
+            break;
+        }
+
+        case SMSG_LOGIN_VERIFY_WORLD:
+        {
+            WorldPacket response(CMSG_PLAYER_LOGIN);
+            InjecteazaOpcodeBot(session, CMSG_PLAYER_LOGIN, response);
+            break;
+        }
+
+        // =========================================================================
+        // 1. PACHETE DE CONECTARE SI LOGARE (DEFINITII NATIVE DIN OPCODES.H)
+        // =========================================================================
+        case SMSG_AUTH_RESPONSE:               // 0x1EE - Confirmarea sesiunii in Core
+        case SMSG_ADDON_INFO:                  // 0x2EF - Trimiterea listei de addon-uri active
+        case SMSG_TUTORIAL_FLAGS:              // 0x0FD - Masca de interfata si tutoriale
+        case SMSG_EQUIPMENT_SET_LIST:          // 0x4C0 - Seturile de iteme din inventar salvate
+        case MSG_SET_DUNGEON_DIFFICULTY:       // 0x329 - Sincronizarea dificultatii (Normal/Heroic)
+        case SMSG_GROUP_LIST:                  // 0x07D - Membrii grupului (daca botul era in party)
+        case SMSG_UPDATE_OBJECT:               // 0x0A9 - IMPORTANT: Botul primeste datele 3D din Grid!
+            // Aceste pachete sunt doar informative. Le lasam sa treaca curat.
+            break;
+
+            // =========================================================================
+            // 2. OPRIRE SPAM LA SPAWN (DEFINITII COMBAT DIN OPCODES.H)
+            // =========================================================================
+        case SMSG_SET_PROFICIENCY:             // 0x127 - Sincronizarea competentelor de arme/armuri
+        case SMSG_SET_FLAT_SPELL_MODIFIER:     // 0x266 - Modificatori de spell-uri valorici (talente)
+        case SMSG_SET_PCT_SPELL_MODIFIER:      // 0x267 - Modificatori de spell-uri procentuali (talente)
+        case SMSG_POWER_UPDATE:                // 0x480 - Resursele botului (Mana, Rage, Energy)
+            // Serverul a trimis datele de combat. Le marcam ca primite prin break 
+            // pentru a opri bucla nativa de retransmitere (spam) din Core.
+            break;
+
+            // =========================================================================
+        // 2. PACHETE INFORMATIVE DE MEDIU SI COMBAT (LE IGNORAM SILENTIOS)
+        // =========================================================================
+        case SMSG_CLIENTCACHE_VERSION:         // 0x04AB - Verificarea versiunii de cache client
+        case SMSG_TALENTS_INFO:                // 0x04C0 - Informatii despre talentele botului
+        case SMSG_COMPRESSED_UPDATE_OBJECT:    // 0x01F6 - Update-uri de miscare in masa de la ceilalti jucatori
+        case SMSG_AURA_UPDATE_ALL:             // 0x0495 - Incarcarea tuturor buff-urilor initiale
+        case SMSG_AURA_UPDATE:                 // 0x0496 - Update periodic de aury/buff-uri
+        case SMSG_MESSAGECHAT:                 // 0x0096 - Mesaje de chat receptionate din jur
+        case SMSG_MONSTER_MOVE:                // 0x00DD - Miscarea NPC-urilor sau monstrilor din apropiere
+        case SMSG_CRITERIA_UPDATE:             // 0x046A - Update de statistici/realizari (Achievements)
+        case SMSG_SPELL_GO:                    // 0x0132 - Lansarea fizica a unei vraji in apropierea botului
+        case SMSG_PARTY_MEMBER_STATS:          // 0x007E - Update de viata/mana pentru membrii din party
+            // Toate aceste opcodes sunt procesate cu succes. 
+            // Fiind pachete primite de la server, doar le dam break pentru a opri logarea lor ca "lipsa".
+            break;
+
+            // =========================================================================
+        // 2. PACHETE INFORMATIVE DE MEDIU (ADAGUATE LA ZI - LE IGNORAM SILENTIOS)
+        // =========================================================================
+            // --- TEXTURILE NOI DIN LOG ---
+        case SMSG_DESTROY_OBJECT:              // 0x00AA - Disparitia unui obiect/NPC din raza vizuala
+        case MSG_MOVE_FALL_LAND:               // 0x00C9 - Confirmarea aterizarii la sol dupa cadere
+        case SMSG_SPELL_START:                 // 0x0131 - Inceputul unui cast de spell in jur
+        case SMSG_SPELLENERGIZELOG:            // 0x0151 - Log de incarcare energie/mana de la spell-uri
+        case SMSG_PERIODICAURALOG:             // 0x024E - Tick-urile periodice de buff-uri/debuff-uri
+            // Doar dam break pentru a opri scrierea lor in logul de pachete lipsa
+            break;
+
+            // =========================================================================
+        // 1. SINCRONIZARE TIMP MANDATORIE (ANTI-LAG / ANTI-DESINCRONIZARE)
+        // =========================================================================
+        case SMSG_TIME_SYNC_REQ:               // 0x0390 - Serverul cere verificarea ceasului
+        {
+            WorldPacket p(packet);
+            uint32 counter = 0;
+
+            try
+            {
+                p >> counter; // Citim contorul trimis de server
+            }
+            catch (...) { break; }
+
+            // Generam raspunsul oficial CMSG_TIME_SYNC_RESP
+            WorldPacket response(CMSG_TIME_SYNC_RESP, 4 + 4);
+            response << counter;                  // Trimitem inapoi acelasi contor primit
+            response << GameTime::GetGameTimeMS(); // Trimitem timpul curent al serverului in milisecunde
+
+            InjecteazaOpcodeBot(session, CMSG_TIME_SYNC_RESP, response);
+            break;
+        }
+
+        // =========================================================================
+        // 2. PACHETE INFORMATIVE DE INITIALIZARE JOC (LE IGNORAM SILENTIOS)
+        // =========================================================================
+        case SMSG_CANCEL_COMBAT:               // 0x014E
+        case SMSG_TRANSFER_PENDING:            // 0x003F
+        case SMSG_UPDATE_INSTANCE_OWNERSHIP:   // 0x032B
+        case SMSG_CONTACT_LIST:                // 0x0067
+        case SMSG_BIND_POINT_UPDATE:           // 0x0155
+        case SMSG_INSTANCE_DIFFICULTY:         // 0x033B
+        case SMSG_INITIAL_SPELLS:              // 0x012A
+        case SMSG_SEND_UNLEARN_SPELLS:         // 0x041E
+        case SMSG_ACTION_BUTTONS:              // 0x0129
+        case SMSG_INITIALIZE_FACTIONS:         // 0x0122
+        case SMSG_ALL_ACHIEVEMENT_DATA:        // 0x047D
+        case SMSG_SET_FORCED_REACTIONS:        // 0x02A5
+        case SMSG_CHANNEL_NOTIFY:              // 0x0099
+        case SMSG_INIT_WORLD_STATES:           // 0x02C2
+        case SMSG_UPDATE_WORLD_STATE:          // 0x02C3
+        case SMSG_QUESTGIVER_STATUS_MULTIPLE:  // 0x0418
+        case SMSG_USERLIST_ADD:                // 0x03F0
+        case SMSG_USERLIST_REMOVE:             // 0x03F1
+            // Doar dam break pentru a le opri din logare
+            break;
+
+            // =========================================================================
+            // 3. PACHETE DE MISCARE ALE CELORLALTI JUCATORI DIN JUR (LE IGNORAM SILENTIOS)
+            // =========================================================================
+        case MSG_MOVE_START_BACKWARD:          // 0x00B6
+        case MSG_MOVE_STOP:                    // 0x00B7
+        case MSG_MOVE_START_TURN_LEFT:         // 0x00BC
+        case MSG_MOVE_STOP_TURN:               // 0x00BE
+        case MSG_MOVE_HEARTBEAT:               // 0x00EE
+        case MSG_MOVE_SET_FACING:              // 0x00DA
+            // Botul doar "vede" mi?carea altora. Nu gener?m r?spuns.
+            break;
+
+            // =========================================================================
+// 2. PACHETE INFORMATIVE DE MEDIU ?I VREME (LE IGNOR?M SILEN?IOS)
+// =========================================================================
+        case SMSG_WEATHER:                     // 0x02F4 - Sincronizarea ploii/vremei din Stormwind/lume
+            // Doar le dam break pentru a le sterge din logul de opcodes lipsa
+            break;
+
+            // =========================================================================
+            // 3. PACHETE PERIODICE DE MI?CARE ALE CELORLALTI JUC?TORI (LE IGNOR?M SILEN?IOS)
+            // =========================================================================
+        case MSG_MOVE_START_FORWARD:           // 0x00B5 - Cineva incepe sa mearga inainte
+        case MSG_MOVE_START_STRAFE_LEFT:       // 0x00B8 - Inceput mers lateral stanga
+        case MSG_MOVE_START_STRAFE_RIGHT:      // 0x00B9 - Inceput mers lateral dreapta
+        case MSG_MOVE_STOP_STRAFE:             // 0x00BA - Oprire mers lateral
+        case MSG_MOVE_START_TURN_RIGHT:        // 0x00BD - Inceput rotire dreapta
+            // Doar le dam break. Bo?ii doar recep?ioneaz? mi?c?rile tale din jur.
+            break;
+
+
+            // =========================================================================
+        // 3. PACHETE CARE CER REACTIE (EXEMPLU: CINEVA DA TRADE CU BOTUL)
+        // =========================================================================
+        case SMSG_TRADE_STATUS: // 0x0120
+        {
+            TC_LOG_INFO("fakPlayer", "[BotNetwork] -> Cineva a incercat trade cu botul. Se forteaza CMSG_IGNORE_TRADE.");
+
+            WorldPacket response(CMSG_IGNORE_TRADE);
+            InjecteazaOpcodeBot(session, CMSG_IGNORE_TRADE, response);
+            break;
+        }
+
+
+
+
+        default:
+        {
+            // Apelam functia de logare automata pentru pachetele nerezolvate
+            LogheazaOpcodeLipsa(opcode);
+            break;
+        }
 
 
 
@@ -2809,10 +3092,20 @@ public:
         Player* player = session->GetPlayer();
         uint16 opcode = packet.GetOpcode();
 
-        // Acest log se va aprinde in sfarsit cand motorul extrage pachetul!
-        TC_LOG_INFO("server.loading", "[BotNetwork] Bot->S [PRIMIT] De la Bot: {} | Opcode: 0x{:X} (Size: {})",
-            player->GetName().c_str(), opcode, (uint32)packet.size());
+        // REPARATIE AFISARE NUME: Preluam numele text oficial din Core conform structurii tale
+        std::string opcodeName = GetOpcodeNameForLogging(static_cast<Opcodes>(opcode));
+
+        // Daca functia returneaza gol (caz rar), punem o siguranta text
+        if (opcodeName.empty())
+        {
+            opcodeName = "UNKNOWN_CMSG_OPCODE";
+        }
+
+        // Log formatat curat: afiseaza Nume Caracter | ID Hexazecimal | Dimensiune | Nume Oficial Pachet
+        TC_LOG_INFO("server.loading", "[BotNetwork] Bot->S [PRIMIT] De la Bot: {} | Opcode: 0x{:X} (Size: {}) | Nume: {}",
+            player->GetName().c_str(), opcode, (uint32)packet.size(), opcodeName.c_str());
     }
+
 };
 
 
