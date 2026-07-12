@@ -3161,28 +3161,50 @@ void World::UpdateSessions(uint32 diff)
                     // Declan?am managerul de scripturi pentru OnPacketReceive
                     sScriptMgr->OnPacketReceive(pSession, *packet);
 
-                    // Verificam starea ceruta de opcode folosind campul Status din Core-ul tau.
-                    // STATUS_LOGGEDIN (sau valoarea echivalenta din core-ul tau pentru starea in joc) 
-                    // cere ca playerul sa fie complet incarcat in memorie.
+                    // ==========================================================
+                    // VALIDARE DINAMICA DIN OPCODES.H PENTRU BOTI (LOGARE NATIVA)
+                    // ==========================================================
                     bool stareValida = true;
 
-                    if (opHandle->Status == STATUS_LOGGEDIN)
+                    // 1. Daca opcode-ul este marcat explicit ca fiind interzis de la client
+                    if (opHandle->Status == STATUS_NEVER)
                     {
-                        if (!pSession->GetPlayer() || !pSession->GetPlayer()->IsInWorld())
+                        stareValida = false;
+                    }
+                    // 2. Daca opcode-ul cere ca playerul sa fie complet conectat in joc
+                    else if (opHandle->Status == STATUS_LOGGEDIN)
+                    {
+                        // Ne asiguram doar ca obiectul Player a fost instantiat in memorie.
+                        // Nu mai verificam IsInWorld(), permitand pachetelor de miscare/teleportare sa treaca!
+                        if (!pSession->GetPlayer())
                         {
                             stareValida = false;
                         }
                     }
-                    else if (opHandle->Status == STATUS_NEVER)
+                    // 3. Daca opcode-ul este trimis in faza de incarcare/teleportare (ecran albastru)
+                    else if (opHandle->Status == STATUS_TRANSFER)
                     {
-                        stareValida = false;
+                        // Permitem pachetelor specifice de transfer (cum e MSG_MOVE_TELEPORT_ACK) sa fie procesate
+                        if (!pSession->GetPlayer())
+                        {
+                            stareValida = false;
+                        }
+                    }
+                    // 4. Daca botul este doar logat in ecranul de caractere (STATUS_AUTHED)
+                    else if (opHandle->Status == STATUS_AUTHED)
+                    {
+                        // In aceasta stare, _player este inca NULL nativ. 
+                        // Pe viitor, cand botul va trimite pachete din ecranul de caractere (ex: CMSG_CHAR_ENUM, CMSG_PLAYER_LOGIN),
+                        // ele vor trece direct si vor fi procesate perfect de server!
+                        stareValida = true;
                     }
 
-                    // Daca botul se afla in starea corecta ceruta de packet handler, executam apelul nativ
+                    // Daca starea botului se potriveste cu permisiunea opcode-ului, apelam Core-ul nativ
                     if (stareValida)
                     {
                         opHandle->Call(pSession, *packet);
                     }
+
                 }
 
                 // Stergem pachetul in siguranta pentru a preveni memory leaks
