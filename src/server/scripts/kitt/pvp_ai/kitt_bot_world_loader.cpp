@@ -2175,7 +2175,7 @@ public:
 
         std::transform(msg.begin(), msg.end(), msg.begin(), ::tolower);
 
-        std::string raspunsText = "";
+        std::string raspunsText = "nu ne cunoastem";
 
 
         if (msg == "vino" || msg == "port")
@@ -2569,15 +2569,15 @@ public:
             }
 
             // 3. Determinam starea flag-ului AddFromChatCmd (ON cu verde / OFF cu rosu)
-            std::string chatCmdText = tracker.AddFromChatCmd ? "|cff00ff00ON|r" : "|cffff0000OFF|r";
+            std::string chatCmdText = !tracker.AddFromChatCmd ? "|cff00ff00ON|r" : "|cffff0000OFF|r";
 
             // 4. Printam linia formatata curat in chat-ul GM-ului
             // Format: 1. [Nume] (AccID: X) | Status: ONLINE | ChatCmd: ON
-            handler->PSendSysMessage("%u. |cff00ff00%s|r (AccID: %u) | Status: %s | ChatCmd: %s",
+            handler->PSendSysMessage("%u. |cff00ff00%s|r (AccID: %u) | Status: %s | PvP ai: %s",
                 index++, charName.c_str(), tracker.accountId, statusText.c_str(), chatCmdText.c_str());
         }
 
-        handler->SendSysMessage("=============================================");
+        handler->SendSysMessage("=================================");
         return true;
     }
 
