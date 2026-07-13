@@ -1935,9 +1935,6 @@ public:
                                 }
                                 else
                                 {
-                                    // Daca este un simplu membru (ca Judy), nu ii setam isQueued = true acum.
-                                    // El isi va lua starea de true automat din ramura "else" a conditiei principale, 
-                                    // doar dupa ce liderul lui va fi apucat sa il bage efectiv in coada (areCoadaActiva va deveni true).
                                     tracker.isQueued = false;
                                 }
                             }
@@ -1968,11 +1965,13 @@ private:
         if (!botPlayer)
             return;
 
-        // Pasul 1: Inscrierea se face DOAR daca botul este liderul grupului sau daca este solo
         Group* group = botPlayer->GetGroup();
+
+        if (!group)
+            return;
+
         if (group && !group->IsLeader(botPlayer->GetGUID()))
         {
-            // Daca nu este liderul, sarim peste el. Liderul grupului va inscrie automat tot party-ul!
             return;
         }
 
@@ -2178,6 +2177,7 @@ public:
 
         std::string raspunsText = "";
 
+
         if (msg == "vino" || msg == "port")
         {
             uint32 targetMapId = player->GetMapId();
@@ -2186,14 +2186,12 @@ public:
             if (!mapEntry || mapEntry->Instanceable())
             {
                 raspunsText = "Nu vreau";
+                return;
             }
             else
             {
-
                 raspunsText = "Pornesc spre tine acum!";
 
-                // Aici vom pune mai tarziu secventa de teleportare safely
-                //uint32 targetMapId = player->GetMapId();
                 float posX = player->GetPositionX();
                 float posY = player->GetPositionY();
                 float posZ = player->GetPositionZ();
@@ -2211,15 +2209,45 @@ public:
                 {
                     receiver->AddToWorld();
                 }
+                return;
             }
         }
-        else if (msg == "status")
+
+        if (msg == "leave group")
+        {
+            uint32 targetMapId = player->GetMapId();
+            MapEntry const* mapEntry = sMapStore.LookupEntry(targetMapId);
+
+            if (!mapEntry || mapEntry->Instanceable() || mapEntry->IsBattleArena() || mapEntry->IsBattleground())
+            {
+                raspunsText = "Sunt intr-o instanta acum";
+            }
+            else
+            {
+                Group* gr = receiver->GetGroup();
+                if (gr)
+                {
+                    raspunsText = "Ies acum din grupul curent.";
+                    gr->RemoveMember(receiver->GetGUID());
+                    return;
+                }
+                else
+                {
+                    raspunsText = "Nu sunt in niciun grup.";
+                    return;
+                }
+            }
+        }
+
+        if (msg == "status")
         {
             raspunsText = "Sunt online si pregatit de arena!";
+            return;
         }
         else
         {
-            raspunsText = "Nu inteleg aceasta comanda. Scrie 'vino' sau 'status'.";
+            raspunsText = "Nu inteleg aceasta comanda. Scrie 'vino', 'status'.";
+            return;
         }
 
         WorldPacket data;
