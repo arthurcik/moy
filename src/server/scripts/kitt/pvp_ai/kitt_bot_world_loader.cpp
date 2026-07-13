@@ -1768,7 +1768,7 @@ public:
 
                                             // === LINIA TA DE SIGURANTA ANTI-PUNCTARE DUBLA ===
                                             // sa nu le dea dublu jocuri contorizate
-                                            //bgQueue.RemovePlayer(botPlayer->GetGUID(), false);
+                                            bgQueue.RemovePlayer(botPlayer->GetGUID(), false);
                                             // ================================================
 
                                             // 3. REPARATIE CRITICA PARAMETRI: Teleportarea nativa prin managerul de Battleground
