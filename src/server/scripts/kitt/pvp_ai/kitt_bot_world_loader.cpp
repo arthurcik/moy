@@ -1753,39 +1753,34 @@ public:
                                                     bgTeamId = (botGroup->GetGUID().GetCounter() % 2 == 0) ? TEAM_ALLIANCE : TEAM_HORDE;
                                             }
 
-                                            // Sincronizam tabara botului cu echipa stabilita
+                                            // 1. Sincronizam echipa botului
                                             botPlayer->SetBGTeam(bgTeamId == TEAM_ALLIANCE ? ALLIANCE : HORDE);
 
-                                            Position const* startPos = bg->GetTeamStartPosition(bgTeamId);
+                                            // 2. Configuram punctele de tranzit si intrarile native conform header-ului tau
+                                            botPlayer->SetBattlegroundEntryPoint();
+                                            botPlayer->SetBattlegroundId(bg->GetInstanceID(), bg->GetTypeID());
 
-                                            if (startPos)
-                                            {
-                                                tracker.isQueued = true;
+                                            // Corectie functii invitat: Preluam ID-ul de invitatie si il salvam pe player
+                                            uint32 inviteTeamId = botPlayer->GetArenaTeamIdInvited();
+                                            botPlayer->SetArenaTeamIdInvited(inviteTeamId);
 
-                                                //TC_LOG_INFO("fakPlayer", "LOG ARENA: Botul {} accepta invitatia nativ...", botPlayer->GetName().c_str());
-                                                botPlayer->SetBattlegroundEntryPoint();
-                                                botPlayer->SetBattlegroundId(bg->GetInstanceID(), bg->GetTypeID());
+                                            tracker.isQueued = true;
 
-                                                //bg->AddPlayer(botPlayer);
-                                                bgQueue.RemovePlayer(botPlayer->GetGUID(), false);
+                                            // === LINIA TA DE SIGURANTA ANTI-PUNCTARE DUBLA ===
+                                            // sa nu le dea dublu jocuri contorizate
+                                            //bgQueue.RemovePlayer(botPlayer->GetGUID(), false);
+                                            // ================================================
 
-                                                botPlayer->TeleportTo(bg->GetMapId(), startPos->GetPositionX(), startPos->GetPositionY(), startPos->GetPositionZ(), startPos->GetOrientation());
+                                            // 3. REPARATIE CRITICA PARAMETRI: Teleportarea nativa prin managerul de Battleground
+                                            // Parametrii trimisi: obiectul player, ID-ul real de instanta al arenei, Tipul de BG/Arena
+                                            sBattlegroundMgr->SendToBattleground(botPlayer, bg->GetInstanceID(), bg->GetTypeID());
 
-                                                /*if (botPlayer->GetSession())
-                                                {
-                                                    WorldPacket pachetGol;
-                                                    botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                                                }*/
+                                            TC_LOG_INFO("fakPlayer", "LOG ARENA REUSIT: {} a intrat nativ in Arena ID: {} (Tip: {}) cu eliminare din coada.",
+                                                botPlayer->GetName().c_str(), bg->GetInstanceID(), bg->GetTypeID());
 
-                                                if (!botPlayer->IsInWorld() && !botPlayer->IsLoading() && !botPlayer->IsBeingTeleported())
-                                                {
-                                                    botPlayer->AddToWorld();
-                                                }
+                                            break;
 
-                                                TC_LOG_INFO("fakPlayer", "LOG ARENA REUSIT: {} este online, activ si listat in arena!", botPlayer->GetName());
 
-                                                break;
-                                            }
                                         }
                                         continue;
                                     }
@@ -2800,12 +2795,15 @@ public:
 
         case SMSG_GROUP_INVITE:
         {
-            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_GROUP_INVITE! Injectam acceptul...", botName.c_str());
+            TC_LOG_INFO("fakPlayer", "[BotNetwork] -> Botul a primit o invitatie de grup. Se trimite acceptul securizat cu corp de 4 octeti.");
 
-            /*WorldPacket* acceptInvite = new WorldPacket(CMSG_GROUP_ACCEPT, 4);
-            *acceptInvite << uint32(0);
-            session->QueuePacket(acceptInvite);*/
-            WorldPacket response(CMSG_GROUP_ACCEPT);
+            // Construeam pachetul de raspuns cu spatiu alocat pentru un uint32
+            WorldPacket response(CMSG_GROUP_ACCEPT, 4);
+
+            // REPARATIE CRASH: Injectam valoarea zero ceruta de handler-ul din Core-ul tau
+            response << uint32(0);
+
+            // Injectam pachetul securizat in coada botului
             InjecteazaOpcodeBot(session, CMSG_GROUP_ACCEPT, response);
             break;
         }
