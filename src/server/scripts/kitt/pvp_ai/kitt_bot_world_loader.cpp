@@ -1683,11 +1683,11 @@ public:
 
                                                     botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
 
-                                                    if (botPlayer->GetSession())
+                                                    /*if (botPlayer->GetSession())
                                                     {
                                                         WorldPacket pachetGol;
                                                         botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                                                    }
+                                                    }*/
 
                                                     botPlayer->DurabilityRepairAll(false, 0, false);
                                                     botPlayer->RemoveAllAuras();
@@ -1722,11 +1722,11 @@ public:
                                                     // Core-ul va cere singur ACK-ul pe canalul corect cand se va executa teleportarea.
                                                     botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
 
-                                                    if (botPlayer->GetSession())
+                                                    /*if (botPlayer->GetSession())
                                                     {
                                                         WorldPacket pachetGol;
                                                         botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                                                    }
+                                                    }*/
                                                 }
 
                                                 // ================
@@ -1771,11 +1771,11 @@ public:
 
                                                 botPlayer->TeleportTo(bg->GetMapId(), startPos->GetPositionX(), startPos->GetPositionY(), startPos->GetPositionZ(), startPos->GetOrientation());
 
-                                                if (botPlayer->GetSession())
+                                                /*if (botPlayer->GetSession())
                                                 {
                                                     WorldPacket pachetGol;
                                                     botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                                                }
+                                                }*/
 
                                                 if (!botPlayer->IsInWorld() && !botPlayer->IsLoading() && !botPlayer->IsBeingTeleported())
                                                 {
@@ -1825,11 +1825,11 @@ public:
                             botPlayer->LeaveBattleground(true, true);
 
                             // opcode
-                            if (botPlayer->GetSession())
+                            /*if (botPlayer->GetSession())
                             {
                                 WorldPacket pachetGol;
                                 botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                            }
+                            }*/
 
                             // --- LOGICA VERIFICARE SI ADAUGARE RATING ---
                             CheckAndRewardArenaBotRating(botPlayer);
@@ -1870,11 +1870,11 @@ public:
                                     // Core-ul nativ isi va gestiona singur tranzitul la Homebind.
                                     botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
 
-                                    if (botPlayer->GetSession())
+                                    /*if (botPlayer->GetSession())
                                     {
                                         WorldPacket pachetGol;
                                         botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                                    }
+                                    }*/
                                 }
                             }
                         }
@@ -2206,11 +2206,11 @@ public:
 
                 receiver->TeleportTo(targetMapId, posX, posY, posZ, orientation);
 
-                if (receiver->GetSession())
+                /*if (receiver->GetSession())
                 {
                     WorldPacket pachetGol;
                     receiver->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                }
+                }*/
 
                 if (!receiver->IsInWorld())
                 {
