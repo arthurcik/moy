@@ -3049,8 +3049,36 @@ public:
 
 
             // =========================================================================
-        // 3. PACHETE CARE CER REACTIE (EXEMPLU: CINEVA DA TRADE CU BOTUL)
-        // =========================================================================
+// 2. PACHETE INFORMATIVE DE MEDIU, GRUP ?I LUPT? (LE IGNOR?M SILEN?IOS)
+// =========================================================================
+        case SMSG_BATTLEFIELD_STATUS:          // 0x02D4 - Starea cozii si a meciului de BG
+        case SMSG_GROUP_JOINED_BATTLEGROUND:   // 0x02E8 - Anunt ca grupul a intrat in coada
+        case SMSG_BATTLEGROUND_PLAYER_JOINED:  // 0x02EC - Jucator nou intrat in instanta de PvP
+        case SMSG_GROUP_SET_LEADER:            // 0x0079 - Schimbarea liderului de grup
+        case SMSG_SPELLHEALLOG:                // 0x0150 - Log de healing primit de bot sau aliati
+        case SMSG_ATTACK_START:                // 0x0143 - Botul a inceput atacul melee pe o tinta
+        case SMSG_ATTACK_STOP:                 // 0x0144 - Oprirea atacului melee
+        case SMSG_ATTACK_SWING_NOT_IN_RANGE:   // 0x0145 - Tinta melee este prea departe
+        case SMSG_CAST_FAILED:                 // 0x0130 - Vraja a esuat (Out of range / Out of sight)
+        case SMSG_GAMEOBJECT_DESPAWN_ANIM:     // 0x0215 - Disparitia portilor de start ale arenei/BG-ului
+        case SMSG_SPELLNONMELEEDAMAGELOG:      // 0x0250 - Log de damage din magii/spells
+            // Doar le dam break pentru a curata logul de noutati
+            break;
+
+            // =========================================================================
+            // 3. PACHETE DE MI?CARE ?I VITEZ? ALE SERVERULUI (LE IGNOR?M SILEN?IOS)
+            // =========================================================================
+        case MSG_MOVE_ROOT:                    // 0x00EC - Serverul imobilizeaza botul (por?ile sunt inchise)
+        case MSG_MOVE_SET_RUN_SPEED:           // 0x00CD - Schimbarea vitezei de alergare nativa
+        case MSG_MOVE_SET_SWIM_SPEED:          // 0x00D3 - Schimbarea vitezei de inot
+        case MSG_MOVE_SET_FLIGHT_SPEED:        // 0x037E - Schimbarea vitezei de zbor
+        case MSG_MOVE_SET_RUN_BACK_SPEED:      // 0x00CF - Viteza de mers cu spatele
+        case MSG_MOVE_SET_SWIM_BACK_SPEED:     // 0x00D5 - Viteza de inot cu spatele
+        case MSG_MOVE_SET_FLIGHT_BACK_SPEED:   // 0x0380 - Viteza de zbor cu spatele
+            // Serverul doar configureaza fizica botului. Dam break.
+            break;
+
+
 
 
 
