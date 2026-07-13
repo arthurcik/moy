@@ -2645,15 +2645,6 @@ public:
         switch (opcode)
         {
             // === 1. PACHETUL NATIV DE INVITATIE GRUP (0x06F) ===
-        case SMSG_GROUP_INVITE:
-        {
-            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_GROUP_INVITE! Injectam acceptul...", botName.c_str());
-
-            WorldPacket* acceptInvite = new WorldPacket(CMSG_GROUP_ACCEPT, 4);
-            *acceptInvite << uint32(0);
-            session->QueuePacket(acceptInvite);
-            break;
-        }
 
         // === 2. CONFIRMAREA LOGARII NATIVE IN LUME ===
         // SMSG_LOGIN_VERIFY_WORLD = 0x042 (In standard 3.3.5a)
@@ -2797,6 +2788,29 @@ public:
             }
             break;
         }
+
+        case SMSG_TRADE_STATUS: // 0x0120
+        {
+            TC_LOG_INFO("fakPlayer", "[BotNetwork] -> Cineva a incercat trade cu botul. Se forteaza CMSG_IGNORE_TRADE.");
+
+            WorldPacket response(CMSG_IGNORE_TRADE);
+            InjecteazaOpcodeBot(session, CMSG_IGNORE_TRADE, response);
+            break;
+        }
+
+        case SMSG_GROUP_INVITE:
+        {
+            TC_LOG_INFO("server.loading", "[BotNetwork] -> HOOK: Botul {} a primit SMSG_GROUP_INVITE! Injectam acceptul...", botName.c_str());
+
+            /*WorldPacket* acceptInvite = new WorldPacket(CMSG_GROUP_ACCEPT, 4);
+            *acceptInvite << uint32(0);
+            session->QueuePacket(acceptInvite);*/
+            WorldPacket response(CMSG_GROUP_ACCEPT);
+            InjecteazaOpcodeBot(session, CMSG_GROUP_ACCEPT, response);
+            break;
+        }
+
+
 
 
         /*case MSG_MOVE_TELEPORT:
@@ -3039,14 +3053,6 @@ public:
             // =========================================================================
         // 3. PACHETE CARE CER REACTIE (EXEMPLU: CINEVA DA TRADE CU BOTUL)
         // =========================================================================
-        case SMSG_TRADE_STATUS: // 0x0120
-        {
-            TC_LOG_INFO("fakPlayer", "[BotNetwork] -> Cineva a incercat trade cu botul. Se forteaza CMSG_IGNORE_TRADE.");
-
-            WorldPacket response(CMSG_IGNORE_TRADE);
-            InjecteazaOpcodeBot(session, CMSG_IGNORE_TRADE, response);
-            break;
-        }
 
 
 
