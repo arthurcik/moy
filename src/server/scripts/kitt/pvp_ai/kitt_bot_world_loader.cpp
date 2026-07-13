@@ -2246,8 +2246,10 @@ public:
         {
             { "access",     kittGhostPlayerCommandSubcommandTable1 },
             { "list",  HandleShowGhostList,          rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "add",      HandleStartGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "addmass",  HandleStartBulkGhostsInWorld, rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "add one",      HandleStartGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "add mass",  HandleStartBulkGhostsInWorld, rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "ai on",      HandleAiOnGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "ai off",      HandleAiOffGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
             { "remove",     HandleRemoveGhostFromWorld,   rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
         };
 
@@ -2490,12 +2492,43 @@ public:
     static bool HandleShowGhostList(ChatHandler* handler, Optional<std::string_view> /*args*/)
     {
         handler->SendSysMessage("=== |cff00ff00Active Ghost Bots in Tracker|r ===");
+
+        if (g_MultiBotTracker.empty())
+        {
+            handler->SendSysMessage("No ghost bots registered in the system.");
+            return true;
+        }
+
         uint32 index = 1;
         for (const auto& tracker : g_MultiBotTracker)
         {
-            handler->PSendSysMessage("%u. Account ID: %u | Character GUID: %u | Status: %s",
-                index++, tracker.accountId, tracker.charGuid, tracker.isProcessed ? "|cff00ff00ONLINE|r" : "|cffff0000LOADING|r");
+            // 1. Reconstruim ObjectGuid-ul nativ pe baza GUID-ului Low (Counter) salvat in tracker
+            ObjectGuid botGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
+
+            // Cautam in cache numele oficial stocat in baza de date
+            std::string charName = "Unknown";
+            if (CharacterCacheEntry const* cacheEntry = sCharacterCache->GetCharacterCacheByGuid(botGuid))
+            {
+                charName = cacheEntry->Name;
+            }
+
+            // 2. Determinam starea exacta: ONLINE (daca e in lume) sau LOADING (daca inca se incarca)
+            std::string statusText = "|cffff0000LOADING|r";
+            if (tracker.isProcessed)
+            {
+                statusText = "|cff00ff00ONLINE|r";
+            }
+
+            // 3. Determinam starea flag-ului AddFromChatCmd (ON cu verde / OFF cu rosu)
+            std::string chatCmdText = tracker.AddFromChatCmd ? "|cff00ff00ON|r" : "|cffff0000OFF|r";
+
+            // 4. Printam linia formatata curat in chat-ul GM-ului
+            // Format: 1. [Nume] (AccID: X) | Status: ONLINE | ChatCmd: ON
+            handler->PSendSysMessage("%u. |cff00ff00%s|r (AccID: %u) | Status: %s | ChatCmd: %s",
+                index++, charName.c_str(), tracker.accountId, statusText.c_str(), chatCmdText.c_str());
         }
+
+        handler->SendSysMessage("=============================================");
         return true;
     }
 
@@ -2553,6 +2586,127 @@ public:
         if (!gasitSiSters)
         {
             handler->PSendSysMessage("Character |cffffffff'%s'|r is not registered in the bot tracker.", targetName.c_str());
+        }
+
+        return true;
+    }
+
+    static bool HandleAiOnGhostInWorld(ChatHandler* handler, Optional<std::string_view> args)
+    {
+        Player* me = handler->GetSession()->GetPlayer();
+        if (!me)
+            return true;
+
+        // 1. Verificam daca s-a introdus numele botului
+        if (!args)
+        {
+            handler->SendSysMessage("Usage: |cffffffff.ztfcbot ai on|r |cff00ff00CharacterName|r");
+            return true;
+        }
+
+        // 2. Normalizam numele primit (Prima litera mare, restul mici)
+        std::string targetName(args.value());
+        if (!targetName.empty())
+        {
+            std::transform(targetName.begin(), targetName.end(), targetName.begin(), ::tolower);
+            targetName[0] = std::toupper(targetName[0]);
+        }
+
+        // 3. Cautam in Cache-ul global pentru a-i afla GUID-ul Low
+        CharacterCacheEntry const* targetCache = sCharacterCache->GetCharacterCacheByName(targetName);
+        if (!targetCache)
+        {
+            handler->PSendSysMessage("Character |cffffffff'%s'|r does not exist in database.", targetName.c_str());
+            return true;
+        }
+
+        uint32 targetGuidLow = targetCache->Guid.GetCounter();
+        bool gasit = false;
+
+        // 4. Parcurgem trackerul pentru a gasi botul si a-i schimba flagul
+        for (auto& tracker : g_MultiBotTracker)
+        {
+            if (tracker.charGuid == targetGuidLow)
+            {
+                // Schimbam flagul din tracker pe true
+                tracker.AddFromChatCmd = false; // Sau tracker.AiActive = true; in functie de cum ai numit variabila
+                gasit = true;
+
+                handler->PSendSysMessage("AI Flag set to |cff00ff00ON|r for bot |cff00ff00%s|r.", targetName.c_str());
+
+                // OPTIONAL NATIV: Daca botul e online, ii poti forta reactivarea reactiilor din Core
+                if (tracker.isProcessed && tracker.realSession && tracker.realSession->GetPlayer())
+                {
+                    // Aici poti adauga o linie daca ai o functie nativa de trezire a AI-ului, ex:
+                    // tracker.realSession->GetPlayer()->GetAI()->NeedToUpdateProcessor(true);
+                }
+                break;
+            }
+        }
+
+        if (!gasit)
+        {
+            handler->PSendSysMessage("Bot |cffffffff'%s'|r is not active or registered in the tracker.", targetName.c_str());
+        }
+
+        return true;
+    }
+
+    static bool HandleAiOffGhostInWorld(ChatHandler* handler, Optional<std::string_view> args)
+    {
+        Player* me = handler->GetSession()->GetPlayer();
+        if (!me)
+            return true;
+
+        // 1. Verificam argumentele
+        if (!args)
+        {
+            handler->SendSysMessage("Usage: |cffffffff.ztfcbot ai off|r |cff00ff00CharacterName|r");
+            return true;
+        }
+
+        // 2. Normalizam numele
+        std::string targetName(args.value());
+        if (!targetName.empty())
+        {
+            std::transform(targetName.begin(), targetName.end(), targetName.begin(), ::tolower);
+            targetName[0] = std::toupper(targetName[0]);
+        }
+
+        // 3. Cautam in Cache
+        CharacterCacheEntry const* targetCache = sCharacterCache->GetCharacterCacheByName(targetName);
+        if (!targetCache)
+        {
+            handler->PSendSysMessage("Character |cffffffff'%s'|r does not exist.", targetName.c_str());
+            return true;
+        }
+
+        uint32 targetGuidLow = targetCache->Guid.GetCounter();
+        bool gasit = false;
+
+        // 4. Parcurgem trackerul pentru oprire flag
+        for (auto& tracker : g_MultiBotTracker)
+        {
+            if (tracker.charGuid == targetGuidLow)
+            {
+                // Schimbam flagul din tracker pe false
+                tracker.AddFromChatCmd = true; // Sau tracker.AiActive = false;
+                gasit = true;
+
+                handler->PSendSysMessage("AI Flag set to |cffff0000OFF|r for bot |cffff0000%s|r.", targetName.c_str());
+
+                // OPTIONAL NATIV: Daca vrei ca botul sa inghete pe loc cand ii dai AI OFF
+                if (tracker.isProcessed && tracker.realSession && tracker.realSession->GetPlayer())
+                {
+                    tracker.realSession->GetPlayer()->StopMoving();
+                }
+                break;
+            }
+        }
+
+        if (!gasit)
+        {
+            handler->PSendSysMessage("Bot |cffffffff'%s'|r is not registered in the tracker.", targetName.c_str());
         }
 
         return true;
@@ -2674,7 +2828,7 @@ public:
 
         uint16 opcode = packet.GetOpcode();
 
-        LogheazaOpcodeCePrimesteBot(session, opcode);
+        //LogheazaOpcodeCePrimesteBot(session, opcode);
 
 
         // Organizam totul sub forma de switch (opcode) conform protocolului nativ
@@ -3077,6 +3231,8 @@ public:
 
     void OnPacketReceive(WorldSession* session, WorldPacket& packet) override
     {
+        return; // dezactivat
+
         if (!session || !session->GetPlayer())
             return;
 
@@ -3142,5 +3298,5 @@ void AddSC_kitt_bot_world_loader()
     new kitt_bot_chat_handler();
     new kitt_ghost_player_command();
     new kitt_ghost_ack_packet();
-    new script_sniffer_jucator_real();
+    //new script_sniffer_jucator_real();
 }
