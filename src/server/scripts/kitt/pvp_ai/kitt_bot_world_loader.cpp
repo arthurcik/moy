@@ -2180,13 +2180,19 @@ public:
 
         if (msg == "vino" || msg == "port")
         {
+            uint32 botMapId = receiver->GetMapId();
+            MapEntry const* botMapEntry = sMapStore.LookupEntry(botMapId);
+
             uint32 targetMapId = player->GetMapId();
             MapEntry const* mapEntry = sMapStore.LookupEntry(targetMapId);
 
-            if (!mapEntry || mapEntry->Instanceable())
+            if (!botMapEntry || botMapEntry->Instanceable() || botMapEntry->IsBattleArena() || botMapEntry->IsBattleground())
             {
-                raspunsText = "Nu vreau";
-                return;
+                raspunsText = "Nu vreau, busy.";
+            }
+            else if (!mapEntry || mapEntry->Instanceable() || mapEntry->IsBattleArena() || mapEntry->IsBattleground())
+            {
+                raspunsText = "Nu vreau acolo";
             }
             else
             {
@@ -2205,18 +2211,17 @@ public:
                     receiver->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
                 }*/
 
-                if (!receiver->IsInWorld())
+                /*if (!receiver->IsInWorld())
                 {
                     receiver->AddToWorld();
-                }
-                return;
+                }*/
             }
         }
 
         if (msg == "leave group")
         {
-            uint32 targetMapId = player->GetMapId();
-            MapEntry const* mapEntry = sMapStore.LookupEntry(targetMapId);
+            uint32 botMapId = receiver->GetMapId();
+            MapEntry const* mapEntry = sMapStore.LookupEntry(botMapId);
 
             if (!mapEntry || mapEntry->Instanceable() || mapEntry->IsBattleArena() || mapEntry->IsBattleground())
             {
@@ -2229,26 +2234,42 @@ public:
                 {
                     raspunsText = "Ies acum din grupul curent.";
                     gr->RemoveMember(receiver->GetGUID());
-                    return;
                 }
                 else
                 {
                     raspunsText = "Nu sunt in niciun grup.";
-                    return;
                 }
+            }
+        }
+
+        if (msg == "set home")
+        {
+            uint32 botMapId = receiver->GetMapId();
+            MapEntry const* mapEntry = sMapStore.LookupEntry(botMapId);
+
+            if (!mapEntry || mapEntry->Instanceable() || mapEntry->IsBattleArena() || mapEntry->IsBattleground())
+            {
+                raspunsText = "Sunt intr-o instanta acum";
+            }
+            else
+            {
+                WorldLocation botLocation = receiver->GetWorldLocation();
+                uint32 botAreaId = receiver->GetAreaId();
+                receiver->SetHomebind(botLocation, botAreaId);
+
+                raspunsText = "Mi-am setat noua casa (Homebind) in aceasta locatie.";
             }
         }
 
         if (msg == "status")
         {
             raspunsText = "Sunt online si pregatit de arena!";
-            return;
         }
-        else
+        /*else
         {
             raspunsText = "Nu inteleg aceasta comanda. Scrie 'vino', 'status'.";
             return;
-        }
+        }*/
 
         WorldPacket data;
         ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER, LANG_UNIVERSAL, receiver, receiver, raspunsText);
