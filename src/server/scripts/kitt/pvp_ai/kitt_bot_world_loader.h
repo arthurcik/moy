@@ -40,6 +40,7 @@ void PornesteTotiBotii();
 void PornesteBotIndividual(uint32 accountId, uint32 charGuid);
 void ForseazaStergereBotFantoma(BotAsyncTracker& tracker);
 
+bool IsPlayerInBotTracker(uint32 charGuidLow);
 BotRole DefinesteSiSalveazaRolulBotului(Player* botPlayer);
 Unit* GhostSelectTarget(Player* botPlayer, Unit*& currentVictim, bool focusPeColeg);
 Unit* GhostSelectFriendlyTarget(Player* botPlayer);

@@ -200,19 +200,19 @@ Unit* GhostSelectTarget(Player* botPlayer, Unit*& currentVictim, bool focusPeCol
     }
 
     playersInCell.remove_if([botPlayer, focusPeColeg](Player* target) {
-         return !target || !target->IsAlive() || target == botPlayer || target->IsGameMaster() ||
-             !botPlayer->InSamePhase(target) || !botPlayer->CanSeeOrDetect(target, false, true) ||
-             target->HasUnitState(UNIT_STATE_DIED) || // hunter Feign Death
-             (!focusPeColeg && !botPlayer->IsHostileTo(target));
+        return !target || !target->IsAlive() || target == botPlayer || target->IsGameMaster() ||
+            !botPlayer->InSamePhase(target) || !botPlayer->CanSeeOrDetect(target, false, true) ||
+            target->HasUnitState(UNIT_STATE_DIED) || // hunter Feign Death
+            (!focusPeColeg && !botPlayer->IsHostileTo(target));
         });
 
     //TC_LOG_INFO("server.loading", "GHOST_LOG: La 50m au fost gasiti {} jucatori in grid. Dupa filtrare au ramas valabili: {}.", (uint32)gasitiLa50m, (uint32)playersInCell.size());
-
+    
     if (playersInCell.empty())
     {
         playersInCell.clear();
         botPlayer->GetPlayerListInGrid(playersInCell, 160.0f, true);
-
+        
         playersInCell.remove_if([botPlayer, focusPeColeg](Player* target) {
             return !target || !target->IsAlive() || target == botPlayer || target->IsGameMaster() ||
                 !botPlayer->InSamePhase(target) || !botPlayer->CanSeeOrDetect(target, false, true) ||
