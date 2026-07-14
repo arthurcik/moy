@@ -2286,20 +2286,20 @@ public:
     {
         static std::vector<ChatCommandBuilder> kittGhostPlayerCommandSubcommandTable1 =
         {
-            //{ "list",   HandleListAllGhostAccess,      rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
-            //{ "set",    HandleSetGhostAccess,    rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
-            //{ "del",    HandleDelGhostAccess,    rbac::RBAC_PERM_JOIN_NORMAL_BG, Console::No },
+            //{ "list",   HandleListAllGhostAccess,      rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            //{ "set",    HandleSetGhostAccess,    rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            //{ "del",    HandleDelGhostAccess,    rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
         };
 
         static std::vector<ChatCommandBuilder> kittGhostPlayerCommandSubcommandTable =
         {
             { "access",     kittGhostPlayerCommandSubcommandTable1 },
-            { "list",  HandleShowGhostList,          rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "add one",      HandleStartGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "add mass",  HandleStartBulkGhostsInWorld, rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "ai on",      HandleAiOnGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "ai off",      HandleAiOffGhostInWorld,      rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
-            { "remove",     HandleRemoveGhostFromWorld,   rbac::RBAC_PERM_COMMAND_LEARN, Console::No },
+            { "list",       HandleShowGhostList,          rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            { "add one",    HandleStartGhostInWorld,      rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            { "add mass",   HandleStartBulkGhostsInWorld, rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            { "ai on",      HandleAiOnGhostInWorld,       rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            { "ai off",     HandleAiOffGhostInWorld,      rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            { "remove",     HandleRemoveGhostFromWorld,   rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
         };
 
         static std::vector<ChatCommandBuilder> kittGhostPlayerCommandTable =
@@ -2577,7 +2577,7 @@ public:
                 index++, charName.c_str(), tracker.accountId, statusText.c_str(), chatCmdText.c_str());
         }
 
-        handler->SendSysMessage("=================================");
+        handler->SendSysMessage("==========================");
         return true;
     }
 
@@ -2586,7 +2586,7 @@ public:
         // 1. Verificam daca s-a introdus numele
         if (!args)
         {
-            handler->SendSysMessage("Usage: |cffffffff.ztfcbot ghost remove|r |cff00ff00CharacterName|r");
+            handler->SendSysMessage("Usage: |cffffffff.zghost remove|r |cff00ff00CharacterName|r");
             return true;
         }
 
@@ -2612,6 +2612,12 @@ public:
         // 4. Cautam botul in tracker-ul nostru global
         for (auto& tracker : g_MultiBotTracker)
         {
+            if (tracker.kickedByPlayer)
+            {
+                handler->PSendSysMessage("Ghost character |cff00ff00%s|r is online by REAL Player... can't remove.", targetName.c_str());
+                break;
+            }
+
             if (!tracker.isProcessed)
             {
                 handler->PSendSysMessage("Ghost character |cff00ff00%s|r is in loading... can't remove.", targetName.c_str());
