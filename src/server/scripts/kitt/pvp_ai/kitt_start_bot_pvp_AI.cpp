@@ -490,6 +490,28 @@ void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim)
         return;
     }
 
+    bool areLOS = botPlayer->IsWithinLOSInMap(victim);
+    if (!areLOS)
+    {
+        if (miscareCurenta != POINT_MOTION_TYPE)
+        {
+            botPlayer->GetMotionMaster()->Clear();
+            botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
+        }
+        else
+        {
+            float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+            botPlayer->GetMotionMaster()->GetDestination(destX, destY, destZ);
+            float distantaModificataSq = victim->GetExactDistSq(destX, destY, destZ);
+
+            if (distantaModificataSq > 4.0f)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
+            }
+        }
+        return;
+    }
+
     // Control sub 4 metri pentru Caster (Se indeparteaza sau ataca pe loc)
     if (dist <= 4.0f)
     {
@@ -499,8 +521,8 @@ void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim)
             botPlayer->StopMoving();
         }
 
-        if (!botPlayer->HasUnitState(UNIT_STATE_MELEE_ATTACKING))
-            botPlayer->Attack(victim, true);
+        /*if (!botPlayer->HasUnitState(UNIT_STATE_MELEE_ATTACKING))
+            botPlayer->Attack(victim, false);*/
 
         if (!botPlayer->HasInArc(1.74f, victim))
             botPlayer->SetFacingToObject(victim);
@@ -527,8 +549,11 @@ void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim)
         }
     }
 
-    if (!botPlayer->HasInArc(1.74f, victim))
-        botPlayer->SetFacingToObject(victim);
+    if (miscareCurenta != POINT_MOTION_TYPE)
+    {
+        if (!botPlayer->HasInArc(1.74f, victim))
+            botPlayer->SetFacingToObject(victim);
+    }
 }
 
 // miscare si attack healer
@@ -1472,7 +1497,7 @@ void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolB
     }
 }
 
-void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole /*rolBot*/)
+void ExecutaLogicaPriestDiscPvPOFF(Player* botPriest, Unit*& victim, BotRole /*rolBot*/)
 {
     // --- 1. VERIFICARI STRICTE DE SIGURANTA SI TARGETING ---
     if (!botPriest || !botPriest->IsAlive())
@@ -1714,6 +1739,153 @@ void ExecutaLogicaRogue(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
     botPlayer->SetPower(POWER_ENERGY, 100);
     if (botPlayer->IsWithinMeleeRange(victim))
         botPlayer->CastSpell(victim, 1752, false);
+}
+
+void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole rolBot)
+{
+    // 1. Verific?ri stricte de siguran??
+    if (!botPriest || !botPriest->IsAlive())
+        return;
+
+    // Medalionul PvP la pierderea controlului
+    if (botPriest->HasUnitState(UNIT_STATE_LOST_CONTROL) && !botPriest->HasUnitState(UNIT_STATE_JUMPING | UNIT_STATE_CHARGING))
+    {
+        IncearcaSaFolosestiMedalionPvP(botPriest);
+    }
+
+    // Dac? deja d? cast, îl l?s?m s? termine vr?jitura
+    if (botPriest->HasUnitState(UNIT_STATE_CASTING))
+        return;
+
+    uint32 myHp = botPriest->GetHealthPct();
+    uint32 myManaPct = botPriest->GetPower(POWER_MANA) * 100 / botPriest->GetMaxPower(POWER_MANA);
+    bool esteHealer = (rolBot == BOT_ROLE_HEALER);
+
+    // Extragere ID-uri vr?ji (Rank 1)
+    uint32 const SHIELD = ObtineRankMaximSpell(17);         // PW_SHIELD_1
+    uint32 const PENANCE = ObtineRankMaximSpell(47540);      // PENANCE_1
+    uint32 const PAIN_SUPP = ObtineRankMaximSpell(33206);      // PAIN_SUPPRESSION_1
+    uint32 const FLASH = ObtineRankMaximSpell(2061);       // FLASH_HEAL_1
+    uint32 const SCREAM = ObtineRankMaximSpell(8122);       // PSYCHIC_SCREAM_1
+    uint32 const RENEW = ObtineRankMaximSpell(139);        // RENEW_1
+    uint32 const INNER_FIRE = ObtineRankMaximSpell(588);        // INNER_FIRE_1
+    uint32 const INNER_FOCUS = ObtineRankMaximSpell(14751);      // INNER_FOCUS_1
+    uint32 const HYMN_OF_HOPE = ObtineRankMaximSpell(64901);      // HYMN_OF_HOPE_1
+    uint32 const WEAKENED_SOUL = 6788;
+
+    // Buff obligatoriu auto-aplicat
+    if (INNER_FIRE && !botPriest->HasAura(INNER_FIRE))
+    {
+        botPriest->CastSpell(botPriest, INNER_FIRE, false);
+        return;
+    }
+
+    // Regenerare man? în repaus
+    if (HYMN_OF_HOPE && myManaPct < 30 && !botPriest->GetSpellHistory()->HasCooldown(HYMN_OF_HOPE))
+    {
+        botPriest->CastSpell(botPriest, HYMN_OF_HOPE, false);
+        return;
+    }
+
+    if (esteHealer)
+    {
+        // G?sim cel mai r?nit coechipier sau partenerul principal din aren?
+        Unit* target = GhostSelectFriendlyTarget(botPriest);
+        if (target && target->IsAlive())
+        {
+            uint32 targetHp = target->GetHealthPct();
+
+            // Dac? partenerul sau preotul au nevoie real? de vindecare, activ?m selec?ia ?i rota?ia
+            if (targetHp < 85 || myHp < 85)
+            {
+                botPriest->SetSelection(target->GetGUID());
+
+                GhostMoveAndHeal(botPriest, target);
+
+                // ========================================================
+                // SECTIUNEA A: URGENTA / PANICA (Sub 35% HP)
+                // ========================================================
+                if (targetHp < 35)
+                {
+                    if (PAIN_SUPP && !botPriest->GetSpellHistory()->HasCooldown(PAIN_SUPP))
+                        botPriest->CastSpell(target, PAIN_SUPP, true);
+
+                    if (SHIELD && !target->HasAura(WEAKENED_SOUL) && !target->HasAura(SHIELD))
+                    {
+                        botPriest->CastSpell(target, SHIELD, false);
+                        return;
+                    }
+
+                    if (INNER_FOCUS && myManaPct < 60 && !botPriest->GetSpellHistory()->HasCooldown(INNER_FOCUS))
+                        botPriest->CastSpell(botPriest, INNER_FOCUS, true);
+
+                    if (PENANCE && !botPriest->GetSpellHistory()->HasCooldown(PENANCE))
+                    {
+                        botPriest->CastSpell(target, PENANCE, false);
+                        return;
+                    }
+
+                    if (FLASH)
+                    {
+                        botPriest->CastSpell(target, FLASH, false);
+                        return;
+                    }
+                    return;
+                }
+
+                // ========================================================
+                // SECTIUNEA B: MENTINERE STANDARD (35% - 85% HP)
+                // ========================================================
+                if (SHIELD && !target->HasAura(WEAKENED_SOUL) && !target->HasAura(SHIELD))
+                {
+                    botPriest->CastSpell(target, SHIELD, false);
+                    return;
+                }
+
+                if (PENANCE && !botPriest->GetSpellHistory()->HasCooldown(PENANCE))
+                {
+                    botPriest->CastSpell(target, PENANCE, false);
+                    return;
+                }
+
+                if (RENEW && !target->HasAura(RENEW))
+                {
+                    botPriest->CastSpell(target, RENEW, false);
+                    return;
+                }
+
+                if (FLASH)
+                {
+                    botPriest->CastSpell(target, FLASH, false);
+                    return;
+                }
+                return;
+            }
+        }
+
+        // Dac? nu are absolut nimic de vindecat în grup ?i are deja LoS stabil cu partenerul,
+        // preotul asist? ofensiv pe ?inta partenerului (nu st? degeaba).
+        victim = GhostSelectTarget(botPriest, victim, true);
+        if (victim)
+            GhostMoveAndAttackCaster(botPriest, victim);
+    }
+    else
+    {
+        // Rol de DPS (Shadow în open world / open combat)
+        victim = GhostSelectTarget(botPriest, victim, false);
+        if (victim)
+            GhostMoveAndAttackCaster(botPriest, victim);
+    }
+
+    // Auto-ap?rare (Psychic Scream în caz de Melee focus pe el)
+    if (victim && victim->IsAlive() && botPriest->IsHostileTo(victim) && botPriest->GetDistance(victim) <= 8.0f)
+    {
+        if (SCREAM && !botPriest->GetSpellHistory()->HasCooldown(SCREAM))
+        {
+            botPriest->CastSpell(botPriest, SCREAM, false);
+            return;
+        }
+    }
 }
 
 
