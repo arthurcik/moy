@@ -1273,7 +1273,7 @@ void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit*& victim, BotRole rolBot) /
     }
 }
 
-void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
+void ExecutaLogicaDruidFeralPvPOFF(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
 {
     // Preluam tinta folosind sistemul tau global (false = scanare ca dps/ostil)
     victim = GhostSelectTarget(botPlayer, victim, false);
@@ -1741,7 +1741,7 @@ void ExecutaLogicaRogue(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
         botPlayer->CastSpell(victim, 1752, false);
 }
 
-void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole rolBot)
+void ExecutaLogicaPriestDiscPvPOFF2(Player* botPriest, Unit*& victim, BotRole rolBot)
 {
     // 1. Verific?ri stricte de siguran??
     if (!botPriest || !botPriest->IsAlive())
@@ -1888,5 +1888,400 @@ void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole rolBot
     }
 }
 
+void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole /*rolBot*/)
+{
+    if (!botPriest || !botPriest->IsAlive())
+        return;
 
+    // 1. MEDALION PVP (Prioritate absoluta daca e in CC)
+    if (botPriest->HasUnitState(UNIT_STATE_LOST_CONTROL))
+    {
+        IncearcaSaFolosestiMedalionPvP(botPriest);
+    }
+
+    // Resurse si Procente
+    uint32 myHp = botPriest->GetHealthPct();
+    uint32 myMana = botPriest->GetPower(POWER_MANA);
+    float manaPct = ((float)myMana / (float)botPriest->GetMaxPower(POWER_MANA)) * 100.0f;
+
+    // MENTINERE BUFF-URI DE BAZA (ID-uri numerice fixe de Rank 1)
+    if (!botPriest->HasAura(ObtineRankMaximSpell(1243))) // Power Word: Fortitude (Rank 1 = 1243)
+        botPriest->CastSpell(botPriest, ObtineRankMaximSpell(1243), false);
+
+    if (!botPriest->HasAura(ObtineRankMaximSpell(588))) // Inner Fire (Rank 1 = 588)
+        botPriest->CastSpell(botPriest, ObtineRankMaximSpell(588), false);
+
+    // Identificare coechipier arena
+    Unit* friendlyTarget = GhostSelectFriendlyTarget(botPriest);
+    uint32 targetHp = friendlyTarget ? friendlyTarget->GetHealthPct() : 100;
+
+    // --- FAZA 1: PRIORITATE DEFENSIVA (HEAL) ---
+    if (friendlyTarget && (targetHp < 90 || myHp < 90))
+    {
+        // Miscare fluida defensiva (Urmarire coechipier + Corectia ta de LoS)
+        GhostMoveAndHeal(botPriest, friendlyTarget);
+
+        // A. Pain Suppression (Rank 1 = 33206) - Salvare sub 35% HP
+        if (targetHp <= 35 && !botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(33206)))
+        {
+            if (!friendlyTarget->HasAura(ObtineRankMaximSpell(33206)) && !friendlyTarget->HasAura(ObtineRankMaximSpell(642)) && !friendlyTarget->HasAura(ObtineRankMaximSpell(45438)))
+            {
+                if (botPriest->HasUnitState(UNIT_STATE_CASTING))
+                    botPriest->InterruptNonMeleeSpells(false);
+
+                botPriest->CastSpell(friendlyTarget, ObtineRankMaximSpell(33206), true); // Ignora GCD pentru salvare instant
+                return;
+            }
+        }
+
+        // B. Power Word: Shield (Rank 1 = 17) - Verificare debuff Weakened Soul (6788)
+        if (!friendlyTarget->HasAura(6788)) // 6788 este ID-ul fix de debuff global
+        {
+            botPriest->CastSpell(friendlyTarget, ObtineRankMaximSpell(17), false);
+            return;
+        }
+
+        // C. Penance Defensive (Rank 1 = 47540) - Sub 75% HP
+        if (targetHp < 75 && !botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(47540)))
+        {
+            if (botPriest->HasUnitState(UNIT_STATE_CASTING))
+                botPriest->InterruptNonMeleeSpells(false);
+
+            // Activare Inner Focus (Rank 1 = 14751) daca are mana putina
+            if (manaPct < 60 && !botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(14751)))
+                botPriest->CastSpell(botPriest, ObtineRankMaximSpell(14751), true);
+
+            botPriest->CastSpell(friendlyTarget, ObtineRankMaximSpell(47540), false);
+            return;
+        }
+
+        // D. Prayer of Mending (Rank 1 = 33076) - Amortizare daune
+        if (targetHp < 85 && !botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(33076)))
+        {
+            botPriest->CastSpell(friendlyTarget, ObtineRankMaximSpell(33076), false);
+            return;
+        }
+
+        // E. Flash Heal (Rank 1 = 2061) - Filler rapid
+        if (targetHp < 70 && !botPriest->HasUnitState(UNIT_STATE_CASTING))
+        {
+            botPriest->CastSpell(friendlyTarget, ObtineRankMaximSpell(2061), false);
+            return;
+        }
+
+        // Daca viata partenerului e sub pragul critic (75%), Priest-ul nu ataca
+        if (targetHp < 75)
+            return;
+    }
+
+    // --- FAZA 2: CONTROL SI REACTIE ANTI-CC (Psychic Scream & SW: Death) ---
+    victim = GhostSelectTarget(botPriest, victim, true);
+    if (victim && victim->IsAlive() && botPriest->IsHostileTo(victim))
+    {
+        float targetDist = botPriest->GetDistance(victim);
+
+        // A. Psychic Scream (Rank 1 = 8122) - Control de apropiere (Fear)
+        if (targetDist <= 8.0f && !botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(8122)))
+        {
+            botPriest->CastSpell(botPriest, ObtineRankMaximSpell(8122), false);
+            return;
+        }
+
+        // B. Mecanica SW: Death (Rank 1 = 32379) pentru a sparge CC-ul inamic (Polymorph / Blind)
+        if (victim->HasUnitState(UNIT_STATE_CASTING))
+        {
+            if (Spell* enemySpell = victim->GetCurrentSpell(CURRENT_GENERIC_SPELL))
+            {
+                if (enemySpell->GetSpellInfo())
+                {
+                    uint32 spellId = enemySpell->GetSpellInfo()->Id;
+                    // Verificam formele de Polymorph (118, 12826, 28271) sau Blind (2094)
+                    if (spellId == 118 || spellId == 12826 || spellId == 28271 || spellId == 2094)
+                    {
+                        if (!botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(32379)))
+                        {
+                            botPriest->CastSpell(victim, ObtineRankMaximSpell(32379), true); // Instant
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        // --- FAZA 3: PRESIUNE OFENSIVA SI SPAM DISPEL ---
+        GhostMoveAndAttackCaster(botPriest, victim);
+
+        // A. Recuperare Mana: Shadowfiend (Rank 1 = 34433)
+        if (manaPct < 50.0f && !botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(34433)))
+        {
+            botPriest->CastSpell(victim, ObtineRankMaximSpell(34433), false);
+            return;
+        }
+
+        // B. Logica de Spargere Imunitati (Mass Dispel - Rank 1 = 32375)
+        // Daca Paladinul are Divine Shield (642) sau Mage-ul are Ice Block (45438), dam Mass Dispel direct sub ei
+        if (victim->HasAura(642) || victim->HasAura(45438))
+        {
+            if (!botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(32375)) && !botPriest->HasUnitState(UNIT_STATE_CASTING))
+            {
+                botPriest->CastSpell(victim->GetPosition(), ObtineRankMaximSpell(32375), false);
+                return;
+            }
+        }
+
+        // C. Dispel Magic Ofensiv (Rank 1 = 527) - Curatarea scuturilor inamice active
+        if (targetDist <= 30.0f)
+        {
+            // Curata Sacred Shield (53601), Ice Barrier (43039), PW: Shield (17) sau Innervate (29166)
+            if (victim->HasAura(53601) || victim->HasAura(43039) || victim->HasAura(17) || victim->HasAura(29166))
+            {
+                botPriest->CastSpell(victim, ObtineRankMaximSpell(527), false);
+                return;
+            }
+        }
+
+        // D. Mana Burn Ofensiv (Rank 1 = 8129) - Presiune pe mana healerului inamic
+        if (victim && victim->GetTypeId() == TYPEID_PLAYER && victim->GetPowerType() == POWER_MANA && victim->GetPower(POWER_MANA) > 1500 && targetDist <= 30.0f)
+        {
+            // Accesam AI-ul jucatorului inamic si verificam daca este Healer folosind functia nativa gasita de tine
+            if (PlayerAI* enemyAI = dynamic_cast<PlayerAI*>(victim->GetAI()))
+            {
+                if (enemyAI->IsHealer(victim->ToPlayer()))
+                {
+                    if (!botPriest->HasUnitState(UNIT_STATE_CASTING) && manaPct > 35.0f)
+                    {
+                        botPriest->CastSpell(victim, ObtineRankMaximSpell(8129), false); // Mana Burn
+                        return;
+                    }
+                }
+            }
+        }
+
+        // E. Asistenta Daune (Mentinere DoT Shadow Word: Pain - Rank 1 = 589)
+        if (!victim->HasAura(ObtineRankMaximSpell(589)) && targetDist <= 30.0f)
+        {
+            botPriest->CastSpell(victim, ObtineRankMaximSpell(589), false);
+            return;
+        }
+
+        // Penance folosit ofensiv (Rank 1 = 47540) daca partenerul are viata plina (HP > 85%)
+        if (targetHp > 85 && !botPriest->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(47540)) && targetDist <= 30.0f)
+        {
+            botPriest->CastSpell(victim, ObtineRankMaximSpell(47540), false);
+            return;
+        }
+    }
+}
+
+void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
+{
+    // Pasul A: Selectare tinta pentru clasa Melee (false)
+    victim = GhostSelectTarget(botPlayer, victim, false);
+
+    if (!botPlayer || !victim || !botPlayer->IsAlive() || !victim->IsAlive())
+        return;
+
+    // Pasul B: GESTIONARE CC SI DEFENSIVA NATIVA (Corectata impotriva spamului)
+    // Verificam STRICT daca are debuff de Fear sau Confused pe el prin auri si UnitState izolate
+    if (botPlayer->HasAuraType(SPELL_AURA_MOD_FEAR) || botPlayer->HasUnitState(UNIT_STATE_FLEEING) || botPlayer->HasUnitState(UNIT_STATE_CONFUSED))
+    {
+        if (!botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(50334))) // Berserk_1 = 50334
+        {
+            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(50334), true); // Ignora GCD
+            botPlayer->InterruptNonMeleeSpells(false);
+
+            // Curatam exclusiv starile daca am dat Berserk
+            botPlayer->ClearUnitState(UNIT_STATE_FLEEING);
+            botPlayer->ClearUnitState(UNIT_STATE_CONFUSED);
+            return;
+        }
+        else // Daca Berserk e pe cooldown, abia atunci spargem trinket-ul
+        {
+            IncearcaSaFolosestiMedalionPvP(botPlayer);
+        }
+    }
+    // Daca este in Stun sau Charm, da Trinket instant
+    else if (botPlayer->HasUnitState(UNIT_STATE_STUNNED) || botPlayer->HasUnitState(UNIT_STATE_CHARMED))
+    {
+        IncearcaSaFolosestiMedalionPvP(botPlayer);
+    }
+
+
+    if (!botPlayer->IsHostileTo(victim))
+        return;
+
+    // Resurse si Procente
+    uint8 formaCurenta = botPlayer->GetShapeshiftForm();
+    uint32 energy = botPlayer->GetPower(POWER_ENERGY);
+    uint32 comboPoints = botPlayer->GetComboPoints();
+    uint32 myHp = botPlayer->GetHealthPct();
+    float targetDist = botPlayer->GetDistance(victim);
+
+    // Fortam forma de Pisica daca din cauza unui CC sau shift a fost scos (CAT_FORM_1 = 768)
+    if (botPlayer->GetShapeshiftForm() != FORM_CAT)
+    {
+        if (!botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(768)))
+        {
+            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(768), false);
+            return;
+        }
+    }
+
+    // --- FAZA 1: SUPRAVIETUIRE SI DEFENSIVA NATIVA ---
+    if (myHp < 40)
+    {
+        if (formaCurenta != FORM_BEAR)
+        {
+            if (!botPlayer->HasAura(ObtineRankMaximSpell(5487)))
+            {
+                botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(5487), true);
+            }
+            botPlayer->SetShapeshiftForm(FORM_BEAR); // Reintra instant in Urs
+            return;
+        }
+
+        if (!botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(61336))) // Survival Instincts = 61336
+            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(61336), false);
+
+        if (!botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(22812))) // Barkskin = 22812
+            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(22812), false);
+    }
+    else
+    {
+        if (formaCurenta != FORM_CAT)
+        {
+            if (!botPlayer->HasAura(ObtineRankMaximSpell(768)))
+            {
+                botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(768), true);
+            }
+            botPlayer->SetShapeshiftForm(FORM_CAT);
+            return;
+        }
+        botPlayer->CastSpell(victim, ObtineRankMaximSpell(49376), false);
+        return;
+    }
+
+    // --- FAZA 2: SECTIUNEA DE MISCARE SECURE (REGULA TA ANTI-CRASH VMAP) ---
+    if (targetDist > 5.0f)
+    {
+        // De la distanta mare, folosim exclusiv MovePoint pe pozitia inamicului (fara spam)
+        if (!botPlayer->isMoving())
+        {
+            botPlayer->GetMotionMaster()->MovePoint(1006, victim->GetPosition());
+        }
+
+        // Feral Charge Cat (ID 49376) - Sare pe inamic daca acesta fuge la distanta
+        if (targetDist > 8.0f && targetDist < 25.0f && !botPlayer->GetSpellHistory()->HasCooldown(49376))
+        {
+            if (formaCurenta != FORM_CAT)
+            {
+                if (!botPlayer->HasAura(ObtineRankMaximSpell(768)))
+                {
+                    botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(768), true);
+                }
+                botPlayer->SetShapeshiftForm(FORM_CAT);
+                return;
+            }
+            botPlayer->CastSpell(victim, ObtineRankMaximSpell(49376), false);
+            return;
+        }
+
+        // Dash (ID: 1850) pentru a ajunge rapid in melee
+        if (targetDist > 15.0f && !botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(1850)) && !botPlayer->HasAura(ObtineRankMaximSpell(1850)))
+        {
+            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(1850), true);
+        }
+
+        // Fiind clasa de Melee, nu rulam atacurile daca suntem departe. Lasam MovePoint sa lucreze.
+        return;
+    }
+    else
+    {
+        // REGULA TA VERIFICATA: Doar de aproape (sub 5m) cuplam Attack(true) si urm?rirea Chase
+        botPlayer->GetMotionMaster()->MoveChase(victim);
+        botPlayer->Attack(victim, true);
+        
+
+        // Micro-pozitionare in spatele tintei folosind functia ta nativa cu coliziuni (tot sub 5m)
+        /*if (!victim->HasInArc(float(M_PI), botPlayer))
+        {
+            float angle = victim->GetOrientation() + M_PI;
+            Position pos = victim->GetFirstCollisionPosition(1.5f, angle);
+            botPlayer->GetMotionMaster()->MovePoint(1005, pos);
+        }*/
+    }
+
+    // --- FAZA 3: ROTATIE DE DAMAGE SI FINISHERS (DOAR IN MELEE) ---
+
+    // Faerie Fire Feral (ID: 16857) - Opreste invizibilitatea (Rogue / Mage)
+    if (!victim->HasAura(ObtineRankMaximSpell(16857)))
+    {
+        botPlayer->CastSpell(victim, ObtineRankMaximSpell(16857), false);
+        //return;
+    }
+
+    // Tiger's Fury (ID: 5217) - Management de energie
+    if (energy <= 30 && !botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(5217)))
+    {
+        botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(5217), true);
+        //return;
+    }
+
+    // Berserk folosit ofensiv pentru burst daca energia e stabila
+    /*if (energy >= 60 && !botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(50334)))
+    {
+        botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(50334), true);
+        return;
+    }*/
+
+    // EXECUTIE FINISHERS (4-5 Combo Points)
+    if (comboPoints >= 4)
+    {
+        // Savage Roar (ID: 52610) - Auto-buff obligatoriu pentru cresterea damage-ului
+        if (!botPlayer->HasAura(ObtineRankMaximSpell(52610)))
+        {
+            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(52610), false);
+            //return;
+        }
+
+        // Rip (ID: 1079) - DoT principal sangerare pe tinte cu multa viata
+        if (victim->GetHealth() > botPlayer->GetMaxHealth() && !victim->HasAura(ObtineRankMaximSpell(1079)))
+        {
+            botPlayer->CastSpell(victim, ObtineRankMaximSpell(1079), false);
+            //return;
+        }
+
+        // Ferocious Bite (ID: 22568) - Burst final direct
+        botPlayer->CastSpell(victim, ObtineRankMaximSpell(22568), false);
+        //return;
+    }
+
+    // GENERARE PUNCTE (Combo Builders)
+    // Mangle - Cat (ID: 33876) - Aplica debuff-ul de 30% daune extra din sangerari
+    if (!victim->HasAura(ObtineRankMaximSpell(33876)))
+    {
+        botPlayer->CastSpell(victim, ObtineRankMaximSpell(33876), false);
+        //return;
+    }
+
+    // Rake (ID: 1822) - Sangerare secundara mica
+    if (!victim->HasAura(ObtineRankMaximSpell(1822)))
+    {
+        botPlayer->CastSpell(victim, ObtineRankMaximSpell(1822), false);
+        //return;
+    }
+
+    // Shred (ID: 5221) daca este pozitionat corect in spate, altfel Mangle din fata
+    if (!victim->HasInArc(float(M_PI), botPlayer))
+    {
+        botPlayer->CastSpell(victim, ObtineRankMaximSpell(5221), false);
+        //return;
+    }
+    else
+    {
+        botPlayer->CastSpell(victim, ObtineRankMaximSpell(33876), false);
+        //return;
+    }
+}
 
