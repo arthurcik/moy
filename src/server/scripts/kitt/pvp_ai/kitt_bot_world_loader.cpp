@@ -2126,6 +2126,23 @@ private:
         if (!at)
             return;
 
+        // VERIFICARE SEPARATA PENTRU MMR SUB 1200
+        for (ArenaTeam::MemberList::iterator itr = at->m_membersBegin(); itr != at->m_membersEnd(); ++itr)
+        {
+            if (itr->Guid == botPlayer->GetGUID())
+            {
+                uint32 bonusMMR = urand(150, 250);
+                if (itr->MatchMakerRating < 1200)
+                {
+                    itr->MatchMakerRating = itr->MatchMakerRating + bonusMMR;
+
+                    TC_LOG_INFO("fakPlayer", "Arena MMR: S-au salvat in siguranta {} MMR in cache-ul RAM al echipei {} pentru urmatorul meci!",
+                        itr->MatchMakerRating, arenaTeamId);
+                }
+                break;
+            }
+        }
+
         uint32 currentPersonalRating = botPlayer->GetUInt32Value(PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + (teamSizeIndex * ARENA_TEAM_END) + ARENA_TEAM_PERSONAL_RATING);
 
         if (currentPersonalRating < 1150) // 1350
