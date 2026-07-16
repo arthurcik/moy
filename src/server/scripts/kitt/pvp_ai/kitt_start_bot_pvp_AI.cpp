@@ -1753,7 +1753,7 @@ void ExecutaLogicaPriestDiscPvPOFF2(Player* botPriest, Unit*& victim, BotRole ro
         IncearcaSaFolosestiMedalionPvP(botPriest);
     }
 
-    // Dac? deja d? cast, îl l?s?m s? termine vr?jitura
+    // Dac? deja d? cast, ?l l?s?m s? termine vr?jitura
     if (botPriest->HasUnitState(UNIT_STATE_CASTING))
         return;
 
@@ -1780,7 +1780,7 @@ void ExecutaLogicaPriestDiscPvPOFF2(Player* botPriest, Unit*& victim, BotRole ro
         return;
     }
 
-    // Regenerare man? în repaus
+    // Regenerare man? ?n repaus
     if (HYMN_OF_HOPE && myManaPct < 30 && !botPriest->GetSpellHistory()->HasCooldown(HYMN_OF_HOPE))
     {
         botPriest->CastSpell(botPriest, HYMN_OF_HOPE, false);
@@ -1863,7 +1863,7 @@ void ExecutaLogicaPriestDiscPvPOFF2(Player* botPriest, Unit*& victim, BotRole ro
             }
         }
 
-        // Dac? nu are absolut nimic de vindecat în grup ?i are deja LoS stabil cu partenerul,
+        // Dac? nu are absolut nimic de vindecat ?n grup ?i are deja LoS stabil cu partenerul,
         // preotul asist? ofensiv pe ?inta partenerului (nu st? degeaba).
         victim = GhostSelectTarget(botPriest, victim, true);
         if (victim)
@@ -1871,13 +1871,13 @@ void ExecutaLogicaPriestDiscPvPOFF2(Player* botPriest, Unit*& victim, BotRole ro
     }
     else
     {
-        // Rol de DPS (Shadow în open world / open combat)
+        // Rol de DPS (Shadow ?n open world / open combat)
         victim = GhostSelectTarget(botPriest, victim, false);
         if (victim)
             GhostMoveAndAttackCaster(botPriest, victim);
     }
 
-    // Auto-ap?rare (Psychic Scream în caz de Melee focus pe el)
+    // Auto-ap?rare (Psychic Scream ?n caz de Melee focus pe el)
     if (victim && victim->IsAlive() && botPriest->IsHostileTo(victim) && botPriest->GetDistance(victim) <= 8.0f)
     {
         if (SCREAM && !botPriest->GetSpellHistory()->HasCooldown(SCREAM))

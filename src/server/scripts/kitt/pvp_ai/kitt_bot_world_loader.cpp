@@ -752,6 +752,8 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
 }
 
 
+
+
 class kitt_bot_account_login_interceptor : public AccountScript
 {
 public:
@@ -1589,6 +1591,9 @@ public:
 
                             // 5. Sincronizam timpul intern de logare si fortam masca de update vizual pentru guilda sub cap
                             botPlayer->SetInGameTime(GameTime::GetGameTimeMS());
+
+                            botPlayer->SendInitialPacketsBeforeAddToMap();
+                            botPlayer->SendInitialPacketsAfterAddToMap();
 
                             // ===========================================================
 
@@ -2867,8 +2872,40 @@ public:
         }
 
         //session->_recvQueue.add(packet);
-        session->QueuePacket(std::move(packet));
+        //session->QueuePacket(std::move(packet));
+        session->QueuePacket(packet);
     }
+
+    bool EstePachetulDestinatBotului(WorldSession* session, WorldPacket& pachetPrimitDeLaServer)
+    {
+        if (!session || !session->IsKittBot())
+            return false;
+
+        Player* botPlayer = session->GetPlayer();
+        if (!botPlayer)
+            return false;
+
+        // Clonam pachetul pe stiva pentru a-i citi structura fara sa alteram bufferul original
+        WorldPacket cititor(pachetPrimitDeLaServer);
+        uint64 pachetRawGUID = 0;
+
+        try
+        {
+            // Apelam functia nativa din ByteBuffer pentru a extrage GUID-ul packed
+            cititor.readPackGUID(pachetRawGUID);
+        }
+        catch (...)
+        {
+            // Daca pachetul e gol sau nu incepe cu un GUID packed, returnam false din siguranta
+            return false;
+        }
+
+        // Comparam GUID-ul din pachet cu cel al botului curent
+        return (pachetRawGUID == botPlayer->GetGUID().GetRawValue());
+    }
+
+
+
 
     // 1. CAPTURA PACHETE TRIMISE DE SERVER CATRE BOT (SMSG)
     void OnPacketSend(WorldSession* session, WorldPacket& packet) override
@@ -2889,16 +2926,46 @@ public:
         // Organizam totul sub forma de switch (opcode) conform protocolului nativ
         switch (opcode)
         {
-        case SMSG_NEW_WORLD:
+        case SMSG_TRANSFER_PENDING:            // 0x003F
         {
-            WorldPacket response(MSG_MOVE_WORLDPORT_ACK);
+            // Clientul raspunde instant la semnalul de pending cu un prim WORLDPORT_ACK gol
+            WorldPacket response(MSG_MOVE_WORLDPORT_ACK, 0);
+
+            // Folosim functia ta curata. Filtrul va lasa pachetul sa treaca automat (exceptie de sistem)
             InjecteazaOpcodeBot(session, MSG_MOVE_WORLDPORT_ACK, response);
             break;
         }
 
-        case MSG_MOVE_TELEPORT:
+        case SMSG_NEW_WORLD:
+        {
+            /*WorldPacket response(MSG_MOVE_WORLDPORT_ACK);
+            InjecteazaOpcodeBot(session, MSG_MOVE_WORLDPORT_ACK, response);
+            break;*/
+            // Setam o dimensiune minima de 4 sau 8 bytes pentru siguranta bufferului
+            WorldPacket response(MSG_MOVE_WORLDPORT_ACK, 0);
+            InjecteazaOpcodeBot(session, MSG_MOVE_WORLDPORT_ACK, response);
+
+            // OPTIMIZARE NATIVA CONFORM SNIFFER:
+            // Imediat dupa al doilea ACK, jocul trimite intotdeauna CMSG_SET_ACTIVE_MOVER (0x026A)
+            // pentru a anunta serverul ca entitatea player este cea care controleaza miscarea acum!
+            Player* botPlayer = session->GetPlayer();
+            if (botPlayer)
+            {
+                WorldPacket activeMover(CMSG_SET_ACTIVE_MOVER, 8);
+                activeMover << botPlayer->GetGUID(); // Trimitem GUID-ul intreg (uint64) cerut de protocol
+                InjecteazaOpcodeBot(session, CMSG_SET_ACTIVE_MOVER, activeMover);
+            }
+            break;
+        }
+
+        //case MSG_MOVE_TELEPORT:
         case MSG_MOVE_TELEPORT_ACK:
         {
+            if (!EstePachetulDestinatBotului(session, packet))
+            {
+                break;
+            }
+
             // SIGURANTA ANTI-BUCLA: Daca pachetul este gol sau generat de noi, dam break
             if (packet.empty() || packet.size() < 20)
             {
@@ -2907,6 +2974,27 @@ public:
 
             Player* botPlayer = session->GetPlayer();
             if (!botPlayer)
+            {
+                break;
+            }
+
+            // REPARATIE ANTI-BROADCAST: Citim GUID-ul folosind functia ta nativa
+            WorldPacket cititor(packet);
+            uint64 pachetRawGUID = 0;
+
+            try
+            {
+                // Apelam exact functia pe care mi-ai aratat-o din ByteBuffer
+                cititor.readPackGUID(pachetRawGUID);
+            }
+            catch (...)
+            {
+                break; // Daca bufferul e gol sau arunca ByteBufferPositionException
+            }
+
+            // VALIDARE CRITICA: Comparam GUID-ul numeric brut din pachet cu cel al botului.
+            // Daca nu coincid, inseamna ca este un broadcast de la un bot vecin. Il ignoram!
+            if (pachetRawGUID != botPlayer->GetGUID().GetRawValue())
             {
                 break;
             }
@@ -2952,6 +3040,54 @@ public:
             break;
         }
 
+        case SMSG_FORCE_MOVE_ROOT:
+        {
+            if (!EstePachetulDestinatBotului(session, packet))
+            {
+                break;
+            }
+
+            Player* botPlayer = session->GetPlayer();
+            if (!botPlayer)
+                break;
+
+            // Aloc?m spa?iu suficient pentru structura de mi?care cerut? de core
+            WorldPacket response(CMSG_FORCE_MOVE_ROOT_ACK, 64);
+
+            // 1. TrinityCore cere obligatoriu GUID-ul packed al entit??ii la începutul pachetului
+            response << botPlayer->GetGUID().WriteAsPacked();
+
+            // 2. Cere un contor de mi?care (movement counter / ack count)
+            response << uint32(0);
+
+            // 3. Cere flag-urile de mi?care ?i pozi?ia actual?
+            response << uint32(0); // MoveFlags
+            response << uint16(0); // ExtraMoveFlags
+            response << uint32(GameTime::GetGameTimeMS()); // Time
+            response << botPlayer->GetPositionX();
+            response << botPlayer->GetPositionY();
+            response << botPlayer->GetPositionZ();
+            response << botPlayer->GetOrientation();
+            response << uint32(0); // FallTime
+
+            // Trimitem pachetul complet structurat înapoi la server
+            InjecteazaOpcodeBot(session, CMSG_FORCE_MOVE_ROOT_ACK, response);
+            break;
+        }
+
+        // 3. REPARATIE PENTRU DEBLOCARE INSTANTA / STRUCTURA DE MAP?
+        case SMSG_INSTANCE_DIFFICULTY:
+        {
+            // In loc de break simplu, cand se schimba dificultatea la iesirea din Arena
+            // Procesam instant datele amanate ca sa nu ramana harta agatata in memorie
+            Player* botPlayer = session->GetPlayer();
+            if (botPlayer)
+            {
+                botPlayer->ProcessDelayedOperations();
+            }
+            break;
+        }
+
         case SMSG_TRADE_STATUS: // 0x0120
         {
             TC_LOG_INFO("fakPlayer", "[BotNetwork] -> Cineva a incercat trade cu botul. Se forteaza CMSG_IGNORE_TRADE.");
@@ -2974,11 +3110,6 @@ public:
             // Injectam pachetul securizat in coada botului
             InjecteazaOpcodeBot(session, CMSG_GROUP_ACCEPT, response);
             break;
-        }
-
-        case SMSG_RESURRECT_REQUEST:           // 0x015B
-        {
-            break; // dezactivat. nu functioneaza
         }
 
         case SMSG_CORPSE_RECLAIM_DELAY:        // 0x0269 - Serverul trimite pop-up-ul de Release Spirit
@@ -3132,10 +3263,250 @@ public:
             break;
         }
 
+        case SMSG_MOVE_LAND_WALK:              // 0x00DF - Serverul for?eaz? mersul pe sol
+        {
+            if (!EstePachetulDestinatBotului(session, packet))
+                break;
+
+            Player* botPlayer = session->GetPlayer();
+            if (!botPlayer)
+                break;
+
+            // 1. Calcul?m în?l?imea real? a solului sub picioarele lui
+            float realGroundZ = botPlayer->GetPositionZ();
+            if (Map* botMap = botPlayer->GetMap())
+            {
+                realGroundZ = botMap->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
+                realGroundZ += botPlayer->GetHoverOffset();
+            }
+
+            // 2. Construim evenimentul asincron pentru a amâna aterizarea pân? se golesc vitezele
+            class BotDelayedLandingEvent : public BasicEvent
+            {
+            public:
+                BotDelayedLandingEvent(WorldSession* _session, float _z)
+                    : session(_session), groundZ(_z) {
+                }
+
+                bool Execute(uint64, uint32) override
+                {
+                    if (session && session->IsKittBot() && session->GetPlayer())
+                    {
+                        Player* bPlayer = session->GetPlayer();
+
+                        WorldPacket response(MSG_MOVE_FALL_LAND, 64);
+                        response << bPlayer->GetGUID().WriteAsPacked();
+                        response << uint32(0); // Coada e deja goala, trimitem 0!
+                        response << uint16(0);
+                        response << uint32(GameTime::GetGameTimeMS());
+                        response << float(bPlayer->GetPositionX());
+                        response << float(bPlayer->GetPositionY());
+                        response << float(groundZ); // Trimitem în?l?imea solului calculated anterior
+                        response << float(bPlayer->GetOrientation());
+                        response << uint32(0); // Fall time = 0
+
+                        // Aloc?m pe heap strict la executie conform regulilor tale din World.cpp
+                        WorldPacket* packetToQueue = new WorldPacket(MSG_MOVE_FALL_LAND, response.size());
+                        packetToQueue->append(response.contents(), response.size());
+                        session->QueuePacket(packetToQueue);
+                    }
+                    return true;
+                }
+            private:
+                WorldSession* session;
+                float groundZ; // P?streaz? valoarea primitiv? float pe stiv? (100% safe, zero leak)
+            };
+
+            // O program?m cu 600ms (cu 100ms DUP? ce s-au executat ACK-urile de vitez? de la 500ms!)
+            botPlayer->m_Events.AddEvent(new BotDelayedLandingEvent(session, realGroundZ), botPlayer->m_Events.CalculateTime(600ms));
+            break;
+        }
+
+        case SMSG_FORCE_RUN_SPEED_CHANGE:      // 0x00E2
+        {
+            if (!EstePachetulDestinatBotului(session, packet))
+                break;
+
+            Player* botPlayer = session->GetPlayer();
+            if (!botPlayer)
+                break;
+
+            WorldPacket cititor(packet);
+            cititor.rpos(0);
+            uint64 rawGuid = 0;
+            uint32 serverMovementCounter = 0;
+            uint8 unkByte = 0;
+            float serverVitezaTrimisa = 7.0f;
+
+            try
+            {
+                cititor.readPackGUID(rawGuid);
+                cititor >> serverMovementCounter;
+                cititor >> unkByte;
+                cititor >> serverVitezaTrimisa;
+            }
+            catch (...) { break; }
+
+            // Eveniment asincron complet izolat - COPIAZA DOAR VALORI PRIMITIVE (100% Scurgere-Safe!)
+            class BotDelayedRunSpeedAckEvent : public BasicEvent
+            {
+            public:
+                BotDelayedRunSpeedAckEvent(WorldSession* _session, uint32 _counter, float _speed)
+                    : session(_session), counter(_counter), speed(_speed) {
+                }
+
+                bool Execute(uint64, uint32) override
+                {
+                    if (session && session->IsKittBot() && session->GetPlayer())
+                    {
+                        Player* bPlayer = session->GetPlayer();
+                        WorldPacket response(0x00E3, 45);
+                        response << bPlayer->GetGUID().WriteAsPacked();
+                        response << uint32(counter); // Trimitem counterul citit acum 500ms
+                        response << uint32(0); response << uint16(0); response << uint32(GameTime::GetGameTimeMS());
+                        response << float(bPlayer->GetPositionX()) << float(bPlayer->GetPositionY()) << float(bPlayer->GetPositionZ()) << float(bPlayer->GetOrientation());
+                        response << uint32(0);
+                        response << float(speed); // Trimitem viteza citita acum 500ms
+
+                        // ALOCARE PE HEAP STRICT LA EXECUTIE - Va fi stearsa garantat in aceeasi milisecunda!
+                        WorldPacket* packetToQueue = new WorldPacket(0x00E3, response.size());
+                        packetToQueue->append(response.contents(), response.size());
+                        session->QueuePacket(packetToQueue);
+                    }
+                    return true;
+                }
+            private:
+                WorldSession* session;
+                uint32 counter;
+                float speed;
+            };
+
+            botPlayer->m_Events.AddEvent(new BotDelayedRunSpeedAckEvent(session, serverMovementCounter, serverVitezaTrimisa), botPlayer->m_Events.CalculateTime(500ms));
+            break;
+        }
+
+        case SMSG_FORCE_SWIM_SPEED_CHANGE:     // 0x00E6
+        {
+            if (!EstePachetulDestinatBotului(session, packet))
+                break;
+
+            Player* botPlayer = session->GetPlayer();
+            if (!botPlayer)
+                break;
+
+            WorldPacket cititor(packet);
+            cititor.rpos(0);
+            uint64 rawGuid = 0;
+            uint32 serverMovementCounter = 0;
+            float serverVitezaSwim = 4.72f;
+
+            try
+            {
+                cititor.readPackGUID(rawGuid);
+                cititor >> serverMovementCounter;
+                cititor >> serverVitezaSwim;
+            }
+            catch (...) { break; }
+
+            class BotDelayedSwimSpeedAckEvent : public BasicEvent
+            {
+            public:
+                BotDelayedSwimSpeedAckEvent(WorldSession* _session, uint32 _counter, float _speed)
+                    : session(_session), counter(_counter), speed(_speed) {
+                }
+
+                bool Execute(uint64, uint32) override
+                {
+                    if (session && session->IsKittBot() && session->GetPlayer())
+                    {
+                        Player* bPlayer = session->GetPlayer();
+                        WorldPacket response(0x00E7, 45);
+                        response << bPlayer->GetGUID().WriteAsPacked();
+                        response << uint32(counter);
+                        response << uint32(0); response << uint16(0); response << uint32(GameTime::GetGameTimeMS());
+                        response << float(bPlayer->GetPositionX()) << float(bPlayer->GetPositionY()) << float(bPlayer->GetPositionZ()) << float(bPlayer->GetOrientation());
+                        response << uint32(0);
+                        response << float(speed);
+
+                        WorldPacket* packetToQueue = new WorldPacket(0x00E7, response.size());
+                        packetToQueue->append(response.contents(), response.size());
+                        session->QueuePacket(packetToQueue);
+                    }
+                    return true;
+                }
+            private:
+                WorldSession* session;
+                uint32 counter;
+                float speed;
+            };
+
+            botPlayer->m_Events.AddEvent(new BotDelayedSwimSpeedAckEvent(session, serverMovementCounter, serverVitezaSwim), botPlayer->m_Events.CalculateTime(500ms));
+            break;
+        }
+
+        case SMSG_FORCE_MOVE_UNROOT:           // 0x00EA
+        {
+            if (!EstePachetulDestinatBotului(session, packet))
+                break;
+
+            Player* botPlayer = session->GetPlayer();
+            if (!botPlayer)
+                break;
+
+            WorldPacket cititor(packet);
+            cititor.rpos(0);
+            uint64 rawGuid = 0;
+            uint32 serverMovementCounter = 0;
+
+            try
+            {
+                cititor.readPackGUID(rawGuid);
+                cititor >> serverMovementCounter;
+            }
+            catch (...) { break; }
+
+            class BotDelayedUnrootAckEvent : public BasicEvent
+            {
+            public:
+                BotDelayedUnrootAckEvent(WorldSession* _session, uint32 _counter)
+                    : session(_session), counter(_counter) {
+                }
+
+                bool Execute(uint64, uint32) override
+                {
+                    if (session && session->IsKittBot() && session->GetPlayer())
+                    {
+                        Player* bPlayer = session->GetPlayer();
+                        WorldPacket response(0x00EB, 41);
+                        response << bPlayer->GetGUID().WriteAsPacked();
+                        response << uint32(counter);
+                        response << uint32(0); response << uint16(0); response << uint32(GameTime::GetGameTimeMS());
+                        response << float(bPlayer->GetPositionX()) << float(bPlayer->GetPositionY()) << float(bPlayer->GetPositionZ()) << float(bPlayer->GetOrientation());
+                        response << uint32(0);
+
+                        WorldPacket* packetToQueue = new WorldPacket(0x00EB, response.size());
+                        packetToQueue->append(response.contents(), response.size());
+                        session->QueuePacket(packetToQueue);
+                    }
+                    return true;
+                }
+            private:
+                WorldSession* session;
+                uint32 counter;
+            };
+
+            botPlayer->m_Events.AddEvent(new BotDelayedUnrootAckEvent(session, serverMovementCounter), botPlayer->m_Events.CalculateTime(500ms));
+            break;
+        }
+
+
+
 
         // =========================================================================
         // 1. LE IGNORAM SILENTION (DEFINITII NATIVE DIN OPCODES.H)
         // =========================================================================
+        case MSG_MOVE_TELEPORT:
+        case SMSG_RESURRECT_REQUEST:           // 0x015B
         case SMSG_AUTH_RESPONSE:               // 0x1EE - Confirmarea sesiunii in Core
         case SMSG_ADDON_INFO:                  // 0x2EF - Trimiterea listei de addon-uri active
         case SMSG_TUTORIAL_FLAGS:              // 0x0FD - Masca de interfata si tutoriale
@@ -3163,11 +3534,9 @@ public:
         case SMSG_SPELLENERGIZELOG:            // 0x0151 - Log de incarcare energie/mana de la spell-uri
         case SMSG_PERIODICAURALOG:             // 0x024E - Tick-urile periodice de buff-uri/debuff-uri
         case SMSG_CANCEL_COMBAT:               // 0x014E
-        case SMSG_TRANSFER_PENDING:            // 0x003F
         case SMSG_UPDATE_INSTANCE_OWNERSHIP:   // 0x032B
         case SMSG_CONTACT_LIST:                // 0x0067
         case SMSG_BIND_POINT_UPDATE:           // 0x0155
-        case SMSG_INSTANCE_DIFFICULTY:         // 0x033B
         case SMSG_INITIAL_SPELLS:              // 0x012A
         case SMSG_SEND_UNLEARN_SPELLS:         // 0x041E
         case SMSG_ACTION_BUTTONS:              // 0x0129
