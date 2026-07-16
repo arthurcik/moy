@@ -2938,11 +2938,11 @@ public:
 
         case SMSG_NEW_WORLD:
         {
-            /*WorldPacket response(MSG_MOVE_WORLDPORT_ACK);
+            WorldPacket response(MSG_MOVE_WORLDPORT_ACK);
             InjecteazaOpcodeBot(session, MSG_MOVE_WORLDPORT_ACK, response);
-            break;*/
+            break;
             // Setam o dimensiune minima de 4 sau 8 bytes pentru siguranta bufferului
-            WorldPacket response(MSG_MOVE_WORLDPORT_ACK, 0);
+            /*WorldPacket response(MSG_MOVE_WORLDPORT_ACK, 0);
             InjecteazaOpcodeBot(session, MSG_MOVE_WORLDPORT_ACK, response);
 
             // OPTIMIZARE NATIVA CONFORM SNIFFER:
@@ -2954,7 +2954,7 @@ public:
                 WorldPacket activeMover(CMSG_SET_ACTIVE_MOVER, 8);
                 activeMover << botPlayer->GetGUID(); // Trimitem GUID-ul intreg (uint64) cerut de protocol
                 InjecteazaOpcodeBot(session, CMSG_SET_ACTIVE_MOVER, activeMover);
-            }
+            }*/
             break;
         }
 
@@ -2974,27 +2974,6 @@ public:
 
             Player* botPlayer = session->GetPlayer();
             if (!botPlayer)
-            {
-                break;
-            }
-
-            // REPARATIE ANTI-BROADCAST: Citim GUID-ul folosind functia ta nativa
-            WorldPacket cititor(packet);
-            uint64 pachetRawGUID = 0;
-
-            try
-            {
-                // Apelam exact functia pe care mi-ai aratat-o din ByteBuffer
-                cititor.readPackGUID(pachetRawGUID);
-            }
-            catch (...)
-            {
-                break; // Daca bufferul e gol sau arunca ByteBufferPositionException
-            }
-
-            // VALIDARE CRITICA: Comparam GUID-ul numeric brut din pachet cu cel al botului.
-            // Daca nu coincid, inseamna ca este un broadcast de la un bot vecin. Il ignoram!
-            if (pachetRawGUID != botPlayer->GetGUID().GetRawValue())
             {
                 break;
             }
@@ -3040,6 +3019,7 @@ public:
             break;
         }
 
+        /*
         case SMSG_FORCE_MOVE_ROOT:
         {
             if (!EstePachetulDestinatBotului(session, packet))
@@ -3054,7 +3034,7 @@ public:
             // Aloc?m spa?iu suficient pentru structura de mi?care cerut? de core
             WorldPacket response(CMSG_FORCE_MOVE_ROOT_ACK, 64);
 
-            // 1. TrinityCore cere obligatoriu GUID-ul packed al entit??ii la începutul pachetului
+            // 1. TrinityCore cere obligatoriu GUID-ul packed al entit??ii la ?nceputul pachetului
             response << botPlayer->GetGUID().WriteAsPacked();
 
             // 2. Cere un contor de mi?care (movement counter / ack count)
@@ -3070,10 +3050,11 @@ public:
             response << botPlayer->GetOrientation();
             response << uint32(0); // FallTime
 
-            // Trimitem pachetul complet structurat înapoi la server
+            // Trimitem pachetul complet structurat ?napoi la server
             InjecteazaOpcodeBot(session, CMSG_FORCE_MOVE_ROOT_ACK, response);
             break;
         }
+        */
 
         // 3. REPARATIE PENTRU DEBLOCARE INSTANTA / STRUCTURA DE MAP?
         case SMSG_INSTANCE_DIFFICULTY:
@@ -3263,6 +3244,8 @@ public:
             break;
         }
 
+
+        /*
         case SMSG_MOVE_LAND_WALK:              // 0x00DF - Serverul for?eaz? mersul pe sol
         {
             if (!EstePachetulDestinatBotului(session, packet))
@@ -3272,7 +3255,7 @@ public:
             if (!botPlayer)
                 break;
 
-            // 1. Calcul?m în?l?imea real? a solului sub picioarele lui
+            // 1. Calcul?m ?n?l?imea real? a solului sub picioarele lui
             float realGroundZ = botPlayer->GetPositionZ();
             if (Map* botMap = botPlayer->GetMap())
             {
@@ -3280,7 +3263,7 @@ public:
                 realGroundZ += botPlayer->GetHoverOffset();
             }
 
-            // 2. Construim evenimentul asincron pentru a amâna aterizarea pân? se golesc vitezele
+            // 2. Construim evenimentul asincron pentru a am?na aterizarea p?n? se golesc vitezele
             class BotDelayedLandingEvent : public BasicEvent
             {
             public:
@@ -3301,7 +3284,7 @@ public:
                         response << uint32(GameTime::GetGameTimeMS());
                         response << float(bPlayer->GetPositionX());
                         response << float(bPlayer->GetPositionY());
-                        response << float(groundZ); // Trimitem în?l?imea solului calculated anterior
+                        response << float(groundZ); // Trimitem ?n?l?imea solului calculated anterior
                         response << float(bPlayer->GetOrientation());
                         response << uint32(0); // Fall time = 0
 
@@ -3498,7 +3481,7 @@ public:
             botPlayer->m_Events.AddEvent(new BotDelayedUnrootAckEvent(session, serverMovementCounter), botPlayer->m_Events.CalculateTime(500ms));
             break;
         }
-
+        */
 
 
 
@@ -3615,6 +3598,11 @@ public:
         case SMSG_GROUP_DESTROYED:             // 0x007C - Distrugerea grupului de arena cand meciul se inchide
         case MSG_MOVE_JUMP:                    // 0x00BB - Ignoram pachetul cand alti playeri sar in jur
         case SMSG_SPLINE_MOVE_LAND_WALK:       // 0x030A - For?area mersului la sol (frecvent la ie?ire instan?e)
+        case SMSG_MOVE_LAND_WALK:
+        case SMSG_FORCE_RUN_SPEED_CHANGE:      // 0x00E2
+        case SMSG_FORCE_SWIM_SPEED_CHANGE:     // 0x00E6
+        case SMSG_FORCE_MOVE_UNROOT:           // 0x00EA
+        case SMSG_FORCE_MOVE_ROOT:
 
             break;
 
