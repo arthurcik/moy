@@ -3603,6 +3603,21 @@ public:
         case SMSG_FORCE_SWIM_SPEED_CHANGE:     // 0x00E6
         case SMSG_FORCE_MOVE_UNROOT:           // 0x00EA
         case SMSG_FORCE_MOVE_ROOT:
+        case SMSG_GUILD_EVENT:                 // 0x0092
+        case SMSG_SPELLLOGMISS:                // 0x024B
+        case SMSG_SPELL_FAILURE:               // 0x0133
+        case SMSG_PET_UPDATE_COMBO_POINTS:     // 0x0492
+        case SMSG_UPDATE_COMBO_POINTS:         // 0x039D
+        case SMSG_COOLDOWN_EVENT:              // 0x0135
+        case SMSG_SPELL_FAILED_OTHER:          // 0x02A6
+        case SMSG_SPELLDAMAGESHIELD:           // 0x024F
+        case SMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE: // 0x0383
+        case SMSG_FORCE_SWIM_BACK_SPEED_CHANGE: // 0x02DC
+        case SMSG_FORCE_RUN_BACK_SPEED_CHANGE:  // 0x00E4
+        case SMSG_FORCE_FLIGHT_SPEED_CHANGE:   // 0x0381
+        case SMSG_SPLINE_SET_FLIGHT_SPEED:     // 0x0385
+        case SMSG_CLEAR_COOLDOWN:              // 0x01DE
+        case SMSG_GUILD_BANK_LIST:             // 0x03E8
 
             break;
 
