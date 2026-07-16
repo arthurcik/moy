@@ -3140,7 +3140,7 @@ void World::UpdateSessions(uint32 diff)
             WorldPacket* packet = nullptr;
 
             // Extragem pachetele din coada privata a botului folosind filtrul updater nativ
-            while (pSession->_recvQueue.next(packet, updater))
+            while (pSession->_recvQueue.next(packet/*, updater*/))
             {
                 if (!packet)
                     continue;
