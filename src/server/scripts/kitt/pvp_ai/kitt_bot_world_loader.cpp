@@ -628,7 +628,7 @@ void PornesteBotIndividual(uint32 accountId, uint32 charGuid)
 void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
 {
     // test ....
-    if (!tracker.isProcessed)
+    if (!tracker.kickedByPlayer && !tracker.isProcessed)
     {
         TC_LOG_INFO("fakPlayer", "LOG CUSTOM AVERTISMENT: Botul cu GUID {} se afla in loading screen! Stergerea a fost blocata pentru siguranta.", tracker.charGuid);
         return;
@@ -844,628 +844,19 @@ public:
             }
 
             // --- RE-INTRARE ASINCRONA DUPA LOGOUT JUCATOR REAL ---
-            if (!tracker.isProcessed && tracker.kickedByPlayer)
-            {
-                if (g_BootSequenceTimer > 0)
-                    return;
-
-                tracker.AccRealBusy = false;
-
-                //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
-
-                SessionMap const& sesiuniGlobale = sWorld->GetAllSessions();
-
-                for (auto const& [sessId, sessionPointer] : sesiuniGlobale)
-                {
-                    if (sessionPointer && sessionPointer->GetAccountId() == tracker.accountId && sessionPointer != tracker.realSession)
-                    {
-                        TC_LOG_INFO("fakPlayer", "Verificare Sesiune: Contul {} egal cu: {}", sessionPointer->GetAccountId(), tracker.accountId);
-
-                        tracker.AccRealBusy = true;
-                        break;
-                    }
-                }
-
-                if (tracker.AccRealBusy)
-                {
-                    tracker.AccRelogDelay = 10000;
-                    continue;
-                }
-
-                // Daca omul a dat logout si contul e complet liber:
-                if (!tracker.AccRealBusy)
-                {
-                    tracker.AccRelogDelay = 5000;
-                    tracker.kickedByPlayer = false;
-                    PornesteBotIndividual(tracker.accountId, tracker.charGuid);
-
-                    TC_LOG_INFO("fakPlayer", "LOG REJOIN: Contul {} a fost eliberat. Execut direct secventa de boot...", tracker.accountId);
-                }
-                continue;
-            }
+            ReintrareAsyncDupaLogOut(tracker, diff);
 
             if (!tracker.realSession)
                 continue;
 
             // Intrare in lume
-            if (!tracker.isProcessed && !tracker.kickedByPlayer)
-            {
-                if (g_BootSequenceTimer > 0)
-                    return;
-
-                if (tracker.isReady)
-                {
-                    tracker.isProcessed = true;
-                    g_BootSequenceTimer = 5000;
-
-                    auto loginHolder = std::static_pointer_cast<CharacterDatabaseQueryHolder>(tracker.holder);
-                    if (!loginHolder)
-                    {
-                        tracker.isProcessed = true;
-                        continue;
-                    }
-
-                    TC_LOG_INFO("fakPlayer", "LOG CUSTOM: Baza de date a returnat datele pentru GUID {}! Se forteaza intrarea...", tracker.charGuid);
-                    /*
-                    std::string tempName = "GHOST_SESSION_" + std::to_string(tracker.charGuid);
-                    std::shared_ptr<WorldSocket> nullSocket = nullptr;
-
-                    auto ghostSession = std::make_unique<WorldSession>(tracker.accountId, std::move(tempName), nullSocket, SEC_PLAYER, 2, 0, std::chrono::minutes(0), LOCALE_enUS, 0, false);
-                    //ghostSession->LoadPermissions();
-                    
-                    Player* botPlayer = new Player(ghostSession.get());
-                    ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
-
-                    g_GhostSessionsStorage.push_back(std::move(ghostSession));
-                    */
-                    WorldSession* realSession = tracker.realSession;
-                    if (!realSession)
-                    {
-                        TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: Sesiunea reala a disparut din tracker pentru GUID {}.", tracker.charGuid);
-                        continue;
-                    }
-
-                    Player* botPlayer = new Player(realSession);
-                    ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
-
-                    if (botPlayer->LoadFromDB(playerGuid, *tracker.holder))
-                    {
-                        // protectie map instance
-                        // nu se poate crea instata daca nu e jucator deja
-                        tracker.realSession->SetPlayer(botPlayer); // test sa il gaseasca la stergere
-
-                        uint32 botMapId = botPlayer->GetMapId();
-                        MapEntry const* mapEntry = sMapStore.LookupEntry(botMapId);
-
-                        if (!mapEntry || mapEntry->Instanceable())
-                        {
-                            //ForseazaStergereBotFantoma(tracker);
-
-                            uint32 homeMapId = botPlayer->m_homebindMapId;
-                            float homeX = botPlayer->m_homebindX;
-                            float homeY = botPlayer->m_homebindY;
-                            float homeZ = botPlayer->m_homebindZ;
-                            float homeO = botPlayer->GetOrientation();
-                            //botPlayer->TeleportTo(homeMapId, homeX, homeY, homeZ, homeO);
-                            CharacterDatabase.PExecute("UPDATE characters SET position_x = {}, position_y = {}, position_z = {}, orientation = {}, map = {}, instance_id = 0 WHERE guid = {};",
-                                homeX, homeY, homeZ, homeO, homeMapId, tracker.charGuid);
-
-
-                            TC_LOG_INFO("fakPlayer", "LOG GHOST PROTECTIE: Botul {} a fost mutat in memorie catre Homebind (Map: {}).", botPlayer->GetName().c_str(), homeMapId);
-
-                            //PornesteBotIndividual(tracker.accountId, tracker.charGuid);
-
-                            botPlayer->CleanupsBeforeDelete();
-                            delete botPlayer;
-                            if (tracker.realSession)
-                            {
-                                tracker.realSession->SetIsKittBot(false); // Oprim imunitatea sesiunii vechi pentru a fi curatata de nucleu
-                                tracker.realSession->SetPlayer(nullptr);
-                                tracker.realSession = nullptr;
-                            }
-
-                            tracker.RemoveFromWorld = true;
-                            tracker.isProcessed = true;
-                            PornesteBotIndividual(tracker.accountId, tracker.charGuid);
-                            //realSession->SetPlayer(nullptr);
-
-                            continue;
-                        }
-                        // -------------------
-
-                        // ==================== ACTIVARE GUILDA REPARATA COMPLET ====================
-                        QueryResult dbGuildResult = CharacterDatabase.PQuery("SELECT `guildid`, `rank` FROM `guild_member` WHERE `guid` = {}", tracker.charGuid);
-
-                        if (dbGuildResult)
-                        {
-                            Field* fields = dbGuildResult->Fetch();
-                            uint32 dbGuildId = fields[0].GetUInt32(); // Coloana 0 = guildId
-                            uint8 dbRankId = fields[1].GetUInt8();   // Coloana 1 = rank
-
-                            if (dbGuildId > 0)
-                            {
-                                // 1. Setam ID-ul si rank-ul direct pe obiectul botului (reparam ce a omis LoadFromDB)
-                                botPlayer->SetInGuild(dbGuildId);
-                                botPlayer->SetGuildRank(dbRankId);
-
-                                // 2. Luam obiectul guildei din managerul global folosind ID-ul aflat
-                                if (Guild* guild = sGuildMgr->GetGuildById(dbGuildId))
-                                {
-                                    // 3. Apelam functia din header-ul tau pentru a-l trece online
-                                    // Parametrii: player-ul, tipul de flag (1 = online status), starea (true = online)
-                                    guild->OnPlayerStatusChange(botPlayer, 1, true);
-
-                                    // 4. Sincronizam zona si nivelul in lista interna a breslei
-                                    guild->UpdateMemberData(botPlayer, GUILD_MEMBER_DATA_ZONEID, botPlayer->GetZoneId());
-                                    guild->UpdateMemberData(botPlayer, GUILD_MEMBER_DATA_LEVEL, botPlayer->GetLevel());
-
-                                    TC_LOG_INFO("fakPlayer", "LOG GUILDA REUSIT: Botul {} (GUID: {}) este acum online in Guilda ID {}.", botPlayer->GetName(), tracker.charGuid, dbGuildId);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // Daca nu are guilda in baza de date
-                            botPlayer->SetInGuild(0);
-                            botPlayer->SetGuildRank(0);
-                        }
-
-                        botPlayer->ForceValuesUpdateAtIndex(PLAYER_GUILDID);
-                        // =====================================================================
-
-                        //botPlayer->GetMotionMaster()->Initialize();
-                        //botPlayer->SendDungeonDifficulty(false);
-
-                        //tracker.realSession->LoadPermissions();
-                        //tracker.realSession->SetPlayer(botPlayer);
-
-                        //sCharacterCache->AddCharacterCacheEntry(botPlayer->GetGUID(), tracker.accountId, botPlayer->GetName(), botPlayer->GetGender(), botPlayer->GetRace(), botPlayer->GetClass(), botPlayer->GetLevel());
-
-                        Map* map = sMapMgr->CreateBaseMap(botPlayer->GetMapId());
-
-                        if (map)
-                        {
-                            botPlayer->SetMap(map);
-
-                            // 1. Calculam coordonatele celulei si grid-ului unde se afla botul in Shattrath/lume
-                            //GridCoord p = Trinity::ComputeGridCoord(botPlayer->GetPositionX(), botPlayer->GetPositionY());
-
-                            // 2. Fortam serverul sa incarce in memorie bucata de harta (Grid-ul) pentru acele coordonate
-                            // Fara asta, in Shattrath botul va cadea in gol sau va genera crash la tick-ul de update
-                            map->LoadGrid(botPlayer->GetPositionX(), botPlayer->GetPositionY());
-
-                            // 2. CONFIGUR?M SESIUNEA ?I MI?CAREA (Doar dup? ce harta este valid?!)
-                            tracker.realSession->SetPlayer(botPlayer);
-                            botPlayer->GetMotionMaster()->Initialize();
-                            botPlayer->SendDungeonDifficulty(false);
-
-                            // Protectie anti-gravitate la spawn: Seta?i semafoarele pentru a bloca c?derea ?n gol ?n primul tick
-                            botPlayer->SetSemaphoreTeleportFar(true);
-                            botPlayer->SetSemaphoreTeleportNear(true);
-
-                            // 3. LOGARE ?N LUME ?N ORDINEA OFICIAL? TRINITYCORE
-                            // Pasul A: Ad?ug?m ?n Accessorul Global pentru ca thread-urile de h?r?i s? ?l g?seasc? ?n RAM
-                            ObjectAccessor::AddObject(botPlayer);
-
-                            // Pasul B: Ad?ug?m playerul ?n registrul fizic al h?r?ii active
-                            botPlayer->GetMap()->AddPlayerToMap(botPlayer);
-
-                            // Pasul C: Activ?m prezen?a lui global? ?n lume (Broadcast c?tre cei din jur)
-                            botPlayer->AddToWorld();
-
-                            
-
-                            // 4. PLANIFIC?M DEBLOCAREA SEMAFOARELOR (Dup? ce se a?az? ?n Grid)
-                            class BotSpawnSafeEvent : public BasicEvent
-                            {
-                            public:
-                                BotSpawnSafeEvent(Player* _player) : player(_player) {}
-                                bool Execute(uint64, uint32) override
-                                {
-                                    if (player && player->IsInWorld())
-                                    {
-                                        player->SetSemaphoreTeleportFar(false);
-                                        player->SetSemaphoreTeleportNear(false);
-                                        player->StopMoving();
-                                        TC_LOG_INFO("fakPlayer", "[BotNetwork] -> [SPAWN-SAFE] Semafoarele de siguran?? au fost ridicate pentru {}.", player->GetName().c_str());
-                                    }
-                                    return true;
-                                }
-                            private:
-                                Player* player;
-                            };
-                            botPlayer->m_Events.AddEvent(new BotSpawnSafeEvent(botPlayer), botPlayer->m_Events.CalculateTime(800ms));
-
-
-
-                            //botPlayer->GetMap()->AddPlayerToMap(botPlayer);
-
-                            //botPlayer->AddToWorld();
-                            //ObjectAccessor::AddObject(botPlayer);
-
-                            // Asta face ca botul sa fie vazut online la comanda /who sau pe panourile web (UCP/Armory)
-                            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_ONLINE);
-                            stmt->setUInt32(0, botPlayer->GetGUID().GetCounter());
-                            CharacterDatabase.Execute(stmt);
-
-                            // Toti jucatorii care il au la Friends vor primi notificarea vizuala "X has come online."
-                            sSocialMgr->SendFriendStatus(botPlayer, FRIEND_ONLINE, botPlayer->GetGUID(), true);
-
-                            // 4. COPIAT DIN CORE: Sincronizare si anunt in cadrul Grupului (daca botul era intr-un Party/Raid)
-                            if (Group* group = botPlayer->GetGroup())
-                            {
-                                group->SendUpdate();
-                                group->ResetMaxEnchantingLevel();
-                                if (group->GetLeaderGUID() == botPlayer->GetGUID())
-                                    group->StopLeaderOfflineTimer();
-                            }
-
-                            // 5. Sincronizam timpul intern de logare si fortam masca de update vizual pentru guilda sub cap
-                            botPlayer->SetInGameTime(GameTime::GetGameTimeMS());
-
-                            botPlayer->SendInitialPacketsBeforeAddToMap();
-                            botPlayer->SendInitialPacketsAfterAddToMap();
-
-                            // ===========================================================
-
-                            FictivBotsGuids.insert(playerGuid);
-
-                            TC_LOG_INFO("fakPlayer", "LOG CUSTOM REUSIT: {} (GUID: {}) a intrat online permanent pe sesiunea reala!", botPlayer->GetName().c_str(), tracker.charGuid);
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: LoadFromDB a refuzat structura holder-ului pentru GUID {}.", tracker.charGuid);
-
-                        realSession->SetPlayer(nullptr);
-                        botPlayer->CleanupsBeforeDelete();
-                        delete botPlayer;
-
-                        tracker.realSession->SetIsKittBot(false);
-                        tracker.realSession = nullptr;
-                        tracker.isProcessed = true;
-
-                        /*if (WorldSession* ghostSession = botPlayer->GetSession())
-                        {
-                            ghostSession->SetPlayer(nullptr);
-                        }
-
-                        botPlayer->CleanupsBeforeDelete();
-                        delete botPlayer;
-
-                        auto accountId = tracker.accountId;
-                        g_GhostSessionsStorage.erase(
-                            std::remove_if(g_GhostSessionsStorage.begin(), g_GhostSessionsStorage.end(),
-                                [accountId](const std::unique_ptr<WorldSession>& session) {
-                                    return session && session->GetAccountId() == accountId;
-                                }),
-                            g_GhostSessionsStorage.end()
-                        );
-
-                        tracker.realSession = nullptr;
-                        tracker.isProcessed = false;*/
-                    }
-                    //return;
-                    continue;
-                }
-            }
+            IntrareaInLume(tracker, diff);
 
             if (tracker.AddFromChatCmd)
                 continue;
 
             // 2. LOGICA DINAMICA DE COADA SI PORT IN ARENA
-            if (tracker.isProcessed)
-            {
-                ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
-                Player* botPlayer = ObjectAccessor::FindPlayer(playerGuid);
-
-
-                if (botPlayer && botPlayer->IsInWorld() && !botPlayer->IsLoading())
-                {
-                    bool areCoadaActiva = botPlayer->InBattlegroundQueue();
-                    bool esteInMeciAcum = botPlayer->GetMap()->IsBattleArena();
-
-                    // --- PASUL A: PORTARE IN ARENA PRIN EVENIMENT (ANTI-CRASH TOTAL) ---
-                    if (areCoadaActiva && !esteInMeciAcum)
-                    {
-                        for (uint32 slot = 0; slot < 3; ++slot)
-                        {
-                            BattlegroundQueueTypeId queueTypeId = botPlayer->GetBattlegroundQueueTypeId(slot);
-
-                            if (queueTypeId.BattlemasterListId != 0)
-                            {
-                                BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(queueTypeId);
-                                GroupQueueInfo ginfoData;
-
-                                if (bgQueue.GetPlayerGroupInfoData(botPlayer->GetGUID(), &ginfoData))
-                                {
-                                    if (ginfoData.IsInvitedToBGInstanceGUID > 0)
-                                    {
-                                        BattlegroundTypeId bgTypeId = BattlegroundTypeId(queueTypeId.BattlemasterListId);
-                                        Battleground* bg = sBattlegroundMgr->GetBattleground(ginfoData.IsInvitedToBGInstanceGUID, bgTypeId);
-
-                                        if (bg)
-                                        {
-                                            Map* actualArenaMap = sMapMgr->FindMap(bg->GetMapId(), bg->GetInstanceID());
-                                            if (!actualArenaMap)
-                                            {
-                                                // === reinvie si tele home ===
-                                                if (!botPlayer->IsAlive())
-                                                {
-                                                    TC_LOG_INFO("fakPlayer", " !isalive");
-                                                    botPlayer->ResurrectPlayer(1.0f);
-                                                    botPlayer->SpawnCorpseBones();
-
-                                                    botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
-
-                                                    /*if (botPlayer->GetSession())
-                                                    {
-                                                        WorldPacket pachetGol;
-                                                        botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                                                    }*/
-
-                                                    botPlayer->DurabilityRepairAll(false, 0, false);
-                                                    botPlayer->RemoveAllAuras();
-                                                }
-
-                                                if (botPlayer->IsInCombat())
-                                                {
-                                                    botPlayer->AttackStop();
-                                                    botPlayer->ClearInCombat();
-                                                }
-
-                                                // 1. Luam inaltimea curenta a botului ca fallback sigur
-                                                float groundHeight = botPlayer->GetPositionZ();
-
-                                                // 2. PROTECTIE: Rulam GetHeight DOAR daca coordonatele botului sunt valide matematic in RAM
-                                                if (!std::isnan(botPlayer->GetPositionX()) && !std::isinf(botPlayer->GetPositionX()) &&
-                                                    !std::isnan(botPlayer->GetPositionY()) && !std::isinf(botPlayer->GetPositionY()))
-                                                {
-                                                    groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
-                                                }
-
-                                                // 3. Verificam starea de cadere sau anomalie de pozitie
-                                                if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
-                                                    botPlayer->IsFalling() ||
-                                                    botPlayer->IsUnderWater() ||
-                                                    botPlayer->IsInWater() ||
-                                                    botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
-                                                {
-                                                    TC_LOG_INFO("fakPlayer", "LOG PROTECTIE: Botul {} este in apa, cade sau e sub harta. Il trimitem acasa.", botPlayer->GetName().c_str());
-
-                                                    // Teleportam direct botul. NU mai apelam HandleMoveWorldportAckOpcode cu pachete goale aici!
-                                                    // Core-ul va cere singur ACK-ul pe canalul corect cand se va executa teleportarea.
-                                                    botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
-
-                                                    /*if (botPlayer->GetSession())
-                                                    {
-                                                        WorldPacket pachetGol;
-                                                        botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                                                    }*/
-                                                }
-
-                                                // ================
-
-                                                continue;
-                                            }
-
-                                            // protectie preventiva
-                                            botPlayer->GetMotionMaster()->Clear();
-                                            botPlayer->GetMotionMaster()->MoveIdle();
-                                            botPlayer->StopMoving();
-                                            // -------------
-
-                                            Team botTeamFromQueue = ginfoData.Team;
-                                            TeamId bgTeamId = TEAM_ALLIANCE;
-
-                                            if (botTeamFromQueue == HORDE)
-                                            {
-                                                bgTeamId = TEAM_HORDE;
-                                            }
-                                            else if (botTeamFromQueue != ALLIANCE)
-                                            {
-                                                if (Group* botGroup = botPlayer->GetGroup())
-                                                    bgTeamId = (botGroup->GetGUID().GetCounter() % 2 == 0) ? TEAM_ALLIANCE : TEAM_HORDE;
-                                            }
-
-                                            // 1. Sincronizam echipa botului
-                                            botPlayer->SetBGTeam(bgTeamId == TEAM_ALLIANCE ? ALLIANCE : HORDE);
-
-                                            // 2. Configuram punctele de tranzit si intrarile native conform header-ului tau
-                                            botPlayer->SetBattlegroundEntryPoint();
-                                            botPlayer->SetBattlegroundId(bg->GetInstanceID(), bg->GetTypeID());
-
-                                            // Corectie functii invitat: Preluam ID-ul de invitatie si il salvam pe player
-                                            uint32 inviteTeamId = botPlayer->GetArenaTeamIdInvited();
-                                            botPlayer->SetArenaTeamIdInvited(inviteTeamId);
-
-                                            tracker.isQueued = true;
-
-                                            // === LINIA TA DE SIGURANTA ANTI-PUNCTARE DUBLA ===
-                                            // sa nu le dea dublu jocuri contorizate
-                                            bgQueue.RemovePlayer(botPlayer->GetGUID(), false);
-                                            // ================================================
-
-                                            // 3. REPARATIE CRITICA PARAMETRI: Teleportarea nativa prin managerul de Battleground
-                                            // Parametrii trimisi: obiectul player, ID-ul real de instanta al arenei, Tipul de BG/Arena
-                                            sBattlegroundMgr->SendToBattleground(botPlayer, bg->GetInstanceID(), bg->GetTypeID());
-
-                                            TC_LOG_INFO("fakPlayer", "LOG ARENA REUSIT: {} a intrat nativ in Arena ID: {} (Tip: {}) cu eliminare din coada.",
-                                                botPlayer->GetName().c_str(), bg->GetInstanceID(), bg->GetTypeID());
-
-                                            break;
-
-
-                                        }
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // --- PASUL A2: DETECTARE SFARSIT DE MECI SI EVACUARE AUTOMATA ---
-                    if (esteInMeciAcum)
-                    {
-                        if (tracker.AddFromChatCmd)
-                            return;
-
-                        Battleground* bg = botPlayer->GetBattleground();
-
-                        // pentru AI cand este in meci
-                        if (bg && bg->GetStatus() == STATUS_IN_PROGRESS)
-                        {
-                            if (FictivBotsGuids.find(botPlayer->GetGUID()) != FictivBotsGuids.end())
-                            {
-                                kitt_start_bot_pvp_AI(botPlayer, diff);
-                            }
-                        }
-
-                        // STATUS_WAIT_LEAVE are valoarea nativa 4. O verificam direct in siguranta:
-                        if (bg && bg->GetStatus() == STATUS_WAIT_LEAVE)
-                        {
-                            botPlayer->AttackStop();
-                            botPlayer->CombatStop();
-                            botPlayer->GetMotionMaster()->Clear();
-                            botPlayer->GetMotionMaster()->MoveIdle();
-                            botPlayer->StopMoving();
-
-                            TC_LOG_INFO("fakPlayer", "LOG ARENA: Meciul s-a terminat pentru {}. Se forteaza parasirea instantei...", botPlayer->GetName().c_str());
-
-                            botPlayer->LeaveBattleground(true, true);
-
-                            // opcode
-                            /*if (botPlayer->GetSession())
-                            {
-                                WorldPacket pachetGol;
-                                botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                            }*/
-
-                            // --- LOGICA VERIFICARE SI ADAUGARE RATING ---
-                            CheckAndRewardArenaBotRating(botPlayer);
-                            CheckAndRewardArenaBotPersonalRating(botPlayer);
-
-                            //tracker.isQueued = false;
-
-                            //break;
-                            continue;
-                        }
-                    }
-
-                    // --- PASUL B: INSCRIERE SI RE-INSCRIERE AUTOMATA (AIci punem JoinGroupArena2v2Rated) ---
-                    if (!areCoadaActiva && !esteInMeciAcum)
-                    {
-                        if (tracker.isQueued)
-                        {
-                            tracker.isQueued = false;
-                            tracker.rejoinTimer = urand(15000, 35000);
-                            TC_LOG_INFO("fakPlayer", "LOG STATUS: Botul {} a iesit din query sau meci. Pornesc cronometrul de re-inscriere...", botPlayer->GetName().c_str());
-
-                            // verificare si la iesire din bg
-                            if (!botPlayer->IsBeingTeleported() && !botPlayer->IsLoading() &&
-                                !std::isnan(botPlayer->GetPositionX()) && !std::isinf(botPlayer->GetPositionX()) &&
-                                !std::isnan(botPlayer->GetPositionY()) && !std::isinf(botPlayer->GetPositionY()))
-                            {
-                                float groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
-
-                                if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
-                                    botPlayer->IsFalling() ||
-                                    botPlayer->IsUnderWater() ||
-                                    botPlayer->IsInWater() ||
-                                    botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
-                                {
-                                    TC_LOG_INFO("fakPlayer", "LOG PROTECTIE: Botul {} cade sau e in apa dupa meci. Il trimitem la Homebind.", botPlayer->GetName().c_str());
-
-                                    // Teleportam curat. NU mai trimitem pachetGol in HandleMoveWorldportAckOpcode!
-                                    // Core-ul nativ isi va gestiona singur tranzitul la Homebind.
-                                    botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
-
-                                    /*if (botPlayer->GetSession())
-                                    {
-                                        WorldPacket pachetGol;
-                                        botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
-                                    }*/
-                                }
-                            }
-                        }
-
-                        if (tracker.rejoinTimer <= diff)
-                        {
-                            bool existaJucatoriLaCoada = false;
-
-                            if (Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(BATTLEGROUND_AA))
-                            {
-                                if (PvPDifficultyEntry const* bracketEntry = GetBattlegroundBracketByLevel(bg->GetMapId(), botPlayer->GetLevel()))
-                                {
-                                    BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bg->GetTypeID(), bracketEntry->GetBracketId(), 2); // 2 = 2v2
-                                    BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
-
-                                    // join daca lista nu e goala pt toti botii
-                                    /*for (uint32 j = 0; j < 2; ++j)
-                                    {
-                                        if (!bgQueue.m_QueuedGroups[j].empty())
-                                        {
-                                            existaJucatoriLaCoada = true;
-                                            break;
-                                        }
-                                    }*/
-
-                                    // join doar daca in asteptare este cineva fara pereche
-                                    uint32 totalEchipeInCoada = 0;
-                                    for (uint32 j = 0; j < 2; ++j)
-                                    {
-                                        totalEchipeInCoada += bgQueue.m_QueuedGroups[j].size();
-                                    }
-
-                                    // Daca numarul de echipe din coada este IMPAR (1, 3, 5...), inseamna ca cineva nu are pereche!
-                                    // Doar in acest caz botul are voie sa intre ca sa completeze perechea.
-                                    if (totalEchipeInCoada % 2 != 0)
-                                    {
-                                        existaJucatoriLaCoada = true;
-                                    }
-                                }
-                            }
-
-                            if (!existaJucatoriLaCoada)
-                            {
-                                tracker.rejoinTimer = urand(10000, 20000);
-                            }
-                            else
-                            {
-
-                                if (botPlayer->HasAura(26013))
-                                {
-                                    botPlayer->RemoveAura(26013);
-                                }
-
-                                //JoinGroupArena2v2Rated(botPlayer);
-
-                                Group* checkGroup = botPlayer->GetGroup();
-
-                                if (checkGroup && checkGroup->IsLeader(botPlayer->GetGUID()))
-                                {
-                                    tracker.isQueued = true;
-                                    tracker.rejoinTimer = 0;
-                                    JoinGroupArena2v2Rated(botPlayer);
-                                }
-                                else
-                                {
-                                    tracker.isQueued = false;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            tracker.rejoinTimer -= diff;
-                        }
-                    }
-                    else
-                    {
-                        tracker.isQueued = true;
-                    }
-                }
-            }
+            PortInArenaDinamic(tracker, diff);
         }
 
         g_MultiBotTracker.erase(
@@ -1572,15 +963,15 @@ private:
                     }
                 }
             }
-/*            else
-            {
-                if (!botPlayer->InBattlegroundQueue())
-                {
-                    botPlayer->AddBattlegroundQueueId(bgQueueTypeId);
-                }
-            }*/
+            /*            else
+                        {
+                            if (!botPlayer->InBattlegroundQueue())
+                            {
+                                botPlayer->AddBattlegroundQueueId(bgQueueTypeId);
+                            }
+                        }*/
 
-            // Pasul 7: Programeaza serverul sa caute meci pentru acest MMR
+                        // Pasul 7: Programeaza serverul sa caute meci pentru acest MMR
             sBattlegroundMgr->ScheduleQueueUpdate(matchmakerRating, bgQueueTypeId);
 
             TC_LOG_INFO("fakPlayer", "Succes Coada: Echipa de boti condusa de {} a intrat oficial in query-ul de Matchmaking 2v2 Rated!", botPlayer->GetName().c_str());
@@ -1685,6 +1076,648 @@ private:
             }
         }
     }
+
+    // ce era in onUpdate
+    // separarea functiilor
+
+    // Intrare in lume
+    void IntrareaInLume(BotAsyncTracker& tracker, uint32 /*diff*/)
+    {
+        if (!tracker.isProcessed && !tracker.kickedByPlayer)
+        {
+            if (g_BootSequenceTimer > 0)
+                return;
+
+            if (tracker.isReady)
+            {
+                tracker.isProcessed = true;
+                g_BootSequenceTimer = 5000;
+
+                auto loginHolder = std::static_pointer_cast<CharacterDatabaseQueryHolder>(tracker.holder);
+                if (!loginHolder)
+                {
+                    tracker.isProcessed = true;
+                    //continue;
+                    return;
+                }
+
+                TC_LOG_INFO("fakPlayer", "LOG CUSTOM: Baza de date a returnat datele pentru GUID {}! Se forteaza intrarea...", tracker.charGuid);
+                /*
+                std::string tempName = "GHOST_SESSION_" + std::to_string(tracker.charGuid);
+                std::shared_ptr<WorldSocket> nullSocket = nullptr;
+
+                auto ghostSession = std::make_unique<WorldSession>(tracker.accountId, std::move(tempName), nullSocket, SEC_PLAYER, 2, 0, std::chrono::minutes(0), LOCALE_enUS, 0, false);
+                //ghostSession->LoadPermissions();
+
+                Player* botPlayer = new Player(ghostSession.get());
+                ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
+
+                g_GhostSessionsStorage.push_back(std::move(ghostSession));
+                */
+                WorldSession* realSession = tracker.realSession;
+                if (!realSession)
+                {
+                    TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: Sesiunea reala a disparut din tracker pentru GUID {}.", tracker.charGuid);
+                    //continue;
+                    return;
+                }
+
+                Player* botPlayer = new Player(realSession);
+                ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
+
+                if (botPlayer->LoadFromDB(playerGuid, *tracker.holder))
+                {
+                    // protectie map instance
+                    // nu se poate crea instata daca nu e jucator deja
+                    tracker.realSession->SetPlayer(botPlayer); // test sa il gaseasca la stergere
+
+                    uint32 botMapId = botPlayer->GetMapId();
+                    MapEntry const* mapEntry = sMapStore.LookupEntry(botMapId);
+
+                    if (!mapEntry || mapEntry->Instanceable())
+                    {
+                        //ForseazaStergereBotFantoma(tracker);
+
+                        uint32 homeMapId = botPlayer->m_homebindMapId;
+                        float homeX = botPlayer->m_homebindX;
+                        float homeY = botPlayer->m_homebindY;
+                        float homeZ = botPlayer->m_homebindZ;
+                        float homeO = botPlayer->GetOrientation();
+                        //botPlayer->TeleportTo(homeMapId, homeX, homeY, homeZ, homeO);
+                        CharacterDatabase.PExecute("UPDATE characters SET position_x = {}, position_y = {}, position_z = {}, orientation = {}, map = {}, instance_id = 0 WHERE guid = {};",
+                            homeX, homeY, homeZ, homeO, homeMapId, tracker.charGuid);
+
+
+                        TC_LOG_INFO("fakPlayer", "LOG GHOST PROTECTIE: Botul {} a fost mutat in memorie catre Homebind (Map: {}).", botPlayer->GetName().c_str(), homeMapId);
+
+                        //PornesteBotIndividual(tracker.accountId, tracker.charGuid);
+
+                        botPlayer->CleanupsBeforeDelete();
+                        delete botPlayer;
+                        if (tracker.realSession)
+                        {
+                            tracker.realSession->SetIsKittBot(false); // Oprim imunitatea sesiunii vechi pentru a fi curatata de nucleu
+                            tracker.realSession->SetPlayer(nullptr);
+                            tracker.realSession = nullptr;
+                        }
+
+                        tracker.RemoveFromWorld = true;
+                        tracker.isProcessed = true;
+                        PornesteBotIndividual(tracker.accountId, tracker.charGuid);
+                        //realSession->SetPlayer(nullptr);
+
+                        //continue;
+                        return;
+                    }
+                    // -------------------
+
+                    // ==================== ACTIVARE GUILDA REPARATA COMPLET ====================
+                    QueryResult dbGuildResult = CharacterDatabase.PQuery("SELECT `guildid`, `rank` FROM `guild_member` WHERE `guid` = {}", tracker.charGuid);
+
+                    if (dbGuildResult)
+                    {
+                        Field* fields = dbGuildResult->Fetch();
+                        uint32 dbGuildId = fields[0].GetUInt32(); // Coloana 0 = guildId
+                        uint8 dbRankId = fields[1].GetUInt8();   // Coloana 1 = rank
+
+                        if (dbGuildId > 0)
+                        {
+                            // 1. Setam ID-ul si rank-ul direct pe obiectul botului (reparam ce a omis LoadFromDB)
+                            botPlayer->SetInGuild(dbGuildId);
+                            botPlayer->SetGuildRank(dbRankId);
+
+                            // 2. Luam obiectul guildei din managerul global folosind ID-ul aflat
+                            if (Guild* guild = sGuildMgr->GetGuildById(dbGuildId))
+                            {
+                                // 3. Apelam functia din header-ul tau pentru a-l trece online
+                                // Parametrii: player-ul, tipul de flag (1 = online status), starea (true = online)
+                                guild->OnPlayerStatusChange(botPlayer, 1, true);
+
+                                // 4. Sincronizam zona si nivelul in lista interna a breslei
+                                guild->UpdateMemberData(botPlayer, GUILD_MEMBER_DATA_ZONEID, botPlayer->GetZoneId());
+                                guild->UpdateMemberData(botPlayer, GUILD_MEMBER_DATA_LEVEL, botPlayer->GetLevel());
+
+                                TC_LOG_INFO("fakPlayer", "LOG GUILDA REUSIT: Botul {} (GUID: {}) este acum online in Guilda ID {}.", botPlayer->GetName(), tracker.charGuid, dbGuildId);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Daca nu are guilda in baza de date
+                        botPlayer->SetInGuild(0);
+                        botPlayer->SetGuildRank(0);
+                    }
+
+                    botPlayer->ForceValuesUpdateAtIndex(PLAYER_GUILDID);
+                    // =====================================================================
+
+                    //botPlayer->GetMotionMaster()->Initialize();
+                    //botPlayer->SendDungeonDifficulty(false);
+
+                    //tracker.realSession->LoadPermissions();
+                    //tracker.realSession->SetPlayer(botPlayer);
+
+                    //sCharacterCache->AddCharacterCacheEntry(botPlayer->GetGUID(), tracker.accountId, botPlayer->GetName(), botPlayer->GetGender(), botPlayer->GetRace(), botPlayer->GetClass(), botPlayer->GetLevel());
+
+                    Map* map = sMapMgr->CreateBaseMap(botPlayer->GetMapId());
+
+                    if (map)
+                    {
+                        botPlayer->SetMap(map);
+
+                        // 1. Calculam coordonatele celulei si grid-ului unde se afla botul in Shattrath/lume
+                        //GridCoord p = Trinity::ComputeGridCoord(botPlayer->GetPositionX(), botPlayer->GetPositionY());
+
+                        // 2. Fortam serverul sa incarce in memorie bucata de harta (Grid-ul) pentru acele coordonate
+                        // Fara asta, in Shattrath botul va cadea in gol sau va genera crash la tick-ul de update
+                        map->LoadGrid(botPlayer->GetPositionX(), botPlayer->GetPositionY());
+
+                        // 2. CONFIGUR?M SESIUNEA ?I MI?CAREA (Doar dup? ce harta este valid?!)
+                        tracker.realSession->SetPlayer(botPlayer);
+                        botPlayer->GetMotionMaster()->Initialize();
+                        botPlayer->SendDungeonDifficulty(false);
+
+                        // Protectie anti-gravitate la spawn: Seta?i semafoarele pentru a bloca c?derea ?n gol ?n primul tick
+                        botPlayer->SetSemaphoreTeleportFar(true);
+                        botPlayer->SetSemaphoreTeleportNear(true);
+
+                        // 3. LOGARE ?N LUME ?N ORDINEA OFICIAL? TRINITYCORE
+                        // Pasul A: Ad?ug?m ?n Accessorul Global pentru ca thread-urile de h?r?i s? ?l g?seasc? ?n RAM
+                        ObjectAccessor::AddObject(botPlayer);
+
+                        // Pasul B: Ad?ug?m playerul ?n registrul fizic al h?r?ii active
+                        botPlayer->GetMap()->AddPlayerToMap(botPlayer);
+
+                        // Pasul C: Activ?m prezen?a lui global? ?n lume (Broadcast c?tre cei din jur)
+                        botPlayer->AddToWorld();
+
+
+
+                        // 4. PLANIFIC?M DEBLOCAREA SEMAFOARELOR (Dup? ce se a?az? ?n Grid)
+                        class BotSpawnSafeEvent : public BasicEvent
+                        {
+                        public:
+                            BotSpawnSafeEvent(Player* _player) : player(_player) {}
+                            bool Execute(uint64, uint32) override
+                            {
+                                if (player && player->IsInWorld())
+                                {
+                                    player->SetSemaphoreTeleportFar(false);
+                                    player->SetSemaphoreTeleportNear(false);
+                                    player->StopMoving();
+                                    TC_LOG_INFO("fakPlayer", "[BotNetwork] -> [SPAWN-SAFE] Semafoarele de siguran?? au fost ridicate pentru {}.", player->GetName().c_str());
+                                }
+                                return true;
+                            }
+                        private:
+                            Player* player;
+                        };
+                        botPlayer->m_Events.AddEvent(new BotSpawnSafeEvent(botPlayer), botPlayer->m_Events.CalculateTime(800ms));
+
+
+
+                        //botPlayer->GetMap()->AddPlayerToMap(botPlayer);
+
+                        //botPlayer->AddToWorld();
+                        //ObjectAccessor::AddObject(botPlayer);
+
+                        // Asta face ca botul sa fie vazut online la comanda /who sau pe panourile web (UCP/Armory)
+                        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_ONLINE);
+                        stmt->setUInt32(0, botPlayer->GetGUID().GetCounter());
+                        CharacterDatabase.Execute(stmt);
+
+                        // Toti jucatorii care il au la Friends vor primi notificarea vizuala "X has come online."
+                        sSocialMgr->SendFriendStatus(botPlayer, FRIEND_ONLINE, botPlayer->GetGUID(), true);
+
+                        // 4. COPIAT DIN CORE: Sincronizare si anunt in cadrul Grupului (daca botul era intr-un Party/Raid)
+                        if (Group* group = botPlayer->GetGroup())
+                        {
+                            group->SendUpdate();
+                            group->ResetMaxEnchantingLevel();
+                            if (group->GetLeaderGUID() == botPlayer->GetGUID())
+                                group->StopLeaderOfflineTimer();
+                        }
+
+                        // 5. Sincronizam timpul intern de logare si fortam masca de update vizual pentru guilda sub cap
+                        botPlayer->SetInGameTime(GameTime::GetGameTimeMS());
+
+                        botPlayer->SendInitialPacketsBeforeAddToMap();
+                        botPlayer->SendInitialPacketsAfterAddToMap();
+
+                        // ===========================================================
+
+                        FictivBotsGuids.insert(playerGuid);
+
+                        TC_LOG_INFO("fakPlayer", "LOG CUSTOM REUSIT: {} (GUID: {}) a intrat online permanent pe sesiunea reala!", botPlayer->GetName().c_str(), tracker.charGuid);
+                        //break;
+                        return;
+                    }
+                }
+                else
+                {
+                    TC_LOG_INFO("fakPlayer", "LOG CUSTOM EROARE: LoadFromDB a refuzat structura holder-ului pentru GUID {}.", tracker.charGuid);
+
+                    realSession->SetPlayer(nullptr);
+                    botPlayer->CleanupsBeforeDelete();
+                    delete botPlayer;
+
+                    tracker.realSession->SetIsKittBot(false);
+                    tracker.realSession = nullptr;
+                    tracker.isProcessed = true;
+
+                    /*if (WorldSession* ghostSession = botPlayer->GetSession())
+                    {
+                        ghostSession->SetPlayer(nullptr);
+                    }
+
+                    botPlayer->CleanupsBeforeDelete();
+                    delete botPlayer;
+
+                    auto accountId = tracker.accountId;
+                    g_GhostSessionsStorage.erase(
+                        std::remove_if(g_GhostSessionsStorage.begin(), g_GhostSessionsStorage.end(),
+                            [accountId](const std::unique_ptr<WorldSession>& session) {
+                                return session && session->GetAccountId() == accountId;
+                            }),
+                        g_GhostSessionsStorage.end()
+                    );
+
+                    tracker.realSession = nullptr;
+                    tracker.isProcessed = false;*/
+                }
+                //return;
+                //continue;
+                return;
+            }
+        }
+
+    }
+
+    // --- RE-INTRARE ASINCRONA DUPA LOGOUT JUCATOR REAL ---
+    void ReintrareAsyncDupaLogOut(BotAsyncTracker& tracker, uint32 /*diff*/)
+    {
+        if (!tracker.isProcessed && tracker.kickedByPlayer)
+        {
+            if (g_BootSequenceTimer > 0)
+                return;
+
+            tracker.AccRealBusy = false;
+
+            //ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
+
+            SessionMap const& sesiuniGlobale = sWorld->GetAllSessions();
+
+            for (auto const& [sessId, sessionPointer] : sesiuniGlobale)
+            {
+                if (sessionPointer && sessionPointer->GetAccountId() == tracker.accountId && sessionPointer != tracker.realSession)
+                {
+                    TC_LOG_INFO("fakPlayer", "Verificare Sesiune: Contul {} egal cu: {}", sessionPointer->GetAccountId(), tracker.accountId);
+
+                    tracker.AccRealBusy = true;
+                    break;
+                }
+            }
+
+            if (tracker.AccRealBusy)
+            {
+                tracker.AccRelogDelay = 10000;
+                //continue;
+                return;
+            }
+
+            // Daca omul a dat logout si contul e complet liber:
+            if (!tracker.AccRealBusy)
+            {
+                tracker.AccRelogDelay = 5000;
+                tracker.kickedByPlayer = false;
+                PornesteBotIndividual(tracker.accountId, tracker.charGuid);
+
+                TC_LOG_INFO("fakPlayer", "LOG REJOIN: Contul {} a fost eliberat. Execut direct secventa de boot...", tracker.accountId);
+            }
+            //continue;
+            return;
+        }
+
+    }
+
+    // 2. LOGICA DINAMICA DE COADA SI PORT IN ARENA
+    void PortInArenaDinamic(BotAsyncTracker& tracker, uint32 diff)
+    {
+        if (tracker.isProcessed)
+        {
+            ObjectGuid playerGuid = ObjectGuid::Create<HighGuid::Player>(tracker.charGuid);
+            Player* botPlayer = ObjectAccessor::FindPlayer(playerGuid);
+
+
+            if (botPlayer && botPlayer->IsInWorld() && !botPlayer->IsLoading())
+            {
+                bool areCoadaActiva = botPlayer->InBattlegroundQueue();
+                bool esteInMeciAcum = botPlayer->GetMap()->IsBattleArena();
+
+                // --- PASUL A: PORTARE IN ARENA PRIN EVENIMENT (ANTI-CRASH TOTAL) ---
+                if (areCoadaActiva && !esteInMeciAcum)
+                {
+                    for (uint32 slot = 0; slot < 3; ++slot)
+                    {
+                        BattlegroundQueueTypeId queueTypeId = botPlayer->GetBattlegroundQueueTypeId(slot);
+
+                        if (queueTypeId.BattlemasterListId != 0)
+                        {
+                            BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(queueTypeId);
+                            GroupQueueInfo ginfoData;
+
+                            if (bgQueue.GetPlayerGroupInfoData(botPlayer->GetGUID(), &ginfoData))
+                            {
+                                if (ginfoData.IsInvitedToBGInstanceGUID > 0)
+                                {
+                                    BattlegroundTypeId bgTypeId = BattlegroundTypeId(queueTypeId.BattlemasterListId);
+                                    Battleground* bg = sBattlegroundMgr->GetBattleground(ginfoData.IsInvitedToBGInstanceGUID, bgTypeId);
+
+                                    if (bg)
+                                    {
+                                        Map* actualArenaMap = sMapMgr->FindMap(bg->GetMapId(), bg->GetInstanceID());
+                                        if (!actualArenaMap)
+                                        {
+                                            // === reinvie si tele home ===
+                                            if (!botPlayer->IsAlive())
+                                            {
+                                                TC_LOG_INFO("fakPlayer", " !isalive");
+                                                botPlayer->ResurrectPlayer(1.0f);
+                                                botPlayer->SpawnCorpseBones();
+
+                                                botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
+
+                                                /*if (botPlayer->GetSession())
+                                                {
+                                                    WorldPacket pachetGol;
+                                                    botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                                                }*/
+
+                                                botPlayer->DurabilityRepairAll(false, 0, false);
+                                                botPlayer->RemoveAllAuras();
+                                            }
+
+                                            if (botPlayer->IsInCombat())
+                                            {
+                                                botPlayer->AttackStop();
+                                                botPlayer->ClearInCombat();
+                                            }
+
+                                            // 1. Luam inaltimea curenta a botului ca fallback sigur
+                                            float groundHeight = botPlayer->GetPositionZ();
+
+                                            // 2. PROTECTIE: Rulam GetHeight DOAR daca coordonatele botului sunt valide matematic in RAM
+                                            if (!std::isnan(botPlayer->GetPositionX()) && !std::isinf(botPlayer->GetPositionX()) &&
+                                                !std::isnan(botPlayer->GetPositionY()) && !std::isinf(botPlayer->GetPositionY()))
+                                            {
+                                                groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
+                                            }
+
+                                            // 3. Verificam starea de cadere sau anomalie de pozitie
+                                            if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
+                                                botPlayer->IsFalling() ||
+                                                botPlayer->IsUnderWater() ||
+                                                botPlayer->IsInWater() ||
+                                                botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
+                                            {
+                                                TC_LOG_INFO("fakPlayer", "LOG PROTECTIE: Botul {} este in apa, cade sau e sub harta. Il trimitem acasa.", botPlayer->GetName().c_str());
+
+                                                // Teleportam direct botul. NU mai apelam HandleMoveWorldportAckOpcode cu pachete goale aici!
+                                                // Core-ul va cere singur ACK-ul pe canalul corect cand se va executa teleportarea.
+                                                botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
+
+                                                /*if (botPlayer->GetSession())
+                                                {
+                                                    WorldPacket pachetGol;
+                                                    botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                                                }*/
+                                            }
+
+                                            // ================
+
+                                            continue;
+                                        }
+
+                                        // protectie preventiva
+                                        botPlayer->GetMotionMaster()->Clear();
+                                        botPlayer->GetMotionMaster()->MoveIdle();
+                                        botPlayer->StopMoving();
+                                        // -------------
+
+                                        Team botTeamFromQueue = ginfoData.Team;
+                                        TeamId bgTeamId = TEAM_ALLIANCE;
+
+                                        if (botTeamFromQueue == HORDE)
+                                        {
+                                            bgTeamId = TEAM_HORDE;
+                                        }
+                                        else if (botTeamFromQueue != ALLIANCE)
+                                        {
+                                            if (Group* botGroup = botPlayer->GetGroup())
+                                                bgTeamId = (botGroup->GetGUID().GetCounter() % 2 == 0) ? TEAM_ALLIANCE : TEAM_HORDE;
+                                        }
+
+                                        // 1. Sincronizam echipa botului
+                                        botPlayer->SetBGTeam(bgTeamId == TEAM_ALLIANCE ? ALLIANCE : HORDE);
+
+                                        // 2. Configuram punctele de tranzit si intrarile native conform header-ului tau
+                                        botPlayer->SetBattlegroundEntryPoint();
+                                        botPlayer->SetBattlegroundId(bg->GetInstanceID(), bg->GetTypeID());
+
+                                        // Corectie functii invitat: Preluam ID-ul de invitatie si il salvam pe player
+                                        uint32 inviteTeamId = botPlayer->GetArenaTeamIdInvited();
+                                        botPlayer->SetArenaTeamIdInvited(inviteTeamId);
+
+                                        tracker.isQueued = true;
+
+                                        // === LINIA TA DE SIGURANTA ANTI-PUNCTARE DUBLA ===
+                                        // sa nu le dea dublu jocuri contorizate
+                                        bgQueue.RemovePlayer(botPlayer->GetGUID(), false);
+                                        // ================================================
+
+                                        // 3. REPARATIE CRITICA PARAMETRI: Teleportarea nativa prin managerul de Battleground
+                                        // Parametrii trimisi: obiectul player, ID-ul real de instanta al arenei, Tipul de BG/Arena
+                                        sBattlegroundMgr->SendToBattleground(botPlayer, bg->GetInstanceID(), bg->GetTypeID());
+
+                                        TC_LOG_INFO("fakPlayer", "LOG ARENA REUSIT: {} a intrat nativ in Arena ID: {} (Tip: {}) cu eliminare din coada.",
+                                            botPlayer->GetName().c_str(), bg->GetInstanceID(), bg->GetTypeID());
+
+                                        break;
+
+
+                                    }
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // --- PASUL A2: DETECTARE SFARSIT DE MECI SI EVACUARE AUTOMATA ---
+                if (esteInMeciAcum)
+                {
+                    if (tracker.AddFromChatCmd)
+                        return;
+
+                    Battleground* bg = botPlayer->GetBattleground();
+
+                    // pentru AI cand este in meci
+                    if (bg && bg->GetStatus() == STATUS_IN_PROGRESS)
+                    {
+                        if (FictivBotsGuids.find(botPlayer->GetGUID()) != FictivBotsGuids.end())
+                        {
+                            kitt_start_bot_pvp_AI(botPlayer, diff);
+                        }
+                    }
+
+                    // STATUS_WAIT_LEAVE are valoarea nativa 4. O verificam direct in siguranta:
+                    if (bg && bg->GetStatus() == STATUS_WAIT_LEAVE)
+                    {
+                        botPlayer->AttackStop();
+                        botPlayer->CombatStop();
+                        botPlayer->GetMotionMaster()->Clear();
+                        botPlayer->GetMotionMaster()->MoveIdle();
+                        botPlayer->StopMoving();
+
+                        TC_LOG_INFO("fakPlayer", "LOG ARENA: Meciul s-a terminat pentru {}. Se forteaza parasirea instantei...", botPlayer->GetName().c_str());
+
+                        botPlayer->LeaveBattleground(true, true);
+
+                        // opcode
+                        /*if (botPlayer->GetSession())
+                        {
+                            WorldPacket pachetGol;
+                            botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                        }*/
+
+                        // --- LOGICA VERIFICARE SI ADAUGARE RATING ---
+                        CheckAndRewardArenaBotRating(botPlayer);
+                        CheckAndRewardArenaBotPersonalRating(botPlayer);
+
+                        //tracker.isQueued = false;
+
+                        //break;
+                        //continue;
+                        return;
+                    }
+                }
+
+                // --- PASUL B: INSCRIERE SI RE-INSCRIERE AUTOMATA (AIci punem JoinGroupArena2v2Rated) ---
+                if (!areCoadaActiva && !esteInMeciAcum)
+                {
+                    if (tracker.isQueued)
+                    {
+                        tracker.isQueued = false;
+                        tracker.rejoinTimer = urand(15000, 35000);
+                        TC_LOG_INFO("fakPlayer", "LOG STATUS: Botul {} a iesit din query sau meci. Pornesc cronometrul de re-inscriere...", botPlayer->GetName().c_str());
+
+                        // verificare si la iesire din bg
+                        if (!botPlayer->IsBeingTeleported() && !botPlayer->IsLoading() &&
+                            !std::isnan(botPlayer->GetPositionX()) && !std::isinf(botPlayer->GetPositionX()) &&
+                            !std::isnan(botPlayer->GetPositionY()) && !std::isinf(botPlayer->GetPositionY()))
+                        {
+                            float groundHeight = botPlayer->GetMap()->GetHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY(), botPlayer->GetPositionZ());
+
+                            if (botPlayer->GetPositionZ() > (groundHeight + 5.0f) ||
+                                botPlayer->IsFalling() ||
+                                botPlayer->IsUnderWater() ||
+                                botPlayer->IsInWater() ||
+                                botPlayer->GetPositionZ() < botPlayer->GetMap()->GetMinHeight(botPlayer->GetPositionX(), botPlayer->GetPositionY()))
+                            {
+                                TC_LOG_INFO("fakPlayer", "LOG PROTECTIE: Botul {} cade sau e in apa dupa meci. Il trimitem la Homebind.", botPlayer->GetName().c_str());
+
+                                // Teleportam curat. NU mai trimitem pachetGol in HandleMoveWorldportAckOpcode!
+                                // Core-ul nativ isi va gestiona singur tranzitul la Homebind.
+                                botPlayer->TeleportTo(botPlayer->m_homebindMapId, botPlayer->m_homebindX, botPlayer->m_homebindY, botPlayer->m_homebindZ, botPlayer->GetOrientation());
+
+                                /*if (botPlayer->GetSession())
+                                {
+                                    WorldPacket pachetGol;
+                                    botPlayer->GetSession()->HandleMoveWorldportAckOpcode(pachetGol);
+                                }*/
+                            }
+                        }
+                    }
+
+                    if (tracker.rejoinTimer <= diff)
+                    {
+                        bool existaJucatoriLaCoada = false;
+
+                        if (Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(BATTLEGROUND_AA))
+                        {
+                            if (PvPDifficultyEntry const* bracketEntry = GetBattlegroundBracketByLevel(bg->GetMapId(), botPlayer->GetLevel()))
+                            {
+                                BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bg->GetTypeID(), bracketEntry->GetBracketId(), 2); // 2 = 2v2
+                                BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
+
+                                // join daca lista nu e goala pt toti botii
+                                /*for (uint32 j = 0; j < 2; ++j)
+                                {
+                                    if (!bgQueue.m_QueuedGroups[j].empty())
+                                    {
+                                        existaJucatoriLaCoada = true;
+                                        break;
+                                    }
+                                }*/
+
+                                // join doar daca in asteptare este cineva fara pereche
+                                uint32 totalEchipeInCoada = 0;
+                                for (uint32 j = 0; j < 2; ++j)
+                                {
+                                    totalEchipeInCoada += bgQueue.m_QueuedGroups[j].size();
+                                }
+
+                                // Daca numarul de echipe din coada este IMPAR (1, 3, 5...), inseamna ca cineva nu are pereche!
+                                // Doar in acest caz botul are voie sa intre ca sa completeze perechea.
+                                if (totalEchipeInCoada % 2 != 0)
+                                {
+                                    existaJucatoriLaCoada = true;
+                                }
+                            }
+                        }
+
+                        if (!existaJucatoriLaCoada)
+                        {
+                            tracker.rejoinTimer = urand(10000, 20000);
+                        }
+                        else
+                        {
+
+                            if (botPlayer->HasAura(26013))
+                            {
+                                botPlayer->RemoveAura(26013);
+                            }
+
+                            //JoinGroupArena2v2Rated(botPlayer);
+
+                            Group* checkGroup = botPlayer->GetGroup();
+
+                            if (checkGroup && checkGroup->IsLeader(botPlayer->GetGUID()))
+                            {
+                                tracker.isQueued = true;
+                                tracker.rejoinTimer = 0;
+                                JoinGroupArena2v2Rated(botPlayer);
+                            }
+                            else
+                            {
+                                tracker.isQueued = false;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        tracker.rejoinTimer -= diff;
+                    }
+                }
+                else
+                {
+                    tracker.isQueued = true;
+                }
+            }
+        }
+
+    }
+
 };
 
 class kitt_bot_chat_handler : public PlayerScript
