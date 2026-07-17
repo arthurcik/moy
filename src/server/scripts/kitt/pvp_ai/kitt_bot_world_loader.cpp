@@ -1874,6 +1874,8 @@ public:
     {
         static std::vector<ChatCommandBuilder> kittGhostPlayerCommandSubcommandTable1 =
         {
+            { "addMe",      HandleAddMeInWorld,           rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            { "remMe",      HandleRemoveMeFromWorld,      rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
             //{ "list",   HandleListAllGhostAccess,      rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
             //{ "set",    HandleSetGhostAccess,    rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
             //{ "del",    HandleDelGhostAccess,    rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
@@ -2354,6 +2356,84 @@ public:
 
         return true;
     }
+
+    static bool HandleAddMeInWorld(ChatHandler* handler, Optional<std::string_view> args)
+    {
+        Player* me = handler->GetSession()->GetPlayer();
+        if (!me)
+            return false;
+
+        if (args)
+        {
+            handler->SendSysMessage("|cff00ff00Ghost|r Foloseste doar comanda fara alte caractere.");
+            return true;
+        }
+
+        uint32 accountId = me->GetSession()->GetAccountId();
+        uint32 charGuid = me->GetGUID().GetCounter();
+
+        // 1. Verificam sub mutex daca esti deja monitorizat (ca sa nu apara dubluri in g_MultiBotTracker)
+        {
+            std::lock_guard<std::mutex> lock(g_BotTrackerMutex);
+            for (auto const& tracker : g_MultiBotTracker)
+            {
+                if (tracker.accountId == accountId)
+                {
+                    handler->PSendSysMessage("|cff00ff00Ghost|r Contul tau este deja inregistrat in tracker!");
+                    return true;
+                }
+            }
+        }
+
+        // 2. Initializam trackerul cu flag-urile specifice unui jucator real online
+        BotAsyncTracker tracker;
+        tracker.accountId = accountId;
+        tracker.charGuid = charGuid;
+        tracker.kickedByPlayer = true;          // Flag pe true: omul are prioritate acum
+        tracker.AccRealBusy = true;             // Blocheaza logica de relog din a rula aiurea acum
+        tracker.AddFromChatCmd = true;          // Marcam ca a pornit din comanda chat
+
+        // 3. Inseram tracker-ul in siguranta in vectorul global
+        {
+            std::lock_guard<std::mutex> lock(g_BotTrackerMutex);
+            g_MultiBotTracker.push_back(std::move(tracker));
+        }
+
+        handler->PSendSysMessage("|cff00ff00Ghost Succes!|r Te-ai adaugat in tracker. Cand vei iesi de pe cont, AI-ul va prelua controlul.");
+        return true;
+    }
+
+    static bool HandleRemoveMeFromWorld(ChatHandler* handler, Optional<std::string_view> args)
+    {
+        Player* me = handler->GetSession()->GetPlayer();
+        if (!me)
+            return false;
+
+        if (args)
+        {
+            handler->SendSysMessage("|cff00ff00Ghost|r Foloseste doar comanda fara alte caractere.");
+            return true;
+        }
+
+        uint32 accountId = me->GetSession()->GetAccountId();
+
+        {
+            for (auto& tracker : g_MultiBotTracker)
+            {
+                if (tracker.accountId == accountId)
+                {
+                    tracker.RemoveFromWorld = true;
+
+                    handler->PSendSysMessage("|cff00ff00Ghost Succes!|r Te-ai sters din tracker.");
+                    return true;
+                }
+            }
+        }
+
+        handler->PSendSysMessage("|cff00ff00Ghost|r Contul tau nu este inregistrat in tracker!");
+        return true;
+    }
+
 
 
 };
