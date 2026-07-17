@@ -1874,8 +1874,8 @@ public:
     {
         static std::vector<ChatCommandBuilder> kittGhostPlayerCommandSubcommandTable1 =
         {
-            { "addMe",      HandleAddMeInWorld,           rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
-            { "remMe",      HandleRemoveMeFromWorld,      rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
+            { "addMe",      HandleAddMeInWorld,           rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_5, Console::No },
+            { "remMe",      HandleRemoveMeFromWorld,      rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_5, Console::No },
             //{ "list",   HandleListAllGhostAccess,      rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
             //{ "set",    HandleSetGhostAccess,    rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
             //{ "del",    HandleDelGhostAccess,    rbac::RBAC_PERM_COMMAND_KITT_GM_RANK_9, Console::No },
