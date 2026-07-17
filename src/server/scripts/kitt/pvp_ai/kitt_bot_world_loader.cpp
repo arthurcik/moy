@@ -648,6 +648,7 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
     // Cautam daca jucatorul este inca in lume
     if (Player* botPlayer = ObjectAccessor::FindConnectedPlayer(playerGuid))
     {
+        //TC_LOG_INFO("login erase", "se activeaza la PEMATUR?");
         botPlayer->GetSession()->LogoutPlayer(true);
         botPlayer->GetSession()->PlayerLogout();
         //botPlayer->CombatStop();
@@ -697,6 +698,10 @@ void ForseazaStergereBotFantoma(BotAsyncTracker& tracker)
         //sWorld->RemoveSession(tracker.realSession->GetAccountId());
 
         //delete tracker.realSession;
+        if (!tracker.isProcessed)
+        {
+            tracker.realSession->GetQueryProcessor().CancelAll();
+        }
         tracker.realSession->SetIsKittBot(false);
         tracker.realSession = nullptr;
     }
@@ -727,6 +732,22 @@ public:
                 ForseazaStergereBotFantoma(tracker);
 
                 TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK: Curatare finalizata cu succes pentru contul {}.", accountId);
+                break;
+            }
+            // CAZUL 2: Botul NU este inca procesat (este in cele 5 secunde de delay sau in incarcare SQL)
+            else if (tracker.accountId == accountId && !tracker.kickedByPlayer)
+            {
+                tracker.AccRelogDelay = 5000;
+                tracker.kickedByPlayer = true;
+                tracker.AccRealBusy = true;
+                tracker.isProcessed = false;
+                tracker.isReady = false; // Oprim asincronul SQL din a mai valida datele ca fiind gata
+
+                TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK [PREMATUR]: Jucatorul real s-a logat inainte ca botul sa intre in lume (Cont ID: {}). Se avorteaza secventa...", accountId);
+
+                ForseazaStergereBotFantoma(tracker);
+
+                TC_LOG_INFO("fakPlayer", "LOG ACCOUNT KICK [PREMATUR]: Sesiunea fantoma si flag-urile au fost curatate pentru contul {}.", accountId);
                 break;
             }
         }
