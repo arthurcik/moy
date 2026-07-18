@@ -1907,8 +1907,8 @@ private:
                                 {
                                     // Protectie: Botii nu pot da join la o arena mai mare decat numarul lor de membri!
                                     // Daca grupul are 3 boti, sare peste verificarea de 5v5.
-                                    if (membriGrup < tipCoada)
-                                        continue;
+                                    /*if (membriGrup < tipCoada)
+                                        continue;*/
 
                                     BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bg->GetTypeID(), bracketEntry->GetBracketId(), tipCoada);
                                     BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
@@ -1986,6 +1986,8 @@ private:
                             }
                             else
                             {
+                                AjusteazaGrupBotPentruArena(botPlayer, tipArenaAles);
+
                                 tracker.isQueued = false;
                                 tracker.rejoinTimer = urand(10000, 20000);
                             }
@@ -2004,6 +2006,99 @@ private:
         }
 
     }
+
+    // ajusteaza grup arena
+    void AjusteazaGrupBotPentruArena(Player* botPlayer, uint8 tipArenaAles)
+    {
+        if (!botPlayer || tipArenaAles == 0)
+            return;
+
+        // Determinam slotul echipei de arena in functie de dimensiunea ceruta
+        // 0 = 2v2, 1 = 3v3, 2 = 5v5
+        uint8 teamSizeIndex = 0;
+        if (tipArenaAles == 3) teamSizeIndex = 1;
+        else if (tipArenaAles == 5) teamSizeIndex = 2;
+
+        uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
+        if (arenaTeamId == 0)
+        {
+            TC_LOG_ERROR("fakPlayer", "PROTECTIE GRUP: Liderul bot {} nu are o echipa de arena pentru slotul {}v{}!", botPlayer->GetName().c_str(), tipArenaAles, tipArenaAles);
+            return;
+        }
+
+        ArenaTeam* at = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
+        if (!at)
+            return;
+
+        Group* group = botPlayer->GetGroup();
+        uint32 membriActuali = group ? group->GetMembersCount() : 1;
+
+        // Daca grupul are deja numarul perfect de oameni, nu mai facem nimic
+        if (membriActuali == tipArenaAles)
+            return;
+
+        // SITUATIA A: Grupul este prea mare (exemplu: avem grup de 5, dar coada cere 2v2)
+        // Desfiintam grupul pentru a-l lasa sa invite doar numarul corect la urmatorul tick
+        if (membriActuali > tipArenaAles)
+        {
+            if (group/* && group->IsLeader(botPlayer->GetGUID())*/)
+            {
+                TC_LOG_INFO("fakPlayer", "PROTECTIE GRUP: Grupul botului {} este prea mare ({}). Il desfiintam pentru re-creare la {}v{}.", botPlayer->GetName().c_str(), membriActuali, tipArenaAles, tipArenaAles);
+                group->Disband();
+            }
+            membriActuali = 1;
+            group = nullptr;
+        }
+
+        // SITUATIA B: Grupul este prea mic (aducem membri online din aceeasi Arena Team)
+        uint32 membriNecesariInPlus = tipArenaAles - membriActuali;
+        if (membriNecesariInPlus <= 0)
+            return;
+
+        uint32 membriInvitatiCuSucces = 0;
+
+        // Utilizam structura exacta cu iteratori nativi indicata de tine
+        for (ArenaTeam::MemberList::iterator itr = at->m_membersBegin(); itr != at->m_membersEnd(); ++itr)
+        {
+            // Nu il invitam pe liderul insusi
+            if (itr->Guid == botPlayer->GetGUID())
+                continue;
+
+            // Daca am adus destui oameni pentru dimensiunea ceruta, oprim cautarea
+            if (membriInvitatiCuSucces >= membriNecesariInPlus)
+                break;
+
+            // Verificam daca membrul din echipa de arena este online pe server
+            Player* colegEchipa = ObjectAccessor::FindConnectedPlayer(itr->Guid);
+            if (!colegEchipa || !colegEchipa->IsAlive() || colegEchipa->IsLoading() || colegEchipa->InBattleground())
+                continue;
+
+            // Verificam sa nu fie deja ocupat in alt grup
+            if (colegEchipa->GetGroup())
+                continue;
+
+            // Daca liderul nu avea grup deloc, il cream acum pe loc
+            if (!group)
+            {
+                group = new Group();
+                if (!group->Create(botPlayer))
+                {
+                    delete group;
+                    group = nullptr;
+                    break;
+                }
+                sGroupMgr->AddGroup(group);
+            }
+
+            // Adaugam membrul online direct in structura grupului (fara pachete de retea)
+            if (group->AddMember(colegEchipa))
+            {
+                membriInvitatiCuSucces++;
+                TC_LOG_INFO("fakPlayer", "PROTECTIE GRUP: Botul {} l-a adaugat in grup pe colegul {} pentru arena {}v{}.", botPlayer->GetName().c_str(), colegEchipa->GetName().c_str(), tipArenaAles, tipArenaAles);
+            }
+        }
+    }
+
 
 };
 
