@@ -64,3 +64,4 @@ void ExecutaLogicaWarlockPvP(Player* botWarlock, Unit*& victim, BotRole rolBot);
 void ExecutaLogicaMagePvP(Player* botWarlock, Unit*& victim, BotRole rolBot);
 void ExecutaLogicaRoguePvP(Player* botRogue, Unit*& victim, BotRole rolBot);
 void ExecutaLogicaDeathKnightPvP(Player* botDK, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaShamanPvP(Player* botShaman, Unit*& victim, BotRole rolBot);

@@ -761,6 +761,9 @@ void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff)
     case CLASS_DEATH_KNIGHT:
         ExecutaLogicaDeathKnightPvP(botPlayer, currentVictim, rolBot);
         break;
+    case CLASS_SHAMAN:
+        ExecutaLogicaShamanPvP(botPlayer, currentVictim, rolBot);
+        break;
 
     default:
         break;
@@ -2341,3 +2344,141 @@ void ExecutaLogicaDeathKnightPvP(Player* botDK, Unit*& victim, BotRole /*rolBot*
         if (targetDist <= 5.0f && !dkPet->GetSpellHistory()->HasCooldown(47481)) dkPet->CastSpell(victim, 47481, false); // Gnaw Stun
     }
 }
+
+// elemental
+void ExecutaLogicaShamanPvP(Player* botShaman, Unit*& victim, BotRole /*rolBot*/)
+{
+    // 1. VERIFICARI STRICTE DE SIGURANTA
+    if (!botShaman || !botShaman->IsAlive() || botShaman->IsLoading())
+        return;
+
+    // Activare Medalion PvP instant la pierderea controlului (Fara return ca sa nu piarda DPS)
+    if (botShaman->HasUnitState(UNIT_STATE_LOST_CONTROL) &&
+        !botShaman->HasUnitState(UNIT_STATE_JUMPING | UNIT_STATE_CHARGING))
+    {
+        IncearcaSaFolosestiMedalionPvP(botShaman);
+    }
+
+    // Selectam tinta inamica (Shaman-ul Elemental este intotdeauna CASTER in PvP)
+    victim = GhostSelectTarget(botShaman, victim, false);
+    if (!victim || !victim->IsAlive() || !botShaman->IsHostileTo(victim))
+        return;
+
+    // Apelam miscarea ta nativa de Caster pe care o ai in core
+    GhostMoveAndAttackCaster(botShaman, victim);
+
+    float targetDist = botShaman->GetDistance(victim);
+    uint32 myHp = botShaman->GetHealthPct();
+    uint32 myMana = botShaman->GetPower(POWER_MANA) * 100 / botShaman->GetMaxPower(POWER_MANA);
+
+    // Ignoram tintele aflate in imunitati absolute de PvP (Bula de Paladin / Ice Block)
+    if (victim->HasAura(642) || victim->HasAura(45438))
+        return;
+
+    // Scurtatura inteligenta pentru a verifica daca o abilitate nu este in cooldown
+    auto SpellPregatit = [&](uint32 spellId) -> bool
+        {
+            return !botShaman->GetSpellHistory()->HasCooldown(spellId);
+        };
+
+    // Daca deja casteaza o magie lunga, il lasam sa termine si dam return instant (fara tremurat)
+    if (botShaman->HasUnitState(UNIT_STATE_CASTING))
+        return;
+
+    // ==================== MANAGEMENT BUFFERI PASIVI & SCUTURI (FARA RETURN - OUT OF GCD) ====================
+
+    // Water Shield (ID: 52127): Buff permanent de regenerare a manei cand botul este lovit.
+    if (!botShaman->HasAura(ObtineRankMaximSpell(52127)))
+    {
+        botShaman->CastSpell(botShaman, ObtineRankMaximSpell(52127), false);
+    }
+
+    // Elemental Mastery (ID: 16166): Cooldown ofensiv major. Face urmatorul cast instant. 
+    // Il pornim in lupta direct, fara sa consume resurse sau timp (Out of GCD).
+    if (botShaman->IsInCombat() && SpellPregatit(16166) && urand(0, 100) < 40)
+    {
+        botShaman->CastSpell(botShaman, ObtineRankMaximSpell(16166), false);
+    }
+
+    // ==================== ANTI-CC SI DEFENSE TOTEMS (OUT OF GCD / PASIV) ====================
+
+    // Tremor Totem (ID: 8143): Daca botul sau coechipierii primesc un debuff de Fear/Sleep, pune instant totemul pe jos
+    if (botShaman->HasAuraWithMechanic((1 << MECHANIC_FEAR) | (1 << MECHANIC_SLEEP) | (1 << MECHANIC_CHARM)) && SpellPregatit(8143))
+    {
+        botShaman->CastSpell(botShaman, ObtineRankMaximSpell(8143), false);
+    }
+
+    // Grounding Totem (ID: 8177): Pune scutul de absorbtie vraji daca inamicul casteaza o magie pe el
+    if (victim->IsNonMeleeSpellCast(false, false, true) && targetDist <= 30.0f && SpellPregatit(8177) && urand(0, 100) < 30)
+    {
+        botShaman->CastSpell(botShaman, ObtineRankMaximSpell(8177), false);
+    }
+
+    // ==================== PRIORITATE 1: ROTATIE SUPREMA DE BURST ELEMENTAL (DPS MAXIM) ====================
+
+    // Linie vizuala obligatorie pentru atacuri
+    if (!botShaman->IsWithinLOSInMap(victim))
+        return;
+
+    if (targetDist <= 30.0f)
+    {
+        // Pasul 1: Flame Shock (ID: 8050) - Trebuie aplicat OBLIGATORIU primul pe tinta.
+        // Fara acest debuff pe inamic, urmatoarea noastra vraja mare (Lava Burst) NU va da lovitura critica garantata!
+        if (!victim->HasAura(ObtineRankMaximSpell(8050)))
+        {
+            botShaman->CastSpell(victim, ObtineRankMaximSpell(8050), false);
+            return;
+        }
+
+        // Pasul 2: Lava Burst (ID: 51505) - Abilitatea principala de burst. 
+        // Daca inamicul are deja Flame Shock (verificat la Pasul 1), Lava Burst va lovi cu 100% sansa de CRITICA! DPS urias.
+        if (victim->HasAura(ObtineRankMaximSpell(8050)) && SpellPregatit(51505))
+        {
+            botShaman->CastSpell(victim, ObtineRankMaximSpell(51505), false);
+            return;
+        }
+
+        // Pasul 3: Chain Lightning (ID: 421) - Burst-ul rapid secundar. Lansat direct dupa Lava Burst pentru combo rapid.
+        if (SpellPregatit(421))
+        {
+            botShaman->CastSpell(victim, ObtineRankMaximSpell(421), false);
+            return;
+        }
+
+        // Pasul 4: Earth Shock (ID: 8042) - Lovitura instanta din mers ca filler daca Lava Burst si Chain sunt in cooldown.
+        if (SpellPregatit(8042) && urand(0, 100) < 50)
+        {
+            botShaman->CastSpell(victim, ObtineRankMaximSpell(8042), false);
+            return;
+        }
+
+        // Pasul 5: Lightning Bolt (ID: 403) - Fillerul clasic cu timp de cast lung. Se ruleaza doar cand tot restul e pe cooldown.
+        botShaman->CastSpell(victim, ObtineRankMaximSpell(403), false);
+        return;
+    }
+
+    // ==================== LOGICA SECUNDARA / UTILITIES (KICK-URI SI CONTROL) ====================
+
+    // Wind Shear (ID: 57994): Cel mai bun Kick din joc. Raza de 25m, da intrerupere instanta la magiile inamicilor. Cooldown mic.
+    if (targetDist <= 25.0f && victim->IsNonMeleeSpellCast(false, false, true) && SpellPregatit(57994))
+    {
+        botShaman->CastSpell(victim, ObtineRankMaximSpell(57994), false);
+        return;
+    }
+
+    // Thunderstorm (ID: 51490): Abilitatea de siguranta. Daca inamicii melee (Warrior/Rogue) vin prea aproape (< 8m),
+    // ii arunca in spate la 20 de metri si reface instant 8% din mana Shaman-ului.
+    if (targetDist <= 8.0f && SpellPregatit(51490))
+    {
+        botShaman->CastSpell(botShaman, ObtineRankMaximSpell(51490), false);
+        return;
+    }
+
+    // Earthbind Totem (ID: 2484): Incetineaza inamicii in melee ca sa nu poata alerga inapoi usor spre Shaman
+    if (targetDist <= 10.0f && SpellPregatit(2484))
+    {
+        botShaman->CastSpell(botShaman, ObtineRankMaximSpell(2484), false);
+        return;
+    }
+}
+
