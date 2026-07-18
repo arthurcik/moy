@@ -898,7 +898,7 @@ private:
         if (!group)
             return;
 
-        if (group && !group->IsLeader(botPlayer->GetGUID()))
+        if (group && !group->IsLeader(botPlayer->GetGUID()) && group->GetMembersCount() != 2) // 2 trebuie
         {
             return;
         }
@@ -918,6 +918,236 @@ private:
         BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
 
         // Pasul 4: Preluam ID-ul echipei de Arena 2v2 si rating-urile (Exact ca in functia ta nativa)
+        uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
+        ArenaTeam* at = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
+
+        uint32 arenaRating = 1;
+        uint32 matchmakerRating = 0;
+        uint32 previousOpponents = 0;
+
+        if (at)
+        {
+            arenaRating = at->GetRating();
+            if (arenaRating <= 0) arenaRating = 1;
+
+            matchmakerRating = at->GetAverageMMR(group);
+            previousOpponents = at->GetPreviousOpponents();
+        }
+        else
+        {
+            TC_LOG_ERROR("fakPlayer", "Eroare Coada: Liderul bot {} nu are o echipa de arena 2v2 valida!", botPlayer->GetName().c_str());
+            return;
+        }
+
+        // Fortam viata la toti membrii din grup inainte de inscriere pentru a trece de verificari
+        if (group)
+        {
+            for (GroupReference const* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                if (Player* member = itr->GetSource())
+                    member->SetHealth(member->GetMaxHealth());
+            }
+        }
+        else
+        {
+            botPlayer->SetHealth(botPlayer->GetMaxHealth());
+        }
+
+        // Pasul 5: Apelam AddGroup trimitand pointer-ul de grup ('group') si setand isRated = true, isPremade = false
+        // Semnatura ta din core: AddGroup(leader, group, bracketEntry, isRated, isPremade, ArenaRating, MatchmakerRating, arenateamid, PreviousOpponentsArenaTeamId)
+        // Ocolim complet "WorldPackets" si "SendPacket" pentru a evita prabusirea retelei (nullptr socket)
+        GroupQueueInfo* ginfo = bgQueue.AddGroup(
+            botPlayer,          // leader
+            group,              // group (Transmitem grupul lor real)
+            bracketEntry,       // bracketEntry
+            true,               // isRated = true (Meci cu rating)
+            false,              // isPremade = false
+            arenaRating,        // ArenaRating
+            matchmakerRating,   // MatchmakerRating
+            arenaTeamId,        // arenateamid
+            previousOpponents   // PreviousOpponentsArenaTeamId
+        );
+
+        if (ginfo)
+        {
+            // Pasul 6: Adaugam ID-ul de coada in structura fiecarui membru din grup (exact cum face serverul nativ)
+            if (group)
+            {
+                for (GroupReference const* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                {
+                    if (Player* member = itr->GetSource())
+                    {
+                        if (!member->InBattlegroundQueue())
+                        {
+                            member->AddBattlegroundQueueId(bgQueueTypeId);
+                        }
+                    }
+                }
+            }
+            /*            else
+                        {
+                            if (!botPlayer->InBattlegroundQueue())
+                            {
+                                botPlayer->AddBattlegroundQueueId(bgQueueTypeId);
+                            }
+                        }*/
+
+                        // Pasul 7: Programeaza serverul sa caute meci pentru acest MMR
+            sBattlegroundMgr->ScheduleQueueUpdate(matchmakerRating, bgQueueTypeId);
+
+            TC_LOG_INFO("fakPlayer", "Succes Coada: Echipa de boti condusa de {} a intrat oficial in query-ul de Matchmaking 2v2 Rated!", botPlayer->GetName().c_str());
+        }
+        else
+        {
+            TC_LOG_ERROR("fakPlayer", "Eroare Coada: AddGroup a returnat NULL pentru grupul botului {}.", botPlayer->GetName().c_str());
+        }
+    }
+
+    void JoinGroupArena3v3Rated(Player* botPlayer)
+    {
+        if (!botPlayer)
+            return;
+
+        Group* group = botPlayer->GetGroup();
+
+        if (!group)
+            return;
+
+        if (group && !group->IsLeader(botPlayer->GetGUID()) && group->GetMembersCount() != 3) // 3 trebuie
+        {
+            return;
+        }
+
+        // Pasul 2: Preluam datele de baza pentru arene
+        Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(BATTLEGROUND_AA);
+        if (!bg)
+            return;
+
+        PvPDifficultyEntry const* bracketEntry = GetBattlegroundBracketByLevel(bg->GetMapId(), botPlayer->GetLevel());
+        if (!bracketEntry)
+            return;
+
+        // Pasul 3: ID-ul cozii pentru Arena 3v3 (Slot index 0 in echipa, dimensiune echipa 2)
+        uint8 teamSizeIndex = 1; // 0 = 2v2, 1 = 3v3, 2 = 5v5
+        BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bg->GetTypeID(), bracketEntry->GetBracketId(), 3); // 3 = 3v3
+        BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
+
+        // Pasul 4: Preluam ID-ul echipei de Arena 3v3 si rating-urile (Exact ca in functia ta nativa)
+        uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
+        ArenaTeam* at = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
+
+        uint32 arenaRating = 1;
+        uint32 matchmakerRating = 0;
+        uint32 previousOpponents = 0;
+
+        if (at)
+        {
+            arenaRating = at->GetRating();
+            if (arenaRating <= 0) arenaRating = 1;
+
+            matchmakerRating = at->GetAverageMMR(group);
+            previousOpponents = at->GetPreviousOpponents();
+        }
+        else
+        {
+            TC_LOG_ERROR("fakPlayer", "Eroare Coada: Liderul bot {} nu are o echipa de arena 2v2 valida!", botPlayer->GetName().c_str());
+            return;
+        }
+
+        // Fortam viata la toti membrii din grup inainte de inscriere pentru a trece de verificari
+        if (group)
+        {
+            for (GroupReference const* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                if (Player* member = itr->GetSource())
+                    member->SetHealth(member->GetMaxHealth());
+            }
+        }
+        else
+        {
+            botPlayer->SetHealth(botPlayer->GetMaxHealth());
+        }
+
+        // Pasul 5: Apelam AddGroup trimitand pointer-ul de grup ('group') si setand isRated = true, isPremade = false
+        // Semnatura ta din core: AddGroup(leader, group, bracketEntry, isRated, isPremade, ArenaRating, MatchmakerRating, arenateamid, PreviousOpponentsArenaTeamId)
+        // Ocolim complet "WorldPackets" si "SendPacket" pentru a evita prabusirea retelei (nullptr socket)
+        GroupQueueInfo* ginfo = bgQueue.AddGroup(
+            botPlayer,          // leader
+            group,              // group (Transmitem grupul lor real)
+            bracketEntry,       // bracketEntry
+            true,               // isRated = true (Meci cu rating)
+            false,              // isPremade = false
+            arenaRating,        // ArenaRating
+            matchmakerRating,   // MatchmakerRating
+            arenaTeamId,        // arenateamid
+            previousOpponents   // PreviousOpponentsArenaTeamId
+        );
+
+        if (ginfo)
+        {
+            // Pasul 6: Adaugam ID-ul de coada in structura fiecarui membru din grup (exact cum face serverul nativ)
+            if (group)
+            {
+                for (GroupReference const* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                {
+                    if (Player* member = itr->GetSource())
+                    {
+                        if (!member->InBattlegroundQueue())
+                        {
+                            member->AddBattlegroundQueueId(bgQueueTypeId);
+                        }
+                    }
+                }
+            }
+            /*            else
+                        {
+                            if (!botPlayer->InBattlegroundQueue())
+                            {
+                                botPlayer->AddBattlegroundQueueId(bgQueueTypeId);
+                            }
+                        }*/
+
+                        // Pasul 7: Programeaza serverul sa caute meci pentru acest MMR
+            sBattlegroundMgr->ScheduleQueueUpdate(matchmakerRating, bgQueueTypeId);
+
+            TC_LOG_INFO("fakPlayer", "Succes Coada: Echipa de boti condusa de {} a intrat oficial in query-ul de Matchmaking 2v2 Rated!", botPlayer->GetName().c_str());
+        }
+        else
+        {
+            TC_LOG_ERROR("fakPlayer", "Eroare Coada: AddGroup a returnat NULL pentru grupul botului {}.", botPlayer->GetName().c_str());
+        }
+    }
+
+    void JoinGroupArena5v5Rated(Player* botPlayer)
+    {
+        if (!botPlayer)
+            return;
+
+        Group* group = botPlayer->GetGroup();
+
+        if (!group)
+            return;
+
+        if (group && !group->IsLeader(botPlayer->GetGUID()) && group->GetMembersCount() != 5) // 5 trebuie
+        {
+            return;
+        }
+
+        // Pasul 2: Preluam datele de baza pentru arene
+        Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(BATTLEGROUND_AA);
+        if (!bg)
+            return;
+
+        PvPDifficultyEntry const* bracketEntry = GetBattlegroundBracketByLevel(bg->GetMapId(), botPlayer->GetLevel());
+        if (!bracketEntry)
+            return;
+
+        // Pasul 3: ID-ul cozii pentru Arena 5v5 (Slot index 0 in echipa, dimensiune echipa 2)
+        uint8 teamSizeIndex = 2; // 0 = 2v2, 1 = 3v3, 2 = 5v5
+        BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bg->GetTypeID(), bracketEntry->GetBracketId(), 5); // 5 = 5v5
+        BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
+
+        // Pasul 4: Preluam ID-ul echipei de Arena 5v5 si rating-urile (Exact ca in functia ta nativa)
         uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
         ArenaTeam* at = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
 
@@ -1661,22 +1891,46 @@ private:
                     {
                         bool existaJucatoriLaCoada = false;
 
+                        uint8 tipArenaAles = 0; // Va salva 2, 3 sau 5 in functie de coada gasita activa
+
+                        Group* checkGroup = botPlayer->GetGroup();
+                        uint32 membriGrup = checkGroup ? checkGroup->GetMembersCount() : 1;
+
+
                         if (Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(BATTLEGROUND_AA))
                         {
                             if (PvPDifficultyEntry const* bracketEntry = GetBattlegroundBracketByLevel(bg->GetMapId(), botPlayer->GetLevel()))
                             {
-                                BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bg->GetTypeID(), bracketEntry->GetBracketId(), 2); // 2 = 2v2
-                                BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
+                                uint8 coziDeScanat[] = { 5, 3, 2 };
 
-                                // join daca lista nu e goala pt toti botii
-                                /*for (uint32 j = 0; j < 2; ++j)
+                                for (uint8 tipCoada : coziDeScanat)
                                 {
-                                    if (!bgQueue.m_QueuedGroups[j].empty())
+                                    // Protectie: Botii nu pot da join la o arena mai mare decat numarul lor de membri!
+                                    // Daca grupul are 3 boti, sare peste verificarea de 5v5.
+                                    if (membriGrup < tipCoada)
+                                        continue;
+
+                                    BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bg->GetTypeID(), bracketEntry->GetBracketId(), tipCoada);
+                                    BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
+
+                                    uint32 totalEchipeInCoada = 0;
+                                    for (uint32 j = 0; j < 2; ++j)
+                                    {
+                                        totalEchipeInCoada += bgQueue.m_QueuedGroups[j].size();
+                                    }
+
+                                    // Daca gasim o coada impara (cineva asteapta pereche), o alegem instant!
+                                    if (totalEchipeInCoada % 2 != 0)
                                     {
                                         existaJucatoriLaCoada = true;
-                                        break;
+                                        tipArenaAles = tipCoada; // Salvam bracket-ul sortat dupa activitate
+                                        break; // Oprim bucla pentru ca am gasit meci disponibil!
                                     }
-                                }*/
+                                }
+
+                                /*BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(bg->GetTypeID(), bracketEntry->GetBracketId(), 2); // 2 = 2v2 | 3 = 3v3 | 5 = 5v5
+                                BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
+
 
                                 // join doar daca in asteptare este cineva fara pereche
                                 uint32 totalEchipeInCoada = 0;
@@ -1690,7 +1944,7 @@ private:
                                 if (totalEchipeInCoada % 2 != 0)
                                 {
                                     existaJucatoriLaCoada = true;
-                                }
+                                }*/
                             }
                         }
 
@@ -1710,15 +1964,30 @@ private:
 
                             Group* checkGroup = botPlayer->GetGroup();
 
-                            if (checkGroup && checkGroup->IsLeader(botPlayer->GetGUID()))
+                            if (checkGroup && checkGroup->IsLeader(botPlayer->GetGUID()) && checkGroup->GetMembersCount() == tipArenaAles)
                             {
                                 tracker.isQueued = true;
                                 tracker.rejoinTimer = 0;
-                                JoinGroupArena2v2Rated(botPlayer);
+                                //JoinGroupArena2v2Rated(botPlayer);
+
+                                // Inscrierea se face strict dupa coada care a declansat activitatea (tipArenaAles)
+                                if (tipArenaAles == 2)
+                                {
+                                    JoinGroupArena2v2Rated(botPlayer);
+                                }
+                                else if (tipArenaAles == 3)
+                                {
+                                    JoinGroupArena3v3Rated(botPlayer);
+                                }
+                                else if (tipArenaAles == 5)
+                                {
+                                    JoinGroupArena5v5Rated(botPlayer);
+                                }
                             }
                             else
                             {
                                 tracker.isQueued = false;
+                                tracker.rejoinTimer = urand(10000, 20000);
                             }
                         }
                     }
