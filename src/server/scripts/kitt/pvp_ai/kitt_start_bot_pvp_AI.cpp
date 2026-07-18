@@ -531,7 +531,7 @@ void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim)
     }
 
     // Deplasare si pozitionare la distanta (30 metri)
-    if (dist > 30.0f)
+    if (dist > 27.0f)
     {
         if (miscareCurenta != POINT_MOTION_TYPE)
         {
@@ -645,7 +645,7 @@ void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget)
     }
 
     // --- FAZA 4: LOGICA DE POZITIONARE LA DISTANTA (30 de metri max) ---
-    if (dist > 30.0f)
+    if (dist > 25.0f)
     {
         if (miscareCurenta != POINT_MOTION_TYPE)
         {
@@ -750,10 +750,16 @@ void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff)
         ExecutaLogicaPriestDiscPvP(botPlayer, currentVictim, rolBot);
         break;
     case CLASS_ROGUE:
-        ExecutaLogicaRogue(botPlayer, currentVictim, rolBot);
+        ExecutaLogicaRoguePvP(botPlayer, currentVictim, rolBot);
         break;
     case CLASS_MAGE:
-        ExecutaLogicaMage(botPlayer, currentVictim, rolBot);
+        ExecutaLogicaMagePvP(botPlayer, currentVictim, rolBot);
+        break;
+    case CLASS_WARLOCK:
+        ExecutaLogicaWarlockPvP(botPlayer, currentVictim, rolBot);
+        break;
+    case CLASS_DEATH_KNIGHT:
+        ExecutaLogicaDeathKnightPvP(botPlayer, currentVictim, rolBot);
         break;
 
     default:
@@ -1024,12 +1030,6 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit*& victim, BotRole rolBot)
     }
 }
 
-void ExecutaLogicaMage(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
-{
-    if (!botPlayer->HasUnitState(UNIT_STATE_CASTING))
-        botPlayer->CastSpell(victim, 116, false);
-}
-
 void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit*& victim, BotRole rolBot) // warrior Arms
 {
     victim = GhostSelectTarget(botPlayer, victim, false);
@@ -1271,13 +1271,6 @@ void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit*& victim, BotRole rolBot) /
     {
         botPlayer->CastSpell(victim, ObtineRankMaximSpell(78), false); // Heroic Strike
     }
-}
-
-void ExecutaLogicaRogue(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
-{
-    botPlayer->SetPower(POWER_ENERGY, 100);
-    if (botPlayer->IsWithinMeleeRange(victim))
-        botPlayer->CastSpell(victim, 1752, false);
 }
 
 void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole /*rolBot*/)
@@ -1677,3 +1670,674 @@ void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolB
     }
 }
 
+// affiction
+void ExecutaLogicaWarlockPvP(Player* botWarlock, Unit*& victim, BotRole /*rolBot*/)
+{
+    // 1. VERIFICARI STRICTE DE SIGURANTA
+    if (!botWarlock || !botWarlock->IsAlive() || botWarlock->IsLoading())
+        return;
+
+    // Activare Medalion PvP daca botul este blocat (Stun, Fear, Silenced etc.)
+    if (botWarlock->HasUnitState(UNIT_STATE_LOST_CONTROL) &&
+        !botWarlock->HasUnitState(UNIT_STATE_JUMPING | UNIT_STATE_CHARGING))
+    {
+        IncearcaSaFolosestiMedalionPvP(botWarlock);
+    }
+
+    // Selectam tinta inamica (Warlock-ul este intotdeauna CASTER in PvP)
+    victim = GhostSelectTarget(botWarlock, victim, false);
+    if (!victim || !victim->IsAlive() || !botWarlock->IsHostileTo(victim))
+        return;
+
+    // Apelam miscarea ta nativa de Caster pe care am decis sa o pastram neatinsa
+    GhostMoveAndAttackCaster(botWarlock, victim);
+
+    float targetDist = botWarlock->GetDistance(victim);
+    uint32 myHp = botWarlock->GetHealthPct();
+    uint32 myMana = botWarlock->GetPower(POWER_MANA) * 100 / botWarlock->GetMaxPower(POWER_MANA);
+
+    // Daca deja casteaza o magie, oprim orice alta actiune (fara intreruperi/tremurat)
+    if (botWarlock->HasUnitState(UNIT_STATE_CASTING))
+        return;
+
+    // VERIFICARE IMUNITATI PvP DIRECTE (Divine Shield = 642, Ice Block = 45438)
+    if (victim->HasAura(642) || victim->HasAura(45438))
+        return;
+
+    // Scurtatura inteligenta pentru a verifica daca o abilitate nu este in cooldown
+    auto SpellPregatit = [&](uint32 spellId) -> bool
+        {
+            return !botWarlock->GetSpellHistory()->HasCooldown(spellId);
+        };
+
+    // ==================== MANAGEMENT PET (SUMMON, STATUS & ATTACK IMP) ====================
+    // Pastram logica functionala pe care ai testat-o cu succes pentru Imp-ul tau defensiv
+    Pet* botPet = botWarlock->GetPet();
+    if (!botPet)
+    {
+        if (SpellPregatit(688))
+        {
+            botWarlock->CastSpell(botWarlock, ObtineRankMaximSpell(688), false);
+            return;
+        }
+    }
+    else if (botPet->IsAlive() && !botPet->IsLoading())
+    {
+        if (botPet->GetReactState() != REACT_DEFENSIVE)
+        {
+            botPet->SetReactState(REACT_DEFENSIVE);
+        }
+
+        if (!botWarlock->HasAura(ObtineRankMaximSpell(6307)) && !botPet->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(6307)))
+        {
+            botPet->CastSpell(botPet, ObtineRankMaximSpell(6307), false);
+        }
+
+        if (SpellInfo const* fireboltInfo = sSpellMgr->GetSpellInfo(27267))
+        {
+            bool dejaActiv = false;
+            for (uint8 i = 0; i < botPet->GetPetAutoSpellSize(); ++i)
+            {
+                if (botPet->GetPetAutoSpellOnPos(i) == fireboltInfo->Id)
+                {
+                    dejaActiv = true;
+                    break;
+                }
+            }
+
+            if (!dejaActiv)
+            {
+                botPet->ToggleAutocast(fireboltInfo, true);
+            }
+        }
+
+        if (botPet->GetVictim() != victim)
+        {
+            botPet->Attack(victim, true);
+        }
+    }
+
+    // ==================== MANAGEMENT BUFFERI DEFENSIVI / RESURSE ====================
+
+    // Fel Armor (ID: 28176): Creste spell power-ul si ofera auto-heal pasiv din toate daunele magice aplicate
+    if (!botWarlock->HasAura(ObtineRankMaximSpell(28176)))
+    {
+        botWarlock->CastSpell(botWarlock, ObtineRankMaximSpell(28176), false);
+        return;
+    }
+
+    // Life Tap (ID: 1454): Converteste viata in mana daca stocul de mana e mic (< 20%) dar viata e stabila (> 50%)
+    if (myMana < 20 && myHp > 50 && SpellPregatit(1454))
+    {
+        botWarlock->CastSpell(botWarlock, ObtineRankMaximSpell(1454), false);
+        return;
+    }
+
+    // Shadow Ward (ID: 6229): Scut absorbtie daune de tip umbra, activat rapid daca primeste damage in timp
+    if (botWarlock->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE) && SpellPregatit(6229))
+    {
+        botWarlock->CastSpell(botWarlock, ObtineRankMaximSpell(6229), false);
+        return;
+    }
+
+    // Death Coil (ID: 6789): Abilitatea suprema de salvare (instant). Ofera heal direct si frica de 3 secunde tintei sub 35% HP
+    if (myHp < 35 && targetDist < 30.0f && SpellPregatit(6789))
+    {
+        botWarlock->CastSpell(victim, ObtineRankMaximSpell(6789), false);
+        return;
+    }
+
+    // ==================== CROWD CONTROL IN ARENA ====================
+
+    // Howl of Terror (ID: 5484): Frica AoE instantanee daca inamicii melee ajung periculos de aproape (< 8 metri)
+    if (targetDist <= 8.0f && SpellPregatit(5484))
+    {
+        botWarlock->CastSpell(botWarlock, ObtineRankMaximSpell(5484), false);
+        return;
+    }
+
+    // Fear controlat (ID: 5782): Spam controlat tactic cu timp de cast, rulat doar daca tinta nu fuge deja dintr-un efect similar
+    if (targetDist <= 30.0f && !victim->HasAuraType(SPELL_AURA_MOD_FEAR) && SpellPregatit(5782))
+    {
+        if (urand(0, 100) < 20)
+        {
+            botWarlock->CastSpell(victim, ObtineRankMaximSpell(5782), false);
+            return;
+        }
+    }
+
+    // ==================== ROTATIE BLOCKED / CURSES (BLESTEME) ====================
+
+    if (!botWarlock->IsWithinLOSInMap(victim))
+        return;
+
+    if (targetDist <= 30.0f)
+    {
+        // Curse of Tongues (ID: 1714): Aplicat instant pe healer/caster advers daca schimba intr-un cast activ
+        if (victim->IsNonMeleeSpellCast(false, false, true) && !victim->HasAura(ObtineRankMaximSpell(1714)))
+        {
+            botWarlock->CastSpell(victim, ObtineRankMaximSpell(1714), false);
+            return;
+        }
+
+        // Curse of Exhaustion (ID: 18223): Incetinire instanta de Subtlety/Affli aplicata claselor fizice care alearga spre bot
+        if (victim->IsControlledByPlayer() && !victim->HasAuraWithMechanic(1 << MECHANIC_SNARE) && !victim->HasAura(ObtineRankMaximSpell(18223)))
+        {
+            botWarlock->CastSpell(victim, ObtineRankMaximSpell(18223), false);
+            return;
+        }
+
+        // Curse of Agony (ID: 980): DoT-ul de baza de blestem daca nu exista alta urgenta de control tactict pe tinta
+        if (!victim->HasAura(ObtineRankMaximSpell(980)) && !victim->HasAura(ObtineRankMaximSpell(1714)) && !victim->HasAura(ObtineRankMaximSpell(18223)))
+        {
+            botWarlock->CastSpell(victim, ObtineRankMaximSpell(980), false);
+            return;
+        }
+    }
+
+    // ==================== ROTATIE DE DAMAGE PUR AFFLICTION (DAMAGE IN TIMP) ====================
+
+    // 1. Corruption (ID: 172): Cel mai important DoT instant. Aplicat obligatoriu pe tinta
+    if (targetDist <= 36.0f && !victim->HasAura(ObtineRankMaximSpell(172)))
+    {
+        botWarlock->CastSpell(victim, ObtineRankMaximSpell(172), false);
+        return;
+    }
+
+    // 2. Unstable Affliction (ID: 30108): DoT-ul de final de arbore Affliction (cu timp de cast). 
+    // Protejeaza toate celelalte DoT-uri (daca un healer advers ii da dispell, primeste silent instant de 5 secunde si daune mari)
+    if (targetDist <= 30.0f && !victim->HasAura(ObtineRankMaximSpell(30108)))
+    {
+        botWarlock->CastSpell(victim, ObtineRankMaximSpell(30108), false);
+        return;
+    }
+
+    // 3. Haunt (ID: 48181): Proiectil de baza (cu timp de cast). Sporeste cu 20% toate daunele in timp aplicate pe inamic si ofera heal la intoarcere
+    if (targetDist <= 30.0f && SpellPregatit(48181))
+    {
+        botWarlock->CastSpell(victim, ObtineRankMaximSpell(48181), false);
+        return;
+    }
+
+    // 4. Drain Soul (ID: 1120): Vrajitorie canalizata de executie (Channeled). Se porneste doar cand inamicul intra in pragul critic de viata scazuta (< 25% HP)
+    if (targetDist <= 30.0f && victim->GetHealthPct() < 25)
+    {
+        botWarlock->CastSpell(victim, ObtineRankMaximSpell(1120), false);
+        return;
+    }
+
+    // 5. Shadow Bolt (ID: 686): Proiectilul clasic (filler) cu timp de cast lung. Lansat doar cand toate DoT-urile ruleaza pe inamic
+    if (targetDist <= 30.0f)
+    {
+        botWarlock->CastSpell(victim, ObtineRankMaximSpell(686), false);
+        return;
+    }
+}
+
+// frost
+void ExecutaLogicaMagePvP(Player* botMage, Unit*& victim, BotRole /*rolBot*/)
+{
+    // 1. VERIFICARI STRICTE DE SIGURANTA
+    if (!botMage || !botMage->IsAlive() || botMage->IsLoading())
+        return;
+
+    // Activare Medalion PvP instant la pierderea controlului (Fara return ca sa nu piarda frame-ul)
+    if (botMage->HasUnitState(UNIT_STATE_LOST_CONTROL) &&
+        !botMage->HasUnitState(UNIT_STATE_JUMPING | UNIT_STATE_CHARGING))
+    {
+        IncearcaSaFolosestiMedalionPvP(botMage);
+    }
+
+    // Selectam tinta inamica (Mage-ul este intotdeauna CASTER in PvP)
+    victim = GhostSelectTarget(botMage, victim, false);
+    if (!victim || !victim->IsAlive() || !botMage->IsHostileTo(victim))
+        return;
+
+    // Apelam miscarea ta nativa de Caster pe care o ai in core
+    GhostMoveAndAttackCaster(botMage, victim);
+
+    float targetDist = botMage->GetDistance(victim);
+    uint32 myHp = botMage->GetHealthPct();
+    uint32 myMana = botMage->GetPower(POWER_MANA) * 100 / botMage->GetMaxPower(POWER_MANA);
+
+    // Ignoram complet tintele care au imunitati totale de PvP (Bula de Paladin / Ice Block)
+    if (victim->HasAura(642) || victim->HasAura(45438))
+        return;
+
+    // Scurtatura inteligenta pentru a verifica daca o abilitate nu este in cooldown
+    auto SpellPregatit = [&](uint32 spellId) -> bool
+        {
+            return !botMage->GetSpellHistory()->HasCooldown(spellId);
+        };
+
+    // Daca deja a reusit sa inceapa un cast lung (ex: Frostbolt), il lasam sa termine si dam return instant ca sa nu tremure
+    if (botMage->HasUnitState(UNIT_STATE_CASTING))
+        return;
+
+    // ==================== REFRESH PRE-BUFFURI SI SCUTURI (FARA RETURN - OUT OF GCD) ====================
+
+    // MANAGEMENT ACTIV AL ARMAREI (Daca are mana putina < 35%, pune Mage Armor ID: 6117 pentru regenerare, altfel tine Ice Armor ID: 7302)
+    uint32 armuraNecesara = (myMana < 35) ? 6117 : 7302;
+    if (!botMage->HasAura(ObtineRankMaximSpell(armuraNecesara)))
+    {
+        // Stergem cealalta armura pentru a nu se bloca
+        botMage->RemoveAurasDueToSpell(ObtineRankMaximSpell(armuraNecesara == 6117 ? 7302 : 6117));
+        botMage->CastSpell(botMage, ObtineRankMaximSpell(armuraNecesara), false);
+    }
+
+    // Ice Barrier (ID: 11426): Scutul emblematic de Frost. Se pune instant daca lipseste
+    if (!botMage->HasAura(ObtineRankMaximSpell(11426)) && SpellPregatit(11426))
+    {
+        botMage->CastSpell(botMage, ObtineRankMaximSpell(11426), false);
+    }
+
+    // Icy Veins (ID: 12472): Cooldown ofensiv major care mareste viteza de cast. Se porneste instant
+    if (botMage->IsInCombat() && SpellPregatit(12472) && urand(0, 100) < 40)
+    {
+        botMage->CastSpell(botMage, ObtineRankMaximSpell(12472), false);
+    }
+
+    // ==================== REGENERARE REGLATA MANA CRITICA (EVOCATION) ====================
+    // Evocation (ID: 12051): Daca mana scade sub 20% si botul are viata stabila (> 40%), se opreste sa isi faca mana instant full [3.1]
+    if (myMana < 20 && myHp > 40 && SpellPregatit(12051))
+    {
+        botMage->CastSpell(botMage, ObtineRankMaximSpell(12051), false);
+        return; // Return obligatoriu pentru a lasa canalizarea sa inceapa
+    }
+
+    // ==================== PRIORITATE 1: ROTATIE SUPREMA SHATTER COMBO (DAMAGE SI BURST INSTANT) ====================
+
+    // Linie vizuala obligatorie pentru a putea incepe atacurile
+    if (!botMage->IsWithinLOSInMap(victim))
+        return;
+
+    // Verificam starea critica de Shatter: Daca inamicul e inghetat (Frozen) sau botul are proc de Fingers of Frost (ID: 44544)
+    bool tintaEsteInghetata = victim->IsFrozen() || botMage->HasAura(44544);
+
+    if (tintaEsteInghetata && targetDist <= 30.0f)
+    {
+        // Prioritate Sub-1: Deep Freeze (ID: 44572) - Stun-ul de final de Frost de 5 secunde.
+        if (SpellPregatit(44572))
+        {
+            botMage->CastSpell(victim, ObtineRankMaximSpell(44572), false);
+            return;
+        }
+
+        // Prioritate Sub-2: Ice Lance (ID: 30455) - Burst instantaneu devastator (x3 damage pe tinte inghetate).
+        botMage->CastSpell(victim, ObtineRankMaximSpell(30455), false);
+        return;
+    }
+
+    // ==================== PRIORITATE 2: PROC-URI SI ABILITATI INSTANTANEE (ANTI-KICK OFFENSIVE) ====================
+
+    // 1. Proc-ul Brain Freeze (ID aura: 57761): Permite lansarea unui Fireball (ID: 133) complet INSTANT.
+    if (botMage->HasAura(57761) && targetDist <= 35.0f)
+    {
+        botMage->CastSpell(victim, ObtineRankMaximSpell(133), false);
+        return;
+    }
+
+    // 2. Cone of Cold (ID: 120): Atac instantaneu in semi-cerc daca inamicul este aproape (< 10 metri).
+    if (targetDist <= 10.0f && SpellPregatit(120))
+    {
+        botMage->CastSpell(victim, ObtineRankMaximSpell(120), false);
+        return;
+    }
+
+    // 3. Fire Blast (ID: 2136): Executie rapida la distanta (20m) daca inamicul are sub 30% HP.
+    if (targetDist <= 20.0f && victim->GetHealthPct() < 30 && SpellPregatit(2136))
+    {
+        botMage->CastSpell(victim, ObtineRankMaximSpell(2136), false);
+        return;
+    }
+
+    // ==================== PRIORITATE 3: GENERATOARE DE CRITICE SI PROC-URI (FILLERS CU TIMP DE CAST) ====================
+    if (targetDist <= 30.0f)
+    {
+        // Frostbolt (ID: 116): Ultimul filler, genereaza degetele si procul de Fireball instant.
+        botMage->CastSpell(victim, ObtineRankMaximSpell(116), false);
+        return;
+    }
+
+    // ==================== LOGICA SECUNDARA / UTILITIES (KICK SI BUFFERI) ====================
+
+    // Counterspell (ID: 2139): Da Kick instant la distanta (30m) daca tinta casteaza o magie activa
+    if (targetDist <= 30.0f && victim->IsNonMeleeSpellCast(false, false, true) && SpellPregatit(2139))
+    {
+        botMage->CastSpell(victim, ObtineRankMaximSpell(2139), false);
+        return;
+    }
+
+    // Frost Nova (ID: 122): Fortam inghetarea daca clasele melee ajung prea aproape (< 8m).
+    if (targetDist <= 8.0f && SpellPregatit(122))
+    {
+        botMage->CastSpell(botMage, ObtineRankMaximSpell(122), false);
+        return;
+    }
+}
+
+// subtlety
+void ExecutaLogicaRoguePvP(Player* botRogue, Unit*& victim, BotRole /*rolBot*/)
+{
+    // 1. VERIFICARI STRICTE DE SIGURANTA
+    if (!botRogue || !botRogue->IsAlive() || botRogue->IsLoading())
+        return;
+
+    // Activare Medalion PvP instant la pierderea controlului (Fara return ca sa nu piarda DPS)
+    if (botRogue->HasUnitState(UNIT_STATE_LOST_CONTROL) &&
+        !botRogue->HasUnitState(UNIT_STATE_JUMPING | UNIT_STATE_CHARGING))
+    {
+        IncearcaSaFolosestiMedalionPvP(botRogue);
+    }
+
+    // Selectam tinta inamica (Rogue este intotdeauna MELEE in PvP)
+    victim = GhostSelectTarget(botRogue, victim, false);
+    if (!victim || !victim->IsAlive() || !botRogue->IsHostileTo(victim))
+        return;
+
+    // Pentru clasa Melee folosim miscarea nativa de urmarire stransa pe care o ai in core
+    GhostMoveAndAttackMelee(botRogue, victim);
+
+    float targetDist = botRogue->GetDistance(victim);
+    uint32 myHp = botRogue->GetHealthPct();
+    uint32 energy = botRogue->GetPower(POWER_ENERGY);
+    uint8 comboPoints = botRogue->GetComboPoints();
+
+    // Ignoram tintele care au imunitati totale active (Bula Paladin / Ice Block)
+    if (victim->HasAura(642) || victim->HasAura(45438))
+        return;
+
+    // Detectam starile specifice de Subtlety (Stealth sau Shadow Dance activ)
+    bool stealthed = botRogue->HasAuraType(SPELL_AURA_MOD_STEALTH);
+    bool shadowDance = botRogue->HasAura(51713);
+
+    // Scurtatura inteligenta pentru a verifica daca o abilitate nu este in cooldown
+    auto SpellPregatit = [&](uint32 spellId) -> bool
+        {
+            return !botRogue->GetSpellHistory()->HasCooldown(spellId);
+        };
+
+    // ==================== COOLDOWNS OFENSIVE SUPREME (BURST OUT OF GCD) ====================
+
+    // Shadow Dance (ID: 51713): Activam cooldown-ul suprem de Subtlety pentru a debloca Ambush din picioare.
+    // Il pornim fara return atunci cand energia este aproape plina (> 70) si suntem in melee.
+    if (!stealthed && !shadowDance && energy >= 70 && targetDist <= 5.0f && SpellPregatit(51713) && urand(0, 100) < 40)
+    {
+        botRogue->CastSpell(botRogue, ObtineRankMaximSpell(51713), false);
+        shadowDance = true; // Il marcam ca activ pentru frame-ul curent
+    }
+
+    // Shadowstep (ID: 36554): Teleportare instanta in spatele inamicului.
+    // Crucial pentru DPS pentru a anula timpul pierdut alergand daca inamicul fuge (8m - 25m).
+    if (targetDist >= 8.0f && targetDist <= 25.0f && SpellPregatit(36554))
+    {
+        botRogue->CastSpell(victim, ObtineRankMaximSpell(36554), false);
+        return;
+    }
+
+    // ==================== PRIORITATE 1: ROTATIE DIN STEALTH / SHADOW DANCE (OPENERS MASIVI) ====================
+    if (stealthed || shadowDance)
+    {
+        if (targetDist <= 5.0f)
+        {
+            // Deschidem intotdeauna cu Cheap Shot (ID: 1833) daca tinta nu are deja stun, pentru control si 2 puncte combo instant
+            if (!victim->HasAuraType(SPELL_AURA_MOD_STUN) && energy >= 40)
+            {
+                botRogue->CastSpell(victim, ObtineRankMaximSpell(1833), false);
+                return;
+            }
+
+            // Daca are deja stun, dam SPAM la Ambush (ID: 8676) - sursa principala de burst urias din Subtlety
+            if (energy >= 60)
+            {
+                botRogue->CastSpell(victim, ObtineRankMaximSpell(8676), false);
+                return;
+            }
+        }
+        return; // Oprim frame-ul aici daca suntem in mod Stealth/Dance pentru a nu strica energia pe abilitati slabe
+    }
+
+    // ==================== PRIORITATE 2: ABILITATI DE FINISARE (FINISHERS LA 4-5 COMBO POINTS) ====================
+    if (comboPoints >= 4)
+    {
+        if (targetDist <= 5.0f)
+        {
+            // Kidney Shot (ID: 408): Stun de 5-6 secunde. Il dam doar daca tinta nu este deja blocata de alt stun.
+            if (!victim->HasAuraType(SPELL_AURA_MOD_STUN) && energy >= 25 && SpellPregatit(408))
+            {
+                botRogue->CastSpell(victim, ObtineRankMaximSpell(408), false);
+                return;
+            }
+
+            // Eviscerate (ID: 2098): Lovitura finala suprema pentru DPS maxim direct. Consuma punctele ramase in mii de daune.
+            if (energy >= 35)
+            {
+                botRogue->CastSpell(victim, ObtineRankMaximSpell(2098), false);
+                return;
+            }
+        }
+        return;
+    }
+
+    // ==================== PRIORITATE 3: GENERATOARE DE COMBO POINTS (MAIN ATTACK FILLER) ====================
+    if (targetDist <= 5.0f)
+    {
+        // Hemorrhage (ID: 16511): Generatorul ultra-rapid si ieftin de puncte combo (doar 35 energie).
+        // Lasa si un debuff pe tinta care creste tot damage-ul fizic facut de Rogue. Spam masiv aici!
+        if (energy >= 35)
+        {
+            botRogue->CastSpell(victim, ObtineRankMaximSpell(16511), false);
+            return;
+        }
+    }
+
+    // ==================== LOGICA SECUNDARA / UTILITIES (SE DEDECLANSEAZA DOAR DACA NU EXISTA ENERGIE DE ATAC ACUM) ====================
+
+    // Kick (ID: 1766): Da intrerupere instantanee daca tinta casteaza o magie si botul are 15+ energie
+    if (targetDist <= 5.0f && victim->IsNonMeleeSpellCast(false, false, true) && energy >= 15 && SpellPregatit(1766))
+    {
+        botRogue->CastSpell(victim, ObtineRankMaximSpell(1766), false);
+        return;
+    }
+
+    // MANAGEMENT DEFENSIV TIMP LIBER (Fisat fara return ca sa nu fure din frame-ul de atac viitor)
+    // Cloak of Shadows (ID: 31224): Scut imun magic daca viata scade sub 40% si are DoT-uri active
+    if (myHp < 40 && botRogue->HasAuraType(SPELL_AURA_PERIODIC_DAMAGE) && SpellPregatit(31224))
+    {
+        botRogue->CastSpell(botRogue, ObtineRankMaximSpell(31224), false);
+    }
+
+    // Vanish (ID: 1856): Salvare extrema in Stealth la HP critic (< 25%)
+    if (myHp < 25 && !stealthed && !shadowDance && SpellPregatit(1856))
+    {
+        botRogue->CastSpell(botRogue, ObtineRankMaximSpell(1856), false);
+        return;
+    }
+}
+
+// unholy
+void ExecutaLogicaDeathKnightPvP(Player* botDK, Unit*& victim, BotRole /*rolBot*/)
+{
+    // 1. VERIFICARI STRICTE DE SIGURANTA
+    if (!botDK || !botDK->IsAlive() || botDK->IsLoading())
+        return;
+
+    // Activare Medalion PvP instant la pierderea controlului (Fara return ca sa nu piarda DPS)
+    if (botDK->HasUnitState(UNIT_STATE_LOST_CONTROL) &&
+        !botDK->HasUnitState(UNIT_STATE_JUMPING | UNIT_STATE_CHARGING))
+    {
+        IncearcaSaFolosestiMedalionPvP(botDK);
+    }
+
+    // Selectam tinta inamica (DK este intotdeauna clasa MELEE in PvP)
+    victim = GhostSelectTarget(botDK, victim, false);
+    if (!victim || !victim->IsAlive() || !botDK->IsHostileTo(victim))
+        return;
+
+    // Gestionarea miscarii native de urmarire stransa pe care o detii in core
+    GhostMoveAndAttackMelee(botDK, victim);
+
+    float targetDist = botDK->GetDistance(victim);
+    uint32 myHp = botDK->GetHealthPct();
+    uint32 runicPower = botDK->GetPower(POWER_RUNIC_POWER);
+
+    // Ignoram tintele aflate in imunitati absolute de PvP (Bula de Paladin / Ice Block)
+    if (victim->HasAura(642) || victim->HasAura(45438))
+        return;
+
+    // Verificarea nativa a disponibilitatii resurselor direct din istoricul serverului
+    auto PotiDaSpell = [&](uint32 spellId) -> bool
+        {
+            return !botDK->GetSpellHistory()->HasCooldown(spellId);
+        };
+
+    // ==================== REFRESH PRE-BUFFURI OPTIMIZAT (FARA RETURN) ====================
+
+    // Bone Shield (ID: 49222): Pune scutul doar daca nu e in lupta stransa sau daca are o secunda libera
+    if (!botDK->HasAura(ObtineRankMaximSpell(49222)) && PotiDaSpell(49222) && targetDist > 5.0f)
+    {
+        botDK->CastSpell(botDK, ObtineRankMaximSpell(49222), false);
+    }
+
+    // Horn of Winter (ID: 57330): Da buff si genereaza 10 RP. Fara return pentru a nu bloca atacul fizic
+    if (!botDK->HasAura(ObtineRankMaximSpell(57330)) && PotiDaSpell(57330))
+    {
+        botDK->CastSpell(botDK, ObtineRankMaximSpell(57330), false);
+    }
+
+    // ==================== URMARIRE SI TRAS INAMIC (DEATH GRIP & CHAINS) ====================
+
+    // Death Grip (ID: 49576): Trage inamicul instant daca fuge la distanta mare (intre 10m si 30m)
+    if (targetDist >= 10.0f && targetDist <= 30.0f && PotiDaSpell(49576))
+    {
+        botDK->CastSpell(victim, ObtineRankMaximSpell(49576), false);
+        return;
+    }
+
+    // Chains of Ice (ID: 45524): Incetineala de 95% daca tinta fuge (distanta > 8m)
+    if (targetDist >= 8.0f && targetDist <= 30.0f && !victim->HasAura(ObtineRankMaximSpell(45524)) && PotiDaSpell(45524))
+    {
+        botDK->CastSpell(victim, ObtineRankMaximSpell(45524), false);
+        return;
+    }
+
+    // ==================== ROTATIE DE BOLI (DISEASES - FACTORUL MULTIPLICATOR DE DPS) ====================
+    if (targetDist <= 30.0f)
+    {
+        // 1. Frost Fever via Icy Touch (ID: 45477)
+        if (!victim->HasAura(ObtineRankMaximSpell(55095)) && PotiDaSpell(45477))
+        {
+            botDK->CastSpell(victim, ObtineRankMaximSpell(45477), false);
+            return;
+        }
+
+        // 2. Blood Plague via Plague Strike (ID: 45462) - Doar in melee
+        if (targetDist <= 5.0f && !victim->HasAura(ObtineRankMaximSpell(55078)) && PotiDaSpell(45462))
+        {
+            botDK->CastSpell(victim, ObtineRankMaximSpell(45462), false);
+            return;
+        }
+    }
+
+    // Linie vizuala obligatorie pentru a continua atacurile de baza
+    if (!botDK->IsWithinLOSInMap(victim))
+        return;
+
+    // Extragem starea bolilor de pe tinta
+    bool areBoliActive = victim->HasAura(ObtineRankMaximSpell(55095)) && victim->HasAura(ObtineRankMaximSpell(55078));
+
+    // ==================== ROTATIE DE DAMAGE MAXIM (BURST MELEE OBLIGATORIU) ====================
+    if (targetDist <= 5.0f)
+    {
+        // PRIORITATE 1: Scourge Strike (ID: 55090) - Sursa principala de 2k+ DPS. Se da de fiecare data cand bolile sunt sus!
+        if (areBoliActive && PotiDaSpell(55090))
+        {
+            botDK->CastSpell(victim, ObtineRankMaximSpell(55090), false);
+            return;
+        }
+
+        // PRIORITATE 2: Death Strike (ID: 49998) - Se foloseste DOAR ca urgenta majora daca viata scade sub 45% (lasam rune pentru Scourge Strike)
+        if (myHp < 45 && areBoliActive && PotiDaSpell(49998))
+        {
+            botDK->CastSpell(victim, ObtineRankMaximSpell(49998), false);
+            return;
+        }
+
+        // PRIORITATE 3: Blood Strike (ID: 45902) - Pentru rune de Sange libere
+        if (PotiDaSpell(45902))
+        {
+            botDK->CastSpell(victim, ObtineRankMaximSpell(45902), false);
+            return;
+        }
+
+        // PRIORITATE 4: Death Coil (ID: 47541) - Descarca rapid puterea runica adunata pentru burst magic de completare
+        if (runicPower >= 40)
+        {
+            botDK->CastSpell(victim, ObtineRankMaximSpell(47541), false);
+            return;
+        }
+    }
+
+    // ==================== BURST COOLDOWNS SUPREME (GARGOYLE & RESET RUNE) ====================
+
+    // Summon Gargoyle (ID: 49206): Porneste al doilea burst de DPS in fundal de indata ce are ambele boli si 60+ RP
+    if (targetDist <= 30.0f && runicPower >= 60 && areBoliActive && PotiDaSpell(49206))
+    {
+        botDK->CastSpell(victim, ObtineRankMaximSpell(49206), false);
+        return;
+    }
+
+    // Empower Rune Weapon (ID: 47568): Daca a ramas blocat fara rune de Scourge Strike, le reseteaza instant pentru a continua DPS-ul
+    if (targetDist <= 5.0f && !PotiDaSpell(55090) && PotiDaSpell(47568))
+    {
+        botDK->CastSpell(botDK, ObtineRankMaximSpell(47568), false);
+        return;
+    }
+
+    // ==================== LOGICA SECUNDARA / UTILITIES (SE RULEAZA DOAR DACA NU ARE RUNES DE ATAC) ====================
+
+    // ANTI-CC DEFENSIV (LICHBORNE)
+    if (botDK->HasAuraWithMechanic((1 << MECHANIC_FEAR) | (1 << MECHANIC_SLEEP) | (1 << MECHANIC_CHARM)))
+    {
+        if (PotiDaSpell(49039))
+        {
+            botDK->CastSpell(botDK, ObtineRankMaximSpell(49039), false);
+            return;
+        }
+    }
+
+    // Mind Freeze (ID: 47528): Kick instant in melee daca tinta casteaza
+    if (targetDist <= 5.0f && victim->IsNonMeleeSpellCast(false, false, true) && runicPower >= 20)
+    {
+        botDK->CastSpell(victim, ObtineRankMaximSpell(47528), false);
+        return;
+    }
+
+    // Strangulate (ID: 47476): Silence de la distanta
+    if (targetDist > 5.0f && targetDist <= 30.0f && victim->IsNonMeleeSpellCast(false, false, true) && PotiDaSpell(47476))
+    {
+        botDK->CastSpell(victim, ObtineRankMaximSpell(47476), false);
+        return;
+    }
+
+    // DEFENSIVE UNDER COOLDOWNS (AMS, AMZ, IBF)
+    if (myHp < 50 && victim->IsNonMeleeSpellCast(false, false, true) && PotiDaSpell(50464)) botDK->CastSpell(botDK, ObtineRankMaximSpell(50464), false);
+    if (myHp < 65 && victim->IsNonMeleeSpellCast(false, false, true) && PotiDaSpell(48707)) botDK->CastSpell(botDK, ObtineRankMaximSpell(48707), false);
+    if (myHp < 40 && runicPower >= 20 && PotiDaSpell(48792)) botDK->CastSpell(botDK, ObtineRankMaximSpell(48792), false);
+
+    // INVOCARE GHOUL (RAISE DEAD) - Ruleaza doar la final ca sa nu piarda frame-ul de atac fizic
+    Pet* dkPet = botDK->GetPet();
+    if (!dkPet || !dkPet->IsAlive())
+    {
+        if (PotiDaSpell(46584))
+        {
+            botDK->CastSpell(botDK, ObtineRankMaximSpell(46584), false);
+            return;
+        }
+    }
+    else if (dkPet->IsAlive() && !dkPet->IsLoading())
+    {
+        if (dkPet->GetTarget() != victim->GetGUID()) dkPet->Attack(victim, true);
+        if (targetDist <= 5.0f && !dkPet->GetSpellHistory()->HasCooldown(47481)) dkPet->CastSpell(victim, 47481, false); // Gnaw Stun
+    }
+}

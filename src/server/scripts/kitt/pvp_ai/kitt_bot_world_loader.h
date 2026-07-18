@@ -57,8 +57,10 @@ bool IncearcaSaFolosestiMedalionPvP(Player* botPlayer);
 void kitt_start_bot_pvp_AI(Player* botPlayer, uint32 diff);
 
 void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit*& victim, BotRole rolBot);
-void ExecutaLogicaMage(Player* botPlayer, Unit*& victim, BotRole rolBot);
 void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit*& victim, BotRole rolBot);
 void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole rolBot);
 void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole rolBot);
-void ExecutaLogicaRogue(Player* botPlayer, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaWarlockPvP(Player* botWarlock, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaMagePvP(Player* botWarlock, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaRoguePvP(Player* botRogue, Unit*& victim, BotRole rolBot);
+void ExecutaLogicaDeathKnightPvP(Player* botDK, Unit*& victim, BotRole rolBot);
