@@ -1098,9 +1098,6 @@ private:
         }
     }
 
-    // ce era in onUpdate
-    // separarea functiilor
-
     // Intrare in lume
     void IntrareaInLume(BotAsyncTracker& tracker, uint32 /*diff*/)
     {
