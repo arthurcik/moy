@@ -3291,6 +3291,16 @@ public:
         case SMSG_SPLINE_SET_FLIGHT_BACK_SPEED: // 0x0386
         case SMSG_CRITERIA_DELETED:            // 0x049E
         case SMSG_SPELLORDAMAGE_IMMUNE:        // 0x0263
+        case SMSG_SET_FACTION_VISIBLE:         // 0x0123
+        case SMSG_LOGOUT_COMPLETE:             // 0x004D
+        case SMSG_SPELL_DELAYED:               // 0x01E2
+        case SMSG_LFG_UPDATE_SEARCH:           // 0x0369
+        case SMSG_MOVE_WATER_WALK:             // 0x00DE
+        case SMSG_REAL_GROUP_UPDATE:           // 0x0397
+        case SMSG_RESYNC_RUNES:                // 0x0487
+        case SMSG_ATTACK_SWING_BAD_FACING:     // 0x0146
+        case MSG_CHANNEL_START:                // 0x0139
+        case MSG_CHANNEL_UPDATE:               // 0x013A
 
             break;
 
