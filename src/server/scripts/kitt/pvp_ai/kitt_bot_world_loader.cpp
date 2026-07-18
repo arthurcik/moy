@@ -3281,6 +3281,16 @@ public:
         case SMSG_SPLINE_SET_FLIGHT_SPEED:     // 0x0385
         case SMSG_CLEAR_COOLDOWN:              // 0x01DE
         case SMSG_GUILD_BANK_LIST:             // 0x03E8
+        case SMSG_EMOTE:                       // 0x0103
+        case SMSG_DISMOUNT:                    // 0x03AC
+        case SMSG_STANDSTATE_UPDATE:           // 0x029D
+        case SMSG_SPELLDISPELLOG:              // 0x027B
+        case SMSG_SPELL_COOLDOWN:              // 0x0134
+        case SMSG_SPLINE_SET_RUN_BACK_SPEED:   // 0x02FF
+        case SMSG_SPLINE_SET_SWIM_BACK_SPEED:  // 0x0302
+        case SMSG_SPLINE_SET_FLIGHT_BACK_SPEED: // 0x0386
+        case SMSG_CRITERIA_DELETED:            // 0x049E
+        case SMSG_SPELLORDAMAGE_IMMUNE:        // 0x0263
 
             break;
 
