@@ -3298,6 +3298,9 @@ public:
         case SMSG_ATTACK_SWING_BAD_FACING:     // 0x0146
         case MSG_CHANNEL_START:                // 0x0139
         case MSG_CHANNEL_UPDATE:               // 0x013A
+        case SMSG_CHAT_SERVER_MESSAGE:         // 0x0291
+        case SMSG_CANCEL_AUTO_REPEAT:          // 0x029C
+        case SMSG_LOOT_LIST:                   // 0x03F9
 
             break;
 
