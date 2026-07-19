@@ -2191,6 +2191,33 @@ public:
             }
         }
 
+        if (msg == "join group")
+        {
+            Group* group = player->GetGroup();
+
+            if (!group)
+            {
+                group = new Group();
+                if (!group->Create(player))
+                {
+                    delete group;
+                    group = nullptr;
+                    return;
+                }
+                sGroupMgr->AddGroup(group);
+            }
+
+            // Adaugam membrul online direct in structura grupului (fara pachete de retea)
+            if (!receiver->GetGroup() && group->AddMember(receiver))
+            {
+                raspunsText = "sigur.";
+            }
+            else
+            {
+                raspunsText = "am un grup deja.";
+            }
+        }
+
         if (msg == "set home")
         {
             uint32 botMapId = receiver->GetMapId();
@@ -3107,13 +3134,13 @@ public:
             TC_LOG_INFO("fakPlayer", "[BotNetwork] -> Botul a primit o invitatie de grup. Se trimite acceptul securizat cu corp de 4 octeti.");
 
             // Construeam pachetul de raspuns cu spatiu alocat pentru un uint32
-            WorldPacket response(CMSG_GROUP_ACCEPT, 4);
+            WorldPacket response(CMSG_GROUP_DECLINE, 4); // CMSG_GROUP_DECLINE | CMSG_GROUP_ACCEPT
 
             // REPARATIE CRASH: Injectam valoarea zero ceruta de handler-ul din Core-ul tau
             response << uint32(0);
 
             // Injectam pachetul securizat in coada botului
-            InjecteazaOpcodeBot(session, CMSG_GROUP_ACCEPT, response);
+            InjecteazaOpcodeBot(session, CMSG_GROUP_DECLINE, response);
             break;
         }
 
