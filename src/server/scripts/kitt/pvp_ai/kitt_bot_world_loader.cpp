@@ -1050,7 +1050,7 @@ private:
         }
         else
         {
-            TC_LOG_ERROR("fakPlayer", "Eroare Coada: Liderul bot {} nu are o echipa de arena 2v2 valida!", botPlayer->GetName().c_str());
+            TC_LOG_ERROR("fakPlayer", "Eroare Coada: Liderul bot {} nu are o echipa de arena 3v3 valida!", botPlayer->GetName().c_str());
             return;
         }
 
@@ -1110,7 +1110,7 @@ private:
                         // Pasul 7: Programeaza serverul sa caute meci pentru acest MMR
             sBattlegroundMgr->ScheduleQueueUpdate(matchmakerRating, bgQueueTypeId);
 
-            TC_LOG_INFO("fakPlayer", "Succes Coada: Echipa de boti condusa de {} a intrat oficial in query-ul de Matchmaking 2v2 Rated!", botPlayer->GetName().c_str());
+            TC_LOG_INFO("fakPlayer", "Succes Coada: Echipa de boti condusa de {} a intrat oficial in query-ul de Matchmaking 3v3 Rated!", botPlayer->GetName().c_str());
         }
         else
         {
@@ -1165,7 +1165,7 @@ private:
         }
         else
         {
-            TC_LOG_ERROR("fakPlayer", "Eroare Coada: Liderul bot {} nu are o echipa de arena 2v2 valida!", botPlayer->GetName().c_str());
+            TC_LOG_ERROR("fakPlayer", "Eroare Coada: Liderul bot {} nu are o echipa de arena 5v5 valida!", botPlayer->GetName().c_str());
             return;
         }
 
@@ -1225,7 +1225,7 @@ private:
                         // Pasul 7: Programeaza serverul sa caute meci pentru acest MMR
             sBattlegroundMgr->ScheduleQueueUpdate(matchmakerRating, bgQueueTypeId);
 
-            TC_LOG_INFO("fakPlayer", "Succes Coada: Echipa de boti condusa de {} a intrat oficial in query-ul de Matchmaking 2v2 Rated!", botPlayer->GetName().c_str());
+            TC_LOG_INFO("fakPlayer", "Succes Coada: Echipa de boti condusa de {} a intrat oficial in query-ul de Matchmaking 5v5 Rated!", botPlayer->GetName().c_str());
         }
         else
         {
@@ -1892,10 +1892,6 @@ private:
                         bool existaJucatoriLaCoada = false;
 
                         uint8 tipArenaAles = 0; // Va salva 2, 3 sau 5 in functie de coada gasita activa
-
-                        Group* checkGroup = botPlayer->GetGroup();
-                        uint32 membriGrup = checkGroup ? checkGroup->GetMembersCount() : 1;
-
 
                         if (Battleground* bg = sBattlegroundMgr->GetBattlegroundTemplate(BATTLEGROUND_AA))
                         {
