@@ -1971,17 +1971,30 @@ private:
                                 //JoinGroupArena2v2Rated(botPlayer);
 
                                 // Inscrierea se face strict dupa coada care a declansat activitatea (tipArenaAles)
-                                if (tipArenaAles == 2)
+                                switch (tipArenaAles)
                                 {
-                                    JoinGroupArena2v2Rated(botPlayer);
-                                }
-                                else if (tipArenaAles == 3)
-                                {
-                                    JoinGroupArena3v3Rated(botPlayer);
-                                }
-                                else if (tipArenaAles == 5)
-                                {
-                                    JoinGroupArena5v5Rated(botPlayer);
+                                    case 2:
+                                    {
+                                        JoinGroupArena2v2Rated(botPlayer);
+                                        break;
+                                    }
+                                    case 3:
+                                    {
+                                        JoinGroupArena3v3Rated(botPlayer);
+                                        break;
+                                    }
+                                    case 5:
+                                    {
+                                        JoinGroupArena5v5Rated(botPlayer);
+                                        break;
+                                    }
+
+                                    default:
+                                    {
+                                        tracker.isQueued = false;
+                                        tracker.rejoinTimer = urand(10000, 20000);
+                                        break;
+                                    }
                                 }
                             }
                             else
@@ -2048,6 +2061,11 @@ private:
             }
             membriActuali = 1;
             group = nullptr;
+        }
+
+        if (at->GetCaptain() != botPlayer->GetGUID())
+        {
+            return; // Iesim instant din functie pentru toti botii care nu sunt lideri!
         }
 
         // SITUATIA B: Grupul este prea mic (aducem membri online din aceeasi Arena Team)
