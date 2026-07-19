@@ -34,6 +34,26 @@ struct BotAsyncTracker
 extern std::vector<BotAsyncTracker> g_MultiBotTracker;
 extern std::mutex g_BotTrackerMutex;
 
+// arena join multi-Task
+struct KittBotArenaTracker
+{
+    uint32 arenaTeamId = 0; // team ID
+    bool areGrupIn2v2 = false; // daca e in coada
+    bool areGrupIn3v3 = false; // daca e in coada
+    bool areGrupIn5v5 = false; // daca e in coada
+    bool inCursDeFormare = false; // blocare sa nu intre altul peste
+    ObjectGuid botCareFormeaza; // cine formeaza grup
+
+    std::vector<ObjectGuid> botiOcupatiInFormare; // rezervati pt formare
+
+    time_t timpInceputFormare = 0;
+    time_t timpIntrareInCoada = 0;
+};
+extern std::unordered_map<uint32, KittBotArenaTracker> g_KittBotArenaRegistru;
+// -------------
+
+
+
 
 // load ghost
 void PornesteTotiBotii();

@@ -57,6 +57,8 @@ using namespace Trinity::ChatCommands;
 std::vector<BotAsyncTracker> g_MultiBotTracker;
 std::mutex g_BotTrackerMutex;
 
+std::unordered_map<uint32, KittBotArenaTracker> g_KittBotArenaRegistru; // arena join muti-task
+
 namespace
 {
     // config
@@ -924,6 +926,7 @@ private:
         uint32 arenaRating = 1;
         uint32 matchmakerRating = 0;
         uint32 previousOpponents = 0;
+        time_t timpServerCurent = GameTime::GetGameTime();
 
         if (at)
         {
@@ -980,6 +983,11 @@ private:
                         if (!member->InBattlegroundQueue())
                         {
                             member->AddBattlegroundQueueId(bgQueueTypeId);
+
+                            // flaguri
+                            auto& tArena = g_KittBotArenaRegistru[arenaTeamId];
+                            tArena.areGrupIn2v2 = true;
+                            tArena.timpIntrareInCoada = timpServerCurent;
                         }
                     }
                 }
@@ -1039,6 +1047,7 @@ private:
         uint32 arenaRating = 1;
         uint32 matchmakerRating = 0;
         uint32 previousOpponents = 0;
+        time_t timpServerCurent = GameTime::GetGameTime();
 
         if (at)
         {
@@ -1095,6 +1104,12 @@ private:
                         if (!member->InBattlegroundQueue())
                         {
                             member->AddBattlegroundQueueId(bgQueueTypeId);
+
+                            // flaguri
+                            auto& tArena = g_KittBotArenaRegistru[arenaTeamId];
+                            tArena.areGrupIn3v3 = true;
+                            tArena.timpIntrareInCoada = timpServerCurent;
+
                         }
                     }
                 }
@@ -1154,6 +1169,7 @@ private:
         uint32 arenaRating = 1;
         uint32 matchmakerRating = 0;
         uint32 previousOpponents = 0;
+        time_t timpServerCurent = GameTime::GetGameTime();
 
         if (at)
         {
@@ -1210,6 +1226,12 @@ private:
                         if (!member->InBattlegroundQueue())
                         {
                             member->AddBattlegroundQueueId(bgQueueTypeId);
+
+                            // flaguri
+                            auto& tArena = g_KittBotArenaRegistru[arenaTeamId];
+                            tArena.areGrupIn5v5 = true;
+                            tArena.timpIntrareInCoada = timpServerCurent;
+
                         }
                     }
                 }
@@ -1901,6 +1923,51 @@ private:
 
                                 for (uint8 tipCoada : coziDeScanat)
                                 {
+                                    // ==================== OPRITORUL SUPREM PE TEAM ID ====================
+                                    // Extragem ID-ul echipei noastre pentru bracket-ul pe care vrem sa il scanam
+                                    uint8 slotIndexCoada = (tipCoada == 3) ? 1 : ((tipCoada == 5) ? 2 : 0);
+                                    uint32 MyArenaTeamId = botPlayer->GetArenaTeamId(slotIndexCoada);
+
+                                    if (MyArenaTeamId > 0)
+                                    {
+                                        auto& tArena = g_KittBotArenaRegistru[MyArenaTeamId];
+
+
+
+                                        // DACA ECHIPA NOASTRA ARE DEJA UN GRUP IN ACEASTA COADA, SARE PESTE EA COMPLET!
+                                        // Asta opreste instantaneu grupul lui Roguee din a folosi coada lasata de Jina.
+                                        if (tipCoada == 2 && tArena.areGrupIn2v2)
+                                        {
+                                            continue;
+                                        }
+                                        if (tipCoada == 3 && tArena.areGrupIn3v3)
+                                        {
+                                            continue;
+                                        }
+                                        if (tipCoada == 5 && tArena.areGrupIn5v5)
+                                        {
+                                            continue;
+                                        }
+
+
+                                        /*TC_LOG_INFO("fakPlayer", "[DEBUG COMPLETSCAN] Botul {} scaneaza {}v{}. TeamID: {}. FLAGS -> are2v2: {}, are3v3: {}, are5v5: {}, inFormare: {}, SefFormare: {}.",
+                                            botPlayer->GetName().c_str(),
+                                            tipCoada, tipCoada,
+                                            MyArenaTeamId,
+                                            tArena.areGrupIn2v2 ? 1 : 0,
+                                            tArena.areGrupIn3v3 ? 1 : 0,
+                                            tArena.areGrupIn5v5 ? 1 : 0,
+                                            tArena.inCursDeFormare ? 1 : 0,
+                                            tArena.botCareFormeaza.GetCounter());*/
+
+                                    }
+                                    else
+                                    {
+                                        // daca nu are echipa pt ce sa gasit in coada
+                                        tracker.rejoinTimer = urand(10000, 20000);
+                                        continue;
+                                    }
+                                    // ===================
                                     // Protectie: Botii nu pot da join la o arena mai mare decat numarul lor de membri!
                                     // Daca grupul are 3 boti, sare peste verificarea de 5v5.
                                     /*if (membriGrup < tipCoada)
@@ -2022,76 +2089,122 @@ private:
         if (!botPlayer || tipArenaAles == 0)
             return;
 
-        // Determinam slotul echipei de arena in functie de dimensiunea ceruta
-        // 0 = 2v2, 1 = 3v3, 2 = 5v5
-        uint8 teamSizeIndex = 0;
-        if (tipArenaAles == 3) teamSizeIndex = 1;
-        else if (tipArenaAles == 5) teamSizeIndex = 2;
-
-        uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
+        uint8 slotIndex = (tipArenaAles == 3) ? 1 : ((tipArenaAles == 5) ? 2 : 0);
+        uint32 arenaTeamId = botPlayer->GetArenaTeamId(slotIndex);
         if (arenaTeamId == 0)
+            return;
+
+        // Extragem direct tracker-ul echipei din map-ul static
+        auto& tArena = g_KittBotArenaRegistru[arenaTeamId];
+        tArena.arenaTeamId = arenaTeamId;
+
+        // ==================== PASUL 1: BARIERA DE PROTECTIE (CREARE GRUP) ====================
+        // Daca un alt coleg a blocat deja echipa pentru formare in acest frame/tick, ne oprim instant
+        if (tArena.inCursDeFormare && tArena.botCareFormeaza != botPlayer->GetGUID())
         {
-            TC_LOG_ERROR("fakPlayer", "PROTECTIE GRUP: Liderul bot {} nu are o echipa de arena pentru slotul {}v{}!", botPlayer->GetName().c_str(), tipArenaAles, tipArenaAles);
             return;
         }
+
+        // Daca bracket-ul solicitat este deja marcat ca activ in coada, nu mai incercam sa generam alt grup
+        if (tipArenaAles == 2 && tArena.areGrupIn2v2) return;
+        if (tipArenaAles == 3 && tArena.areGrupIn3v3) return;
+        if (tipArenaAles == 5 && tArena.areGrupIn5v5) return;
+
+        // Daca botul curent face deja parte dintr-un grup, dar el NU este liderul, 
+        // inseamna ca este un membru primit primit in vizita. El nu are voie sa asambleze.
+        Group* group = botPlayer->GetGroup();
+        if (group && !group->IsLeader(botPlayer->GetGUID()))
+        {
+            return;
+        }
+
+        // Activam bariera: Botul curent isi asuma rolul de constructor al grupului
+        if (!tArena.inCursDeFormare)
+        {
+            tArena.inCursDeFormare = true;
+            tArena.botCareFormeaza = botPlayer->GetGUID();
+            tArena.timpInceputFormare = GameTime::GetGameTime();
+            tArena.botiOcupatiInFormare.clear();
+        }
+
+        // Lambda utilitar pentru a anula formarea daca nu gasim conditiile necesare
+        auto AbandoneazaFormareaGrupului = [&]() {
+            tArena.inCursDeFormare = false;
+            tArena.botCareFormeaza = ObjectGuid::Empty;
+            tArena.timpInceputFormare = 0;
+            tArena.botiOcupatiInFormare.clear();
+            };
 
         ArenaTeam* at = sArenaTeamMgr->GetArenaTeamById(arenaTeamId);
         if (!at)
+        {
+            AbandoneazaFormareaGrupului();
             return;
+        }
 
-        Group* group = botPlayer->GetGroup();
         uint32 membriActuali = group ? group->GetMembersCount() : 1;
 
-        // Daca grupul are deja numarul perfect de oameni, nu mai facem nimic
+        // Daca grupul a atins deja dimensiunea ideala, oprim formarea cu succes
+        // (Bariera ramane ridicata o secunda pana cand bucla principala apuca sa ruleze Join)
         if (membriActuali == tipArenaAles)
+        {
             return;
+        }
 
-        // SITUATIA A: Grupul este prea mare (exemplu: avem grup de 5, dar coada cere 2v2)
-        // Desfiintam grupul pentru a-l lasa sa invite doar numarul corect la urmatorul tick
+        // Daca grupul actual este prea mare, il desfiintam curat pentru a-l reconstrui corect
         if (membriActuali > tipArenaAles)
         {
-            if (group/* && group->IsLeader(botPlayer->GetGUID())*/)
+            if (group)
             {
-                TC_LOG_INFO("fakPlayer", "PROTECTIE GRUP: Grupul botului {} este prea mare ({}). Il desfiintam pentru re-creare la {}v{}.", botPlayer->GetName().c_str(), membriActuali, tipArenaAles, tipArenaAles);
                 group->Disband();
             }
-            membriActuali = 1;
-            group = nullptr;
-        }
-
-        if (at->GetCaptain() != botPlayer->GetGUID())
-        {
-            return; // Iesim instant din functie pentru toti botii care nu sunt lideri!
-        }
-
-        // SITUATIA B: Grupul este prea mic (aducem membri online din aceeasi Arena Team)
-        uint32 membriNecesariInPlus = tipArenaAles - membriActuali;
-        if (membriNecesariInPlus <= 0)
+            AbandoneazaFormareaGrupului();
             return;
+        }
 
-        uint32 membriInvitatiCuSucces = 0;
+        // ==================== PASUL 2: RECRUTARE SI MARCARE CA OCUPAT ====================
+        uint32 membriNecesariInPlus = tipArenaAles - membriActuali;
+        std::vector<Player*> colegiValiziDisponibili;
 
-        // Utilizam structura exacta cu iteratori nativi indicata de tine
         for (ArenaTeam::MemberList::iterator itr = at->m_membersBegin(); itr != at->m_membersEnd(); ++itr)
         {
-            // Nu il invitam pe liderul insusi
             if (itr->Guid == botPlayer->GetGUID())
                 continue;
 
-            // Daca am adus destui oameni pentru dimensiunea ceruta, oprim cautarea
-            if (membriInvitatiCuSucces >= membriNecesariInPlus)
+            Player* colegEchipa = ObjectAccessor::FindConnectedPlayer(itr->Guid);
+            if (!colegEchipa || !colegEchipa->IsAlive() || colegEchipa->IsLoading())
+                continue;
+
+            // Regula stricta: Sa nu fie in pvp activ si sa nu aiba absolut niciun grup activ
+            if (colegEchipa->InBattlegroundQueue() || colegEchipa->InBattleground() || colegEchipa->GetGroup())
+                continue;
+
+            colegiValiziDisponibili.push_back(colegEchipa);
+        }
+
+        // Daca nu avem suficienti parteneri complet liberi pe server, anulam tot fara sa stricam nimic
+        if (colegiValiziDisponibili.size() < membriNecesariInPlus)
+        {
+            AbandoneazaFormareaGrupului();
+            return;
+        }
+
+        // Amestecam partenerii gasiti pentru diversitatea compozitiilor din echipa
+        if (colegiValiziDisponibili.size() > 1)
+        {
+            for (size_t i = colegiValiziDisponibili.size() - 1; i > 0; --i)
+            {
+                size_t j = urand(0, i);
+                std::swap(colegiValiziDisponibili[i], colegiValiziDisponibili[j]);
+            }
+        }
+
+        // Incepem asamblarea propriu-zisa
+        for (Player* coleg : colegiValiziDisponibili)
+        {
+            if (membriNecesariInPlus == 0)
                 break;
 
-            // Verificam daca membrul din echipa de arena este online pe server
-            Player* colegEchipa = ObjectAccessor::FindConnectedPlayer(itr->Guid);
-            if (!colegEchipa || !colegEchipa->IsAlive() || colegEchipa->IsLoading() || colegEchipa->InBattleground())
-                continue;
-
-            // Verificam sa nu fie deja ocupat in alt grup
-            if (colegEchipa->GetGroup())
-                continue;
-
-            // Daca liderul nu avea grup deloc, il cream acum pe loc
             if (!group)
             {
                 group = new Group();
@@ -2099,20 +2212,29 @@ private:
                 {
                     delete group;
                     group = nullptr;
+                    AbandoneazaFormareaGrupului();
                     break;
                 }
                 sGroupMgr->AddGroup(group);
             }
 
-            // Adaugam membrul online direct in structura grupului (fara pachete de retea)
-            if (group->AddMember(colegEchipa))
+            if (group->AddMember(coleg))
             {
-                membriInvitatiCuSucces++;
-                TC_LOG_INFO("fakPlayer", "PROTECTIE GRUP: Botul {} l-a adaugat in grup pe colegul {} pentru arena {}v{}.", botPlayer->GetName().c_str(), colegEchipa->GetName().c_str(), tipArenaAles, tipArenaAles);
+                membriNecesariInPlus--;
+
+                // Salvam partenerul recrutat in lista de boti ocupati a trackerului
+                tArena.botiOcupatiInFormare.push_back(coleg->GetGUID());
+
+                TC_LOG_INFO("fakPlayer", "TRACKER ARENA: Liderul {} a securizat membrul {} pentru formatul {}v{}.", botPlayer->GetName().c_str(), coleg->GetName().c_str(), tipArenaAles, tipArenaAles);
             }
         }
     }
 
+    // resetare flaguei join arena multi-task
+    void VerificaSiReseteazaFlaguriBlocate()
+    {
+
+    }
 
 };
 
