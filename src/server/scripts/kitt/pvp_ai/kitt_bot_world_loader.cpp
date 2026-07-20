@@ -1966,7 +1966,7 @@ private:
 
                                     if (MyArenaTeamId > 0)
                                     {
-                                        auto& tArena = g_KittBotArenaRegistru[MyArenaTeamId];
+                                        /*auto& tArena = g_KittBotArenaRegistru[MyArenaTeamId];
 
                                         // DACA ECHIPA NOASTRA ARE DEJA UN GRUP IN ACEASTA COADA, SARE PESTE EA COMPLET!
                                         // Asta opreste instantaneu grupul lui Roguee din a folosi coada lasata de Jina.
@@ -1981,7 +1981,39 @@ private:
                                         if (tipCoada == 5 && tArena.areGrupIn5v5)
                                         {
                                             continue;
+                                        }*/
+
+
+                                        // === VERIFICARE GLOBALA CURATA ===
+                                        bool coadaOcupataDeCineva = false;
+
+                                        for (auto const& [arenaId, dateArena] : g_KittBotArenaRegistru)
+                                        {
+                                            // Verifica DOAR variabila specifica tipului de coada curent
+                                            if (tipCoada == 2 && dateArena.areGrupIn2v2)
+                                            {
+                                                coadaOcupataDeCineva = true;
+                                                break;
+                                            }
+
+                                            if (tipCoada == 3 && dateArena.areGrupIn3v3)
+                                            {
+                                                coadaOcupataDeCineva = true;
+                                                break;
+                                            }
+                                            if (tipCoada == 5 && dateArena.areGrupIn5v5)
+                                            {
+                                                coadaOcupataDeCineva = true;
+                                                break;
+                                            }
                                         }
+
+                                        // Daca e ocupata, sarim peste inregistrare si bucla mare trece la urmatorul tip de coada
+                                        if (coadaOcupataDeCineva)
+                                        {
+                                            continue;
+                                        }
+                                        // ===============================
                                     }
                                     else
                                     {
