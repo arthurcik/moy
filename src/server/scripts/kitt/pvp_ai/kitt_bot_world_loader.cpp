@@ -882,6 +882,8 @@ public:
             PortInArenaDinamic(tracker, diff);
         }
 
+        VerificaSiReseteazaFlaguriBlocate();
+
         g_MultiBotTracker.erase(
             std::remove_if(g_MultiBotTracker.begin(), g_MultiBotTracker.end(),
                 [](const BotAsyncTracker& tracker) { return tracker.RemoveFromWorld; }),
@@ -985,7 +987,9 @@ private:
                             member->AddBattlegroundQueueId(bgQueueTypeId);
 
                             // flaguri
+                            ResetareFlaguriFormare(arenaTeamId, 2);
                             auto& tArena = g_KittBotArenaRegistru[arenaTeamId];
+                            tArena.botLiderDeEchipa = botPlayer->GetGUID();
                             tArena.areGrupIn2v2 = true;
                             tArena.timpIntrareInCoada = timpServerCurent;
                         }
@@ -1106,7 +1110,9 @@ private:
                             member->AddBattlegroundQueueId(bgQueueTypeId);
 
                             // flaguri
+                            ResetareFlaguriFormare(arenaTeamId, 3);
                             auto& tArena = g_KittBotArenaRegistru[arenaTeamId];
+                            tArena.botLiderDeEchipa = botPlayer->GetGUID();
                             tArena.areGrupIn3v3 = true;
                             tArena.timpIntrareInCoada = timpServerCurent;
 
@@ -1228,7 +1234,9 @@ private:
                             member->AddBattlegroundQueueId(bgQueueTypeId);
 
                             // flaguri
+                            ResetareFlaguriFormare(arenaTeamId, 5);
                             auto& tArena = g_KittBotArenaRegistru[arenaTeamId];
+                            tArena.botLiderDeEchipa = botPlayer->GetGUID();
                             tArena.areGrupIn5v5 = true;
                             tArena.timpIntrareInCoada = timpServerCurent;
 
@@ -1803,6 +1811,34 @@ private:
                                         // === LINIA TA DE SIGURANTA ANTI-PUNCTARE DUBLA ===
                                         // sa nu le dea dublu jocuri contorizate
                                         bgQueue.RemovePlayer(botPlayer->GetGUID(), false);
+
+                                        // -- scoate flags arena bots
+                                        // ==========================================================
+                                        // DETECTIE DINAMICA SI RESETARE FLAGURI REGISTRU TEAM ID
+                                        // ==========================================================
+                                        // Determinam automat tipul arenei (2, 3 sau 5) pe baza configuratiei cozii
+                                        if (queueTypeId.TeamSize > 0)
+                                        {
+                                            uint8 slotIndexEchipa = (queueTypeId.TeamSize == 3) ? 1 : ((queueTypeId.TeamSize == 5) ? 2 : 0);
+                                            uint32 botArenaTeamId = botPlayer->GetArenaTeamId(slotIndexEchipa);
+
+                                            if (botArenaTeamId > 0)
+                                            {
+                                                auto& tArena = g_KittBotArenaRegistru[botArenaTeamId];
+
+                                                // Dezactivam flag-ul corespunzator arenei din care tocmai a plecat
+                                                if (queueTypeId.TeamSize == 2) tArena.areGrupIn2v2 = false;
+                                                if (queueTypeId.TeamSize == 3) tArena.areGrupIn3v3 = false;
+                                                if (queueTypeId.TeamSize == 5) tArena.areGrupIn5v5 = false;
+
+                                                // Resetam timestamp-ul de coada pentru acest Team ID
+                                                tArena.timpIntrareInCoada = 0;
+
+                                                TC_LOG_INFO("fakPlayer", "TRACKER ARENA: Botul {} (TeamID: {}) a acceptat invitatia si intra in meciul de {}v{}. Am deblocat coada locala.",
+                                                    botPlayer->GetName().c_str(), botArenaTeamId, queueTypeId.TeamSize, queueTypeId.TeamSize);
+                                            }
+                                        }
+
                                         // ================================================
 
                                         // 3. REPARATIE CRITICA PARAMETRI: Teleportarea nativa prin managerul de Battleground
@@ -2113,10 +2149,10 @@ private:
         // Daca botul curent face deja parte dintr-un grup, dar el NU este liderul, 
         // inseamna ca este un membru primit primit in vizita. El nu are voie sa asambleze.
         Group* group = botPlayer->GetGroup();
-        if (group && !group->IsLeader(botPlayer->GetGUID()))
+        /*if (group && !group->IsLeader(botPlayer->GetGUID()))
         {
             return;
-        }
+        }*/
 
         // Activam bariera: Botul curent isi asuma rolul de constructor al grupului
         if (!tArena.inCursDeFormare)
@@ -2164,7 +2200,26 @@ private:
 
         // ==================== PASUL 2: RECRUTARE SI MARCARE CA OCUPAT ====================
         uint32 membriNecesariInPlus = tipArenaAles - membriActuali;
+        std::vector<Player*> healeriiDisponibili;
         std::vector<Player*> colegiValiziDisponibili;
+
+        bool areHealerInGrup = (DefinesteSiSalveazaRolulBotului(botPlayer) == BOT_ROLE_HEALER);
+
+        // Daca liderul are deja un mini-grup, verificam daca exista deja un healer printre membrii actuali
+        if (group && !areHealerInGrup)
+        {
+            for (auto const& slot : group->GetMemberSlots())
+            {
+                if (Player* membruExistent = ObjectAccessor::FindConnectedPlayer(slot.guid))
+                {
+                    if (DefinesteSiSalveazaRolulBotului(membruExistent) == BOT_ROLE_HEALER)
+                    {
+                        areHealerInGrup = true;
+                        break;
+                    }
+                }
+            }
+        }
 
         for (ArenaTeam::MemberList::iterator itr = at->m_membersBegin(); itr != at->m_membersEnd(); ++itr)
         {
@@ -2176,17 +2231,58 @@ private:
                 continue;
 
             // Regula stricta: Sa nu fie in pvp activ si sa nu aiba absolut niciun grup activ
-            if (colegEchipa->InBattlegroundQueue() || colegEchipa->InBattleground() || colegEchipa->GetGroup())
+            if (colegEchipa->InBattlegroundQueue() || colegEchipa->InBattleground()/* || colegEchipa->GetGroup()*/)
                 continue;
 
-            colegiValiziDisponibili.push_back(colegEchipa);
+            if (Group* grupColeg = colegEchipa->GetGroup())
+            {
+                // Daca grupul in care se afla colegul nu este chiar grupul liderului nostru curent
+                if (!group || grupColeg != group)
+                {
+                    // Daca el este liderul acelui grup vechi, desfiintam tot grupul
+                    if (grupColeg->IsLeader(colegEchipa->GetGUID()))
+                    {
+                        grupColeg->Disband();
+                    }
+                    else
+                    {
+                        // Daca este doar un simplu membru, il scoatem fortat din acel grup
+                        grupColeg->RemoveMember(colegEchipa->GetGUID());
+                    }
+                }
+            }
+
+            // IMPARTIRE INTELIGENTA PE ROLURI
+            if (DefinesteSiSalveazaRolulBotului(colegEchipa) == BOT_ROLE_HEALER)
+            {
+                healeriiDisponibili.push_back(colegEchipa);
+            }
+            else
+            {
+                colegiValiziDisponibili.push_back(colegEchipa);
+            }
+
+            //colegiValiziDisponibili.push_back(colegEchipa);
         }
 
+        size_t totalColegiLiberi = healeriiDisponibili.size() + colegiValiziDisponibili.size();
+
+
         // Daca nu avem suficienti parteneri complet liberi pe server, anulam tot fara sa stricam nimic
-        if (colegiValiziDisponibili.size() < membriNecesariInPlus)
+        if (totalColegiLiberi < membriNecesariInPlus)
         {
             AbandoneazaFormareaGrupului();
             return;
+        }
+
+        // AMESTECAM LISTA DE HEALERI pentru diversitate
+        if (healeriiDisponibili.size() > 1)
+        {
+            for (size_t i = healeriiDisponibili.size() - 1; i > 0; --i)
+            {
+                size_t j = urand(0, i);
+                std::swap(healeriiDisponibili[i], healeriiDisponibili[j]);
+            }
         }
 
         // Amestecam partenerii gasiti pentru diversitatea compozitiilor din echipa
@@ -2199,8 +2295,34 @@ private:
             }
         }
 
+        // CONSTRUIM LISTA FINALA DE INVITATII (Se pastreaza ordinea: Healerii amestecati au intaietate)
+        std::vector<Player*> listaFinalaRecrutare;
+
+        // Daca grupul nu are inca un healer, adaugam intai toti healerii disponibili (gata amestecati)
+        if (!areHealerInGrup && !healeriiDisponibili.empty())
+        {
+            // Adaugam DOAR PRIMUL healer din lista amestecata
+            listaFinalaRecrutare.push_back(healeriiDisponibili.front());
+
+            // Inseamna ca am planificat deja un healer, restul locurilor TREBUIE sa fie DPS
+            //areHealerInGrup = true;
+        }
+
+        // Completam restul listei exclusiv cu DPS-ii amestecati
+        listaFinalaRecrutare.insert(listaFinalaRecrutare.end(), colegiValiziDisponibili.begin(), colegiValiziDisponibili.end());
+
+        // PLASA DE SIGURANTA: Daca nu am avut destui DPS online sa umplem echipa, 
+        // abia atunci permitem si alti healeri ramasi, ca sa nu anulam meciul degeaba
+        if (listaFinalaRecrutare.size() < membriNecesariInPlus && healeriiDisponibili.size() > 1)
+        {
+            for (size_t i = 1; i < healeriiDisponibili.size(); ++i)
+            {
+                listaFinalaRecrutare.push_back(healeriiDisponibili[i]);
+            }
+        }
+
         // Incepem asamblarea propriu-zisa
-        for (Player* coleg : colegiValiziDisponibili)
+        for (Player* coleg : listaFinalaRecrutare)
         {
             if (membriNecesariInPlus == 0)
                 break;
@@ -2231,9 +2353,103 @@ private:
     }
 
     // resetare flaguei join arena multi-task
+
+    void ResetareFlaguriFormare(uint32 arenaTeamId, uint8 tipArenaAles)
+    {
+        if (arenaTeamId == 0)
+            return;
+
+        // Gasim direct celula echipei in memorie (Viteza maxima O(1))
+        auto& tArena = g_KittBotArenaRegistru[arenaTeamId];
+
+        // Scoaterea tuturor flag-urilor de protectie ale echipei
+        tArena.inCursDeFormare = false;
+        tArena.botCareFormeaza = ObjectGuid::Empty;
+        tArena.timpInceputFormare = 0;
+
+        // Eliberam complet partenerii din rezerva
+        tArena.botiOcupatiInFormare.clear();
+
+        TC_LOG_INFO("fakPlayer", "TRACKER ARENA: Resetare flaguri formare pentru echipa {} la categoria {}v{}.", arenaTeamId, tipArenaAles, tipArenaAles);
+    }
+
     void VerificaSiReseteazaFlaguriBlocate()
     {
+        static time_t ultimaCuratareGlobala = 0;
+        time_t timpServerCurent = GameTime::GetGameTime();
 
+        if (timpServerCurent < ultimaCuratareGlobala + 60)
+            return;
+
+        ultimaCuratareGlobala = timpServerCurent;
+
+        for (auto& [teamId, tracker] : g_KittBotArenaRegistru)
+        {
+            if (teamId == 0)
+                continue;
+
+            // 1. VERIFICARE TIMEOUT FORMARE (A ramas blocat la asamblare grup)
+            if (tracker.inCursDeFormare && tracker.timpInceputFormare > 0)
+            {
+                if (timpServerCurent >= tracker.timpInceputFormare + 120)
+                {
+                    // Daca are grup fizic gata facut pe lider, ii dam disband prin pointerul lui
+                    if (Player* botLider = ObjectAccessor::FindConnectedPlayer(tracker.botLiderDeEchipa))
+                    {
+                        if (Group* gr = botLider->GetGroup())
+                            gr->Disband();
+                    }
+
+                    // Resetam strict memoria noastra locala
+                    tracker.inCursDeFormare = false;
+                    tracker.botCareFormeaza = ObjectGuid::Empty;
+                    tracker.timpInceputFormare = 0;
+                    tracker.botiOcupatiInFormare.clear();
+
+                    TC_LOG_INFO("fakPlayer", "KITT GARBAGE: Timeout formare depasit (120s) pentru echipa {}. Eliberat.", teamId);
+                    continue;
+                }
+            }
+
+            // 2. VERIFICARE TIMEOUT COADA (Asteapta de prea mult timp singur in coada goala)
+            bool areOriceCoadaActiva = tracker.areGrupIn2v2 || tracker.areGrupIn3v3 || tracker.areGrupIn5v5;
+            if (areOriceCoadaActiva && tracker.timpIntrareInCoada > 0)
+            {
+                if (timpServerCurent >= tracker.timpIntrareInCoada + 300)
+                {
+                    // Gasim botul care a dat join (folosim sfeul salvat anterior cat timp era in formare, sau primul online)
+                    Player* botLiderCoada = ObjectAccessor::FindConnectedPlayer(tracker.botLiderDeEchipa);
+
+                    if (botLiderCoada)
+                    {
+                        // Scoatem fortat din toate cozile native ale serverului
+                        for (uint8 i = 0; i < PLAYER_MAX_BATTLEGROUND_QUEUES; ++i)
+                        {
+                            BattlegroundQueueTypeId queueId = botLiderCoada->GetBattlegroundQueueTypeId(i);
+                            if (queueId != BATTLEGROUND_QUEUE_NONE)
+                            {
+                                BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(queueId);
+                                bgQueue.RemovePlayer(botLiderCoada->GetGUID(), false);
+                            }
+                        }
+
+                        // Dizolvam grupul ca sa poata fi amestecati tura urmatoare
+                        if (Group* gr = botLiderCoada->GetGroup())
+                            gr->Disband();
+                    }
+
+                    // Curatam complet toate flag-urile
+                    tracker.areGrupIn2v2 = false;
+                    tracker.areGrupIn3v3 = false;
+                    tracker.areGrupIn5v5 = false;
+                    tracker.timpIntrareInCoada = 0;
+                    tracker.botCareFormeaza = ObjectGuid::Empty;
+                    //tracker.botLiderDeEchipa = ObjectGuid::Empty;
+
+                    TC_LOG_INFO("fakPlayer", "KITT GARBAGE: Timeout coada depasit (300s) pentru echipa {}. Scoatere fortata.", teamId);
+                }
+            }
+        }
     }
 
 };

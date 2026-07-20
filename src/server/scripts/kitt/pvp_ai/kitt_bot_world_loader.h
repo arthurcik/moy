@@ -43,6 +43,7 @@ struct KittBotArenaTracker
     bool areGrupIn5v5 = false; // daca e in coada
     bool inCursDeFormare = false; // blocare sa nu intre altul peste
     ObjectGuid botCareFormeaza; // cine formeaza grup
+    ObjectGuid botLiderDeEchipa; // cine formeaza grup
 
     std::vector<ObjectGuid> botiOcupatiInFormare; // rezervati pt formare
 
