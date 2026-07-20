@@ -4066,6 +4066,13 @@ public:
         case SMSG_PLAY_SPELL_VISUAL:           // 0x01F3
         case CMSG_MOVE_FALL_RESET:             // 0x02CA
         case SMSG_MOVE_KNOCK_BACK:             // 0x00EF
+        case SMSG_TEXT_EMOTE:                  // 0x0105
+        case SMSG_ENCHANTMENTLOG:              // 0x01D7
+        case SMSG_RECEIVED_MAIL:               // 0x0285
+        case SMSG_ARENA_TEAM_EVENT:            // 0x0357
+        case SMSG_ARENA_TEAM_COMMAND_RESULT:   // 0x0349
+        case MSG_SET_RAID_DIFFICULTY:          // 0x04EB
+        case SMSG_ZONE_UNDER_ATTACK:           // 0x0254
 
             break;
 
