@@ -4029,6 +4029,11 @@ public:
         case SMSG_CHAT_SERVER_MESSAGE:         // 0x0291
         case SMSG_CANCEL_AUTO_REPEAT:          // 0x029C
         case SMSG_LOOT_LIST:                   // 0x03F9
+        case SMSG_THREAT_UPDATE:               // 0x0483
+        case SMSG_PLAY_SPELL_IMPACT:           // 0x01F7
+        case SMSG_PLAY_SPELL_VISUAL:           // 0x01F3
+        case CMSG_MOVE_FALL_RESET:             // 0x02CA
+        case SMSG_MOVE_KNOCK_BACK:             // 0x00EF
 
             break;
 
