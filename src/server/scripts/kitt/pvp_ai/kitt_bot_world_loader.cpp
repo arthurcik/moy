@@ -1693,8 +1693,9 @@ private:
                 bool esteInMeciAcum = botPlayer->GetMap()->IsBattleArena();
 
                 // --- PASUL A: PORTARE IN ARENA PRIN EVENIMENT (ANTI-CRASH TOTAL) ---
-                if (areCoadaActiva && !esteInMeciAcum)
+                if (areCoadaActiva && !esteInMeciAcum && tracker.rejoinTimer <= diff)
                 {
+                    tracker.rejoinTimer = urand(5000, 10000);
                     for (uint32 slot = 0; slot < 3; ++slot)
                     {
                         BattlegroundQueueTypeId queueTypeId = botPlayer->GetBattlegroundQueueTypeId(slot);
@@ -2105,15 +2106,17 @@ private:
                             }
                         }
                     }
-                    else
+                    /*else
                     {
                         tracker.rejoinTimer -= diff;
-                    }
+                    }*/
                 }
                 else
                 {
                     tracker.isQueued = true;
                 }
+
+                tracker.rejoinTimer -= diff;
             }
         }
 
