@@ -1968,8 +1968,6 @@ private:
                                     {
                                         auto& tArena = g_KittBotArenaRegistru[MyArenaTeamId];
 
-
-
                                         // DACA ECHIPA NOASTRA ARE DEJA UN GRUP IN ACEASTA COADA, SARE PESTE EA COMPLET!
                                         // Asta opreste instantaneu grupul lui Roguee din a folosi coada lasata de Jina.
                                         if (tipCoada == 2 && tArena.areGrupIn2v2)
@@ -1984,18 +1982,6 @@ private:
                                         {
                                             continue;
                                         }
-
-
-                                        /*TC_LOG_INFO("fakPlayer", "[DEBUG COMPLETSCAN] Botul {} scaneaza {}v{}. TeamID: {}. FLAGS -> are2v2: {}, are3v3: {}, are5v5: {}, inFormare: {}, SefFormare: {}.",
-                                            botPlayer->GetName().c_str(),
-                                            tipCoada, tipCoada,
-                                            MyArenaTeamId,
-                                            tArena.areGrupIn2v2 ? 1 : 0,
-                                            tArena.areGrupIn3v3 ? 1 : 0,
-                                            tArena.areGrupIn5v5 ? 1 : 0,
-                                            tArena.inCursDeFormare ? 1 : 0,
-                                            tArena.botCareFormeaza.GetCounter());*/
-
                                     }
                                     else
                                     {
