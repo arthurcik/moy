@@ -490,6 +490,33 @@ void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim)
         return;
     }
 
+    // --- FAZA 3: MECANICA SPECIFICA PENTRU ARENA DALARAN (Lift/Ziduri) ---
+    Map* botMap = botPlayer->GetMap();
+    if (botMap && botMap->GetId() == 617)
+    {
+        if (botPlayer->GetPositionZ() > 10.0f)
+        {
+            // verde start
+            float VposX = 1361.76f - 36.0f;
+            float VposY = 817.336f;
+            float VposZ = 14.8f - 10.0f;
+            if (botPlayer->GetPositionX() > VposX)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, VposX, VposY, VposZ, false);
+                return;
+            }
+            // galben start
+            float GposX = 1218.00f + 42.00f;
+            float GposY = 764.795f;
+            float GposZ = 14.8f - 10.0f;
+            if (botPlayer->GetPositionX() < GposX)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, GposX, GposY, GposZ, false);
+                return;
+            }
+        }
+    }
+
     bool areLOS = botPlayer->IsWithinLOSInMap(victim);
     if (!areLOS)
     {
@@ -582,6 +609,33 @@ void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget)
         return;
     }
 
+    // --- FAZA 3: MECANICA SPECIFICA PENTRU ARENA DALARAN (Lift/Ziduri) ---
+    Map* botMap = botPlayer->GetMap();
+    if (botMap && botMap->GetId() == 617)
+    {
+        if (botPlayer->GetPositionZ() > 10.0f)
+        {
+            // verde start
+            float VposX = 1361.76f - 36.0f;
+            float VposY = 817.336f;
+            float VposZ = 14.8f - 10.0f;
+            if (botPlayer->GetPositionX() > VposX)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, VposX, VposY, VposZ, false);
+                return;
+            }
+            // galben start
+            float GposX = 1218.00f + 42.00f;
+            float GposY = 764.795f;
+            float GposZ = 14.8f - 10.0f;
+            if (botPlayer->GetPositionX() < GposX)
+            {
+                botPlayer->GetMotionMaster()->MovePoint(1001, GposX, GposY, GposZ, false);
+                return;
+            }
+        }
+    }
+
     // --- FAZA 1: CONTROL LOS (LINIE VIZUALA) ---
     // Chiar daca heal-ul merge cu spatele, avem nevoie de linie vizuala (LOS) ca sa nu dea eroare de texturi
     bool areLOS = botPlayer->IsWithinLOSInMap(friendlyTarget);
@@ -615,33 +669,6 @@ void GhostMoveAndHeal(Player* botPlayer, Unit* friendlyTarget)
             botPlayer->StopMoving();
         }
         return;
-    }
-
-    // --- FAZA 3: MECANICA SPECIFICA PENTRU ARENA DALARAN (Lift/Ziduri) ---
-    Map* botMap = botPlayer->GetMap();
-    if (botMap && botMap->GetId() == 617)
-    {
-        if (botPlayer->GetPositionZ() > 10.0f)
-        {
-            // verde start
-            float VposX = 1361.76f - 36.0f;
-            float VposY = 817.336f;
-            float VposZ = 14.8f - 10.0f;
-            if (botPlayer->GetPositionX() > VposX)
-            {
-                botPlayer->GetMotionMaster()->MovePoint(1001, VposX, VposY, VposZ, false);
-                return;
-            }
-            // galben start
-            float GposX = 1218.00f + 42.00f;
-            float GposY = 764.795f;
-            float GposZ = 14.8f - 10.0f;
-            if (botPlayer->GetPositionX() < GposX)
-            {
-                botPlayer->GetMotionMaster()->MovePoint(1001, GposX, GposY, GposZ, false);
-                return;
-            }
-        }
     }
 
     // --- FAZA 4: LOGICA DE POZITIONARE LA DISTANTA (30 de metri max) ---
