@@ -524,6 +524,7 @@ void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim)
         {
             botPlayer->GetMotionMaster()->Clear();
             botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
+            botPlayer->Attack(victim, false); // test caster
         }
         else
         {
@@ -564,6 +565,7 @@ void GhostMoveAndAttackCaster(Player* botPlayer, Unit*& victim)
         {
             botPlayer->GetMotionMaster()->Clear();
             botPlayer->GetMotionMaster()->MovePoint(1001, victim->GetPositionX(), victim->GetPositionY(), victim->GetPositionZ());
+            botPlayer->Attack(victim, false); // test caster
         }
     }
     else
