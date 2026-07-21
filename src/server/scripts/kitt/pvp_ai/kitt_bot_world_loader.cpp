@@ -1900,6 +1900,14 @@ private:
                         CheckAndRewardArenaBotRating(botPlayer);
                         CheckAndRewardArenaBotPersonalRating(botPlayer);
 
+                        // leave group
+                        /*if (botPlayer->GetGroup())
+                        {
+                            TC_LOG_INFO("fakPlayer", "LOG ARENA: Meci end, {} leave GROUP.", botPlayer->GetName().c_str());
+
+                            botPlayer->GetGroup()->RemoveMember(botPlayer->GetGUID());
+                        }*/
+
                         //tracker.isQueued = false;
 
                         //break;
