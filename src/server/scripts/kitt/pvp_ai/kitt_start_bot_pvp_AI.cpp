@@ -1489,7 +1489,7 @@ void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole /*rolB
     }
 }
 
-void ExecutaLogicaDruidFeralPvP(Player* botDruid, Unit*& victim, BotRole rolBot)
+void ExecutaLogicaDruidFeralPvP(Player* botDruid, Unit*& victim, BotRole /*rolBot*/)
 {
     if (!botDruid || !botDruid->IsAlive())
         return;
@@ -1519,7 +1519,6 @@ void ExecutaLogicaDruidFeralPvP(Player* botDruid, Unit*& victim, BotRole rolBot)
 
         if (botDruid->GetShapeshiftForm() != FORM_BEAR)
         {
-            uint32 bearFormSpell = ObtineRankMaximSpell(5487); // Bear Form sau Dire Bear Form
             if (!botDruid->GetSpellHistory()->HasCooldown(5487))
             {
                 botDruid->CastSpell(botDruid, 5487, true); // Triggered = true pentru a trece de restrictii fizice
@@ -1542,7 +1541,6 @@ void ExecutaLogicaDruidFeralPvP(Player* botDruid, Unit*& victim, BotRole rolBot)
         // Schimbare inapoi in pisica daca viata e sigura (peste 60% pentru siguranta)
         if (viataMea > 60)
         {
-            uint32 catFormSpell = ObtineRankMaximSpell(768);
             if (!botDruid->GetSpellHistory()->HasCooldown(768))
             {
                 botDruid->CastSpell(botDruid, 768, true);
@@ -1595,7 +1593,6 @@ void ExecutaLogicaDruidFeralPvP(Player* botDruid, Unit*& victim, BotRole rolBot)
     // 5. Asigurarea formei de pisica (Failsafe)
     if (botDruid->GetShapeshiftForm() != FORM_CAT)
     {
-        uint32 catFormSpell = ObtineRankMaximSpell(768);
         if (!botDruid->GetSpellHistory()->HasCooldown(768))
         {
             botDruid->CastSpell(botDruid, 768, true);
