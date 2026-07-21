@@ -1543,6 +1543,8 @@ void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolB
         }
     }
 
+    GhostMoveAndAttackMelee(botPlayer, victim);
+
     // --- FAZA 1: SUPRAVIETUIRE SI DEFENSIVA NATIVA ---
     if (myHp < 40)
     {
@@ -1580,12 +1582,6 @@ void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolB
     // --- FAZA 2: SECTIUNEA DE MISCARE SECURE (REGULA TA ANTI-CRASH VMAP) ---
     if (targetDist > 5.0f)
     {
-        // De la distanta mare, folosim exclusiv MovePoint pe pozitia inamicului (fara spam)
-        if (!botPlayer->isMoving())
-        {
-            botPlayer->GetMotionMaster()->MovePoint(1006, victim->GetPosition());
-        }
-
         // Feral Charge Cat (ID 49376) - Sare pe inamic daca acesta fuge la distanta
         if (targetDist > 8.0f && targetDist < 25.0f && !botPlayer->GetSpellHistory()->HasCooldown(49376))
         {
@@ -1614,7 +1610,7 @@ void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolB
     else
     {
         // REGULA TA VERIFICATA: Doar de aproape (sub 5m) cuplam Attack(true) si urm?rirea Chase
-        botPlayer->GetMotionMaster()->MoveChase(victim);
+        //botPlayer->GetMotionMaster()->MoveChase(victim);
         botPlayer->Attack(victim, true);
         
 
