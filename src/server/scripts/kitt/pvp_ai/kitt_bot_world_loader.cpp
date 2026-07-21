@@ -4073,6 +4073,10 @@ public:
         case SMSG_ARENA_TEAM_COMMAND_RESULT:   // 0x0349
         case MSG_SET_RAID_DIFFICULTY:          // 0x04EB
         case SMSG_ZONE_UNDER_ATTACK:           // 0x0254
+        case MSG_MOVE_KNOCK_BACK:              // 0x00F1
+        case SMSG_PET_SPELLS:                  // 0x0179
+        case SMSG_DISPEL_FAILED:               // 0x0262
+        case SMSG_ITEM_PUSH_RESULT:            // 0x0166
 
             break;
 
