@@ -1489,210 +1489,115 @@ void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole /*rolB
     }
 }
 
-void ExecutaLogicaDruidFeralPvP(Player* botPlayer, Unit*& victim, BotRole /*rolBot*/)
+void ExecutaLogicaDruidFeralPvP(Player* botDruid, Unit*& victim, BotRole rolBot)
 {
-    // Pasul A: Selectare tinta pentru clasa Melee (false)
-    victim = GhostSelectTarget(botPlayer, victim, false);
-
-    if (!botPlayer || !victim || !botPlayer->IsAlive() || !victim->IsAlive())
+    if (!botDruid || !botDruid->IsAlive())
         return;
 
-    // Pasul B: GESTIONARE CC SI DEFENSIVA NATIVA (Corectata impotriva spamului)
-    // Verificam STRICT daca are debuff de Fear sau Confused pe el prin auri si UnitState izolate
-    if (botPlayer->HasAuraType(SPELL_AURA_MOD_FEAR) || botPlayer->HasUnitState(UNIT_STATE_FLEEING) || botPlayer->HasUnitState(UNIT_STATE_CONFUSED))
+    // 1. Managementul pierderii controlului (CC)
+    if (botDruid->HasUnitState(UNIT_STATE_LOST_CONTROL) &&
+        !botDruid->HasUnitState(UNIT_STATE_JUMPING | UNIT_STATE_CHARGING))
     {
-        if (!botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(50334))) // Berserk_1 = 50334
-        {
-            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(50334), true); // Ignora GCD
-            botPlayer->InterruptNonMeleeSpells(false);
-
-            // Curatam exclusiv starile daca am dat Berserk
-            botPlayer->ClearUnitState(UNIT_STATE_FLEEING);
-            botPlayer->ClearUnitState(UNIT_STATE_CONFUSED);
-            return;
-        }
-        else // Daca Berserk e pe cooldown, abia atunci spargem trinket-ul
-        {
-            IncearcaSaFolosestiMedalionPvP(botPlayer);
-        }
-    }
-    // Daca este in Stun sau Charm, da Trinket instant
-    else if (botPlayer->HasUnitState(UNIT_STATE_STUNNED) || botPlayer->HasUnitState(UNIT_STATE_CHARMED))
-    {
-        IncearcaSaFolosestiMedalionPvP(botPlayer);
+        IncearcaSaFolosestiMedalionPvP(botDruid);
     }
 
-
-    if (!botPlayer->IsHostileTo(victim))
+    // 2. Selectie tinta si miscare
+    victim = GhostSelectTarget(botDruid, victim, false);
+    if (!victim || !victim->IsAlive())
         return;
 
-    // Resurse si Procente
-    uint8 formaCurenta = botPlayer->GetShapeshiftForm();
-    uint32 energy = botPlayer->GetPower(POWER_ENERGY);
-    uint32 comboPoints = botPlayer->GetComboPoints();
-    uint32 myHp = botPlayer->GetHealthPct();
-    float targetDist = botPlayer->GetDistance(victim);
+    GhostMoveAndAttackMelee(botDruid, victim);
 
-    // Fortam forma de Pisica daca din cauza unui CC sau shift a fost scos (CAT_FORM_1 = 768)
-    if (botPlayer->GetShapeshiftForm() != FORM_CAT)
+    // 3. Asigurarea formei de pisica (Form Shift Failsafe)
+    if (botDruid->GetShapeshiftForm() != FORM_CAT)
     {
-        if (!botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(768)))
-        {
-            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(768), false);
-            return;
-        }
-    }
-
-    GhostMoveAndAttackMelee(botPlayer, victim);
-
-    // --- FAZA 1: SUPRAVIETUIRE SI DEFENSIVA NATIVA ---
-    if (myHp < 40)
-    {
-        if (formaCurenta != FORM_BEAR)
-        {
-            if (!botPlayer->HasAura(ObtineRankMaximSpell(5487)))
-            {
-                botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(5487), true);
-            }
-            botPlayer->SetShapeshiftForm(FORM_BEAR); // Reintra instant in Urs
-            return;
-        }
-
-        if (!botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(61336))) // Survival Instincts = 61336
-            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(61336), false);
-
-        if (!botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(22812))) // Barkskin = 22812
-            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(22812), false);
-    }
-    else
-    {
-        if (formaCurenta != FORM_CAT)
-        {
-            if (!botPlayer->HasAura(ObtineRankMaximSpell(768)))
-            {
-                botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(768), true);
-            }
-            botPlayer->SetShapeshiftForm(FORM_CAT);
-            return;
-        }
-        botPlayer->CastSpell(victim, ObtineRankMaximSpell(49376), false);
+        // ID 768 este Cat Form. Folosim true pentru a ignora GCD la shift
+        botDruid->SetShapeshiftForm(FORM_CAT);
+        botDruid->CastSpell(botDruid, 768, true);
         return;
     }
 
-    // --- FAZA 2: SECTIUNEA DE MISCARE SECURE (REGULA TA ANTI-CRASH VMAP) ---
-    if (targetDist > 5.0f)
+    // 4. Buff-uri si cooldown-uri de auto-sustinere (Omen of Clarity, Tiger's Fury)
+    if (!botDruid->HasAura(16864)) // Omen of Clarity
     {
-        // Feral Charge Cat (ID 49376) - Sare pe inamic daca acesta fuge la distanta
-        if (targetDist > 8.0f && targetDist < 25.0f && !botPlayer->GetSpellHistory()->HasCooldown(49376))
+        botDruid->CastSpell(botDruid, ObtineRankMaximSpell(16864), false);
+    }
+
+    uint32 energie = botDruid->GetPower(POWER_ENERGY);
+    uint32 viataMea = botDruid->GetHealthPct();
+
+    // Tiger's Fury daca energia este scazuta (sub 30) pentru spike de damage
+    if (energie < 30 && !botDruid->GetSpellHistory()->HasCooldown(5217))
+    {
+        botDruid->CastSpell(botDruid, ObtineRankMaximSpell(5217), true);
+    }
+
+    // Survival Instincts sau Barkskin la viata scazuta
+    if (viataMea < 35 && !botDruid->GetSpellHistory()->HasCooldown(61336))
+    {
+        botDruid->CastSpell(botDruid, ObtineRankMaximSpell(61336), true); // Survival Instincts
+    }
+
+    // 5. Rotatia de baze si interactiunea cu distanta (Raza de atac)
+    float distanta = botDruid->GetDistance(victim);
+    if (distanta > 5.0f)
+    {
+        // Feral Charge (Cat) daca tinta este la distanta (ID: 49376)
+        if (distanta >= 8.0f && distanta <= 25.0f && !botDruid->GetSpellHistory()->HasCooldown(49376))
         {
-            if (formaCurenta != FORM_CAT)
-            {
-                if (!botPlayer->HasAura(ObtineRankMaximSpell(768)))
-                {
-                    botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(768), true);
-                }
-                botPlayer->SetShapeshiftForm(FORM_CAT);
-                return;
-            }
-            botPlayer->CastSpell(victim, ObtineRankMaximSpell(49376), false);
+            botDruid->CastSpell(victim, 49376, false);
+        }
+        return; // Nu poate da magiile de melee daca este prea departe
+    }
+
+    // Preluam punctele de combo acumulate pe victima curenta
+    uint8 puncteCombo = botDruid->GetComboPoints();
+
+    // 6. Finisheri (Magiile care consuma puncte de combo - prioritare la 4-5 puncte)
+    if (puncteCombo >= 4)
+    {
+        // Aplica Rip (Sangerare principala - ID: 1079) daca tinta nu are deja debuff-ul
+        if (!victim->HasAura(ObtineRankMaximSpell(1079)) && energie >= 30)
+        {
+            botDruid->CastSpell(victim, ObtineRankMaximSpell(1079), false);
             return;
         }
 
-        // Dash (ID: 1850) pentru a ajunge rapid in melee
-        if (targetDist > 15.0f && !botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(1850)) && !botPlayer->HasAura(ObtineRankMaximSpell(1850)))
+        // Savage Roar (Buff damage propriu - ID: 52610) daca nu e activ
+        if (!botDruid->HasAura(52610) && energie >= 25)
         {
-            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(1850), true);
+            botDruid->CastSpell(botDruid, ObtineRankMaximSpell(52610), false);
+            return;
         }
 
-        // Fiind clasa de Melee, nu rulam atacurile daca suntem departe. Lasam MovePoint sa lucreze.
+        // Ferocious Bite (Burst damage direct - ID: 22568) daca restul sunt active
+        if (energie >= 35)
+        {
+            botDruid->CastSpell(victim, ObtineRankMaximSpell(22568), false);
+            return;
+        }
+    }
+
+    // 7. Generatoare de puncte de combo (Atacuri de baza)
+    // Mangle (Cat) - ID: 33876 (Mentine debuff-ul de damage marit pentru sangerari)
+    if (!victim->HasAura(ObtineRankMaximSpell(33876)) && energie >= 40)
+    {
+        botDruid->CastSpell(victim, ObtineRankMaximSpell(33876), false);
         return;
     }
-    else
+
+    // Rake (Sangerare rapida care genereaza puncte - ID: 1822)
+    if (!victim->HasAura(ObtineRankMaximSpell(1822)) && energie >= 35)
     {
-        // REGULA TA VERIFICATA: Doar de aproape (sub 5m) cuplam Attack(true) si urm?rirea Chase
-        //botPlayer->GetMotionMaster()->MoveChase(victim);
-        botPlayer->Attack(victim, true);
-        
-
-        // Micro-pozitionare in spatele tintei folosind functia ta nativa cu coliziuni (tot sub 5m)
-        /*if (!victim->HasInArc(float(M_PI), botPlayer))
-        {
-            float angle = victim->GetOrientation() + M_PI;
-            Position pos = victim->GetFirstCollisionPosition(1.5f, angle);
-            botPlayer->GetMotionMaster()->MovePoint(1005, pos);
-        }*/
-    }
-
-    // --- FAZA 3: ROTATIE DE DAMAGE SI FINISHERS (DOAR IN MELEE) ---
-
-    // Faerie Fire Feral (ID: 16857) - Opreste invizibilitatea (Rogue / Mage)
-    if (!victim->HasAura(ObtineRankMaximSpell(16857)))
-    {
-        botPlayer->CastSpell(victim, ObtineRankMaximSpell(16857), false);
-        //return;
-    }
-
-    // Tiger's Fury (ID: 5217) - Management de energie
-    if (energy <= 30 && !botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(5217)))
-    {
-        botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(5217), true);
-        //return;
-    }
-
-    // Berserk folosit ofensiv pentru burst daca energia e stabila
-    /*if (energy >= 60 && !botPlayer->GetSpellHistory()->HasCooldown(ObtineRankMaximSpell(50334)))
-    {
-        botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(50334), true);
+        botDruid->CastSpell(victim, ObtineRankMaximSpell(1822), false);
         return;
-    }*/
-
-    // EXECUTIE FINISHERS (4-5 Combo Points)
-    if (comboPoints >= 4)
-    {
-        // Savage Roar (ID: 52610) - Auto-buff obligatoriu pentru cresterea damage-ului
-        if (!botPlayer->HasAura(ObtineRankMaximSpell(52610)))
-        {
-            botPlayer->CastSpell(botPlayer, ObtineRankMaximSpell(52610), false);
-            //return;
-        }
-
-        // Rip (ID: 1079) - DoT principal sangerare pe tinte cu multa viata
-        if (victim->GetHealth() > botPlayer->GetMaxHealth() && !victim->HasAura(ObtineRankMaximSpell(1079)))
-        {
-            botPlayer->CastSpell(victim, ObtineRankMaximSpell(1079), false);
-            //return;
-        }
-
-        // Ferocious Bite (ID: 22568) - Burst final direct
-        botPlayer->CastSpell(victim, ObtineRankMaximSpell(22568), false);
-        //return;
     }
 
-    // GENERARE PUNCTE (Combo Builders)
-    // Mangle - Cat (ID: 33876) - Aplica debuff-ul de 30% daune extra din sangerari
-    if (!victim->HasAura(ObtineRankMaximSpell(33876)))
+    // Shred (Atac de baza cand spatele este accesibil sau ca umplutura - ID: 5221)
+    if (energie >= 42)
     {
-        botPlayer->CastSpell(victim, ObtineRankMaximSpell(33876), false);
-        //return;
-    }
-
-    // Rake (ID: 1822) - Sangerare secundara mica
-    if (!victim->HasAura(ObtineRankMaximSpell(1822)))
-    {
-        botPlayer->CastSpell(victim, ObtineRankMaximSpell(1822), false);
-        //return;
-    }
-
-    // Shred (ID: 5221) daca este pozitionat corect in spate, altfel Mangle din fata
-    if (!victim->HasInArc(float(M_PI), botPlayer))
-    {
-        botPlayer->CastSpell(victim, ObtineRankMaximSpell(5221), false);
-        //return;
-    }
-    else
-    {
-        botPlayer->CastSpell(victim, ObtineRankMaximSpell(33876), false);
-        //return;
+        botDruid->CastSpell(victim, ObtineRankMaximSpell(5221), false);
+        return;
     }
 }
 
