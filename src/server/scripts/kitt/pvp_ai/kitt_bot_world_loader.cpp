@@ -4085,6 +4085,9 @@ public:
         case SMSG_PET_SPELLS:                  // 0x0179
         case SMSG_DISPEL_FAILED:               // 0x0262
         case SMSG_ITEM_PUSH_RESULT:            // 0x0166
+        case SMSG_SPLINE_MOVE_START_SWIM:      // 0x030B
+        case SMSG_SPLINE_MOVE_STOP_SWIM:       // 0x030C
+        case SMSG_MULTIPLE_MOVES:              // 0x051E
 
             break;
 
