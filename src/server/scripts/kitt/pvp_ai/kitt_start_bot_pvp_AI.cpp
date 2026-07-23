@@ -34,6 +34,11 @@ namespace
 {
     // Container static privat pentru gestionarea timerelor de AI (retine GUID-ul si timpul ramas)
     static std::unordered_map<ObjectGuid, uint32> G_BotAITimers;
+
+    // Registru global dedicat exclusiv pentru delay-ul botilor in Ring of Valor
+// Cheia este GUID-ul unic al botului, iar valoarea este timestamp-ul de pe server
+    std::unordered_map<ObjectGuid, time_t> g_BotRingOfValorDelayRegistru;
+
 }
 
 BotRole DefinesteSiSalveazaRolulBotului(Player* botPlayer)
@@ -396,13 +401,51 @@ void GhostMoveAndAttackMelee(Player* botPlayer, Unit*& victim)
         return;
     }
 
-    // arena dalaran
+    // arena dalaran & valor
     Map* botMap = botPlayer->GetMap();
     if (!botMap)
         return;
 
     uint32 mapid = botMap->GetId();
-    
+
+    // ring of valor
+    if (mapid && mapid == 618)
+    {
+        if (botPlayer->GetPositionZ() < 28.27f)
+        {
+            time_t timpServerCurent = GameTime::GetGameTime();
+            ObjectGuid botGuid = botPlayer->GetGUID();
+
+            // Cautam daca botul curent are deja un timp inregistrat
+            auto it = g_BotRingOfValorDelayRegistru.find(botGuid);
+
+            if (it != g_BotRingOfValorDelayRegistru.end())
+            {
+                // Daca au trecut mai putin de 20 de secunde, blocam actiunile botului (ii dam return)
+                if (timpServerCurent < it->second + 40) // timp delay // defaul 20
+                    return;
+
+                // Daca au trecut cele 20 de secunde, il stergem din registru pentru a curata memoria
+                // si pentru a lasa logica sa functioneze curat si in rundele/meciurile urmatoare
+                g_BotRingOfValorDelayRegistru.erase(it);
+            }
+            else
+            {
+                // Daca botul abia a coborat si nu are timp salvat, il adaugam acum in registru
+                // si oprim executia (delay-ul lui de 20 de secunde incepe in acest moment)
+                g_BotRingOfValorDelayRegistru[botGuid] = timpServerCurent;
+                return;
+            }
+
+            // Dupa ce trec cele 20 de secunde, botul trece de verificarile de mai sus si ajunge aici
+            float posZ = 30.0f;
+            botPlayer->Relocate(botPlayer->GetPositionX(), botPlayer->GetPositionY(), posZ);
+            return;
+        }
+    }
+
+
+    // dalaran
     if (mapid && mapid == 617)
     {
         if (botPlayer->GetPositionZ() > 10.0f)
@@ -835,17 +878,29 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit*& victim, BotRole rolBot)
 
             // Trimitem colegul in functia ta, unde va rula perfect logica de 35 de metri!
             GhostMoveAndHeal(botPaladin, colegDeVindecat);
+            if (g_BotRingOfValorDelayRegistru.find(botPaladin->GetGUID()) != g_BotRingOfValorDelayRegistru.end())
+            {
+                return; // Nu selecteaza nicio tinta cat timp asteapta liftul
+            }
         }
         //GhostMoveAndAttackMelee(botPaladin, victim);
         //GhostMoveAndHeal(botPaladin, victim);
         else
         {
             victim = GhostSelectTarget(botPaladin, victim, true);
+            if (!victim)
+            {
+                victim = GhostSelectTarget(botPaladin, victim, false);
+            }
 
             if (!victim || !victim->IsAlive())
                 return;
 
             GhostMoveAndAttackMelee(botPaladin, victim);
+            if (g_BotRingOfValorDelayRegistru.find(botPaladin->GetGUID()) != g_BotRingOfValorDelayRegistru.end())
+            {
+                return; // Nu selecteaza nicio tinta cat timp asteapta liftul
+            }
         }
     }
     else
@@ -858,6 +913,10 @@ void ExecutaLogicaPaladinPvP(Player* botPaladin, Unit*& victim, BotRole rolBot)
         // DPS-ul fuge si ataca inamicul normal corp la corp
         GhostMoveAndAttackMelee(botPaladin, victim);
         //GhostMoveAndAttackMelee(botPaladin, victim);
+        if (g_BotRingOfValorDelayRegistru.find(botPaladin->GetGUID()) != g_BotRingOfValorDelayRegistru.end())
+        {
+            return; // Nu selecteaza nicio tinta cat timp asteapta liftul
+        }
     }
 
     //uint32 myHp = botPaladin->GetHealthPct();
@@ -1098,6 +1157,11 @@ void ExecutaLogicaWarriorPvP(Player* botPlayer, Unit*& victim, BotRole rolBot) /
     else
     {
         GhostMoveAndAttackMelee(botPlayer, victim);
+        if (g_BotRingOfValorDelayRegistru.find(botPlayer->GetGUID()) != g_BotRingOfValorDelayRegistru.end())
+        {
+            return; // Nu selecteaza nicio tinta cat timp asteapta liftul
+        }
+
     }
 
     // Preluam distanta simplu pentru restul vrajilor de mai jos (Charge, Intercept, etc.)
@@ -1393,6 +1457,11 @@ void ExecutaLogicaPriestDiscPvP(Player* botPriest, Unit*& victim, BotRole /*rolB
 
     // --- FAZA 2: CONTROL SI REACTIE ANTI-CC (Psychic Scream & SW: Death) ---
     victim = GhostSelectTarget(botPriest, victim, true);
+    if (!victim)
+    {
+        victim = GhostSelectTarget(botPriest, victim, false);
+    }
+
     if (victim && victim->IsAlive() && botPriest->IsHostileTo(victim))
     {
         float targetDist = botPriest->GetDistance(victim);
@@ -2192,6 +2261,11 @@ void ExecutaLogicaDeathKnightPvP(Player* botDK, Unit*& victim, BotRole /*rolBot*
 
     // Gestionarea miscarii native de urmarire stransa pe care o detii in core
     GhostMoveAndAttackMelee(botDK, victim);
+    if (g_BotRingOfValorDelayRegistru.find(botDK->GetGUID()) != g_BotRingOfValorDelayRegistru.end())
+    {
+        return; // Nu selecteaza nicio tinta cat timp asteapta liftul
+    }
+
 
     float targetDist = botDK->GetDistance(victim);
     uint32 myHp = botDK->GetHealthPct();
