@@ -4088,6 +4088,7 @@ public:
         case SMSG_SPLINE_MOVE_START_SWIM:      // 0x030B
         case SMSG_SPLINE_MOVE_STOP_SWIM:       // 0x030C
         case SMSG_MULTIPLE_MOVES:              // 0x051E
+        case SMSG_INVALIDATE_PLAYER:           // 0x031C
 
             break;
 
