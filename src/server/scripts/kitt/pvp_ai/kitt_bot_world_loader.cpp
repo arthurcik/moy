@@ -1263,12 +1263,14 @@ private:
         }
     }
 
-    void CheckAndRewardArenaBotRating(Player* botPlayer)
+    void CheckAndRewardArenaBotRating(Player* botPlayer, uint8 arenaTeamType)
     {
         if (!botPlayer)
             return;
 
-        uint8 teamSizeIndex = 0; // 0 = 2v2
+        //uint8 teamSizeIndex = 0; // 0 = 2v2
+
+        uint8 teamSizeIndex = (arenaTeamType == 3) ? 1 : ((arenaTeamType == 5) ? 2 : 0);
         uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
 
         if (arenaTeamId == 0)
@@ -1294,12 +1296,14 @@ private:
         }
     }
 
-    void CheckAndRewardArenaBotPersonalRating(Player* botPlayer)
+    void CheckAndRewardArenaBotPersonalRating(Player* botPlayer, uint8 arenaTeamType)
     {
         if (!botPlayer)
             return;
 
-        uint8 teamSizeIndex = 0; // 0 = 2v2
+        //uint8 teamSizeIndex = 0; // 0 = 2v2
+
+        uint8 teamSizeIndex = (arenaTeamType == 3) ? 1 : ((arenaTeamType == 5) ? 2 : 0);
         uint32 arenaTeamId = botPlayer->GetArenaTeamId(teamSizeIndex);
 
         if (arenaTeamId == 0)
@@ -1879,6 +1883,7 @@ private:
                     // STATUS_WAIT_LEAVE are valoarea nativa 4. O verificam direct in siguranta:
                     if (bg && bg->GetStatus() == STATUS_WAIT_LEAVE)
                     {
+                        uint8 arenaTeamType = bg->GetArenaType();
                         botPlayer->AttackStop();
                         botPlayer->CombatStop();
                         botPlayer->GetMotionMaster()->Clear();
@@ -1897,8 +1902,8 @@ private:
                         }*/
 
                         // --- LOGICA VERIFICARE SI ADAUGARE RATING ---
-                        CheckAndRewardArenaBotRating(botPlayer);
-                        CheckAndRewardArenaBotPersonalRating(botPlayer);
+                        CheckAndRewardArenaBotRating(botPlayer, arenaTeamType);
+                        CheckAndRewardArenaBotPersonalRating(botPlayer, arenaTeamType);
 
                         // leave group
                         /*if (botPlayer->GetGroup())
