@@ -4094,6 +4094,11 @@ public:
         case SMSG_SPLINE_MOVE_STOP_SWIM:       // 0x030C
         case SMSG_MULTIPLE_MOVES:              // 0x051E
         case SMSG_INVALIDATE_PLAYER:           // 0x031C
+        case SMSG_SPLINE_MOVE_SET_FLYING:      // 0x0422
+        case SMSG_SPLINE_MOVE_UNSET_FLYING:    // 0x0423
+        case SMSG_TOTEM_CREATED:               // 0x0413
+        case MSG_MOVE_FEATHER_FALL:            // 0x02B0
+        case SMSG_PET_LEARNED_SPELL:           // 0x0499
 
             break;
 

@@ -1802,7 +1802,7 @@ void ExecutaLogicaWarlockPvP(Player* botWarlock, Unit*& victim, BotRole /*rolBot
     {
         if (SpellPregatit(688))
         {
-            botWarlock->CastSpell(botWarlock, ObtineRankMaximSpell(688), false);
+            botWarlock->CastSpell(botWarlock, ObtineRankMaximSpell(688), true);
             return;
         }
     }
