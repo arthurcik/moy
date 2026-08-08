@@ -103,6 +103,7 @@ struct BattlegroundScore
         // For Logging purpose
         virtual std::string ToString() const { return ""; }
 
+public: // kitt
         uint32 GetKillingBlows() const    { return KillingBlows; }
         uint32 GetDeaths() const          { return Deaths; }
         uint32 GetHonorableKills() const  { return HonorableKills; }
@@ -110,6 +111,7 @@ struct BattlegroundScore
         uint32 GetDamageDone() const      { return DamageDone; }
         uint32 GetHealingDone() const     { return HealingDone; }
 
+protected: // kitt
         virtual uint32 GetAttr1() const { return 0; }
         virtual uint32 GetAttr2() const { return 0; }
         virtual uint32 GetAttr3() const { return 0; }

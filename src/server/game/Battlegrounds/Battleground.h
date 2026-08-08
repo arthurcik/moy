@@ -546,6 +546,16 @@ class TC_GAME_API Battleground
             return &itr->second;
         }
 
+        // kitt start
+        BattlegroundScore* GetPlayerScore(ObjectGuid guid) const
+        {
+            auto itr = PlayerScores.find(guid);
+            if (itr != PlayerScores.end())
+                return itr->second;
+            return nullptr;
+        }
+        // kitt end
+
         Trinity::unique_weak_ptr<Battleground> GetWeakPtr() const { return m_weakRef; }
         void SetWeakPtr(Trinity::unique_weak_ptr<Battleground> weakRef) { m_weakRef = std::move(weakRef); }
 
