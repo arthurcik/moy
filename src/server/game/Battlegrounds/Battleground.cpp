@@ -819,6 +819,20 @@ void Battleground::EndBattleground(uint32 winner)
 
     BattlegroundQueueTypeId bgQueueTypeId = BattlegroundMgr::BGQueueTypeId(GetTypeID(), GetBracketId(), GetArenaType());
 
+// =========================================================
+// DECLANSARE HOOK CUSTOM PENTRU FIECARE JUCATOR DIN BG
+// =========================================================
+    for (auto const& pair : m_Players)
+    {
+        Player* player = ObjectAccessor::FindConnectedPlayer(pair.first);
+        if (!player)
+            continue;
+
+        sScriptMgr->OnBattlegroundEnd(player, this, winner);
+    }
+    // =========================================================
+
+
     //npcbot: despawn generated bots immediately
     BattlegroundBotMap::iterator bitr, bnext;
     for (bitr = m_Bots.begin(); bitr != m_Bots.end(); bitr = bnext)

@@ -645,12 +645,16 @@ class TC_GAME_API PlayerScript : public ScriptObject
         // Called when a player kills another player
         virtual void OnPVPKill(Player* killer, Player* killed);
 
-        // Kitt
+        // Kitt start -----------
         virtual void OnEquip(Player* player, Item* item, uint16 slot, bool update);
 
         virtual InventoryResult OnCanEquipItem(Player* player, uint8 slot, uint16& dest, Item* item, bool swap, bool not_loading);
 
         virtual void OnAfterLootFill(Player* player, Loot* loot);
+
+        // se apeleaza pentru fiecare jucator la finalul unui BG
+        virtual void OnBattlegroundEnd(Player* player, Battleground* bg, uint32 winner);
+        // kitt end -------------
 
         // Called when a player kills a creature
         virtual void OnCreatureKill(Player* killer, Creature* killed);
@@ -1040,6 +1044,7 @@ class TC_GAME_API ScriptMgr
         void OnAfterLootFill(Player* player, Loot* loot); // kitt
         void OnEquip(Player* player, Item* item, uint16 slot, bool update); // kitt
         InventoryResult OnCanEquipItem(Player* player, uint8 slot, uint16& dest, Item* item, bool swap, bool not_loading); // kitt
+        void OnBattlegroundEnd(Player* player, Battleground* bg, uint32 winner); // kitt
         void OnCreatureKill(Player* killer, Creature* killed);
         void OnPlayerKilledByCreature(Creature* killer, Player* killed);
         void OnPlayerLevelChanged(Player* player, uint8 oldLevel);

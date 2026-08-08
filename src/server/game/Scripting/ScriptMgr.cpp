@@ -1834,7 +1834,7 @@ void ScriptMgr::OnPVPKill(Player* killer, Player* killed)
     FOREACH_SCRIPT(PlayerScript)->OnPVPKill(killer, killed);
 }
 
-// kitt
+// kitt start --------------
 void ScriptMgr::OnEquip(Player* player, Item* item, uint16 slot, bool update)
 {
     FOREACH_SCRIPT(PlayerScript)->OnEquip(player, item, slot, update);
@@ -1863,6 +1863,12 @@ void ScriptMgr::OnAfterLootFill(Player* player, Loot* loot)
     FOREACH_SCRIPT(PlayerScript)->OnAfterLootFill(player, loot);
 }
 
+void ScriptMgr::OnBattlegroundEnd(Player* player, Battleground* bg, uint32 winner)
+{
+    FOREACH_SCRIPT(PlayerScript)->OnBattlegroundEnd(player, bg, winner);
+}
+
+// kitt end -----------------
 
 void ScriptMgr::OnCreatureKill(Player* killer, Creature* killed)
 {
@@ -2650,7 +2656,7 @@ void PlayerScript::OnPVPKill(Player* /*killer*/, Player* /*killed*/)
 {
 }
 
-// kitt
+// kitt start ------
 void PlayerScript::OnEquip(Player* /*player*/, Item* /*item*/, uint16 /*slot*/, bool /*update*/)
 {
 }
@@ -2663,6 +2669,12 @@ InventoryResult PlayerScript::OnCanEquipItem(Player* /*player*/, uint8 /*slot*/,
 void PlayerScript::OnAfterLootFill(Player* /*player*/, Loot* /*loot*/)
 {
 }
+
+void PlayerScript::OnBattlegroundEnd(Player* /*player*/, Battleground* /*bg*/, uint32 /*winner*/)
+{
+}
+
+// kitt end --------
 
 void PlayerScript::OnCreatureKill(Player* /*killer*/, Creature* /*killed*/)
 {
