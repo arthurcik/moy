@@ -4145,7 +4145,7 @@ namespace KittBotAI
         if (!gr)
             return;
 
-        uint32 static const BossHalion = 39863;
+        //uint32 static const BossHalion = 39863;
         uint32 static const npcMeteorStrikeMark = 40029;
         uint32 static const npcMeteorStrikeFlame = 40055;
         uint32 static const npcCombustion = 40001;
