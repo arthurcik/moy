@@ -344,7 +344,7 @@ namespace KittBotAI
         uint32 mapId = master->GetMapId();
         uint32 areaId = master->GetAreaId();
 
-        if (mapId != 603 && mapId != 631)
+        if (mapId != 603 && mapId != 631 && mapId != 724)
             return;
 
         InstanceScript* instance = master->GetInstanceScript();
@@ -352,26 +352,33 @@ namespace KittBotAI
             return;
 
         // ulduar
-        uint32 FlameLeviathan     = static_cast<uint32>(instance->GetBossState(0)); //  DATA_FLAME_LEVIATHAN
-        uint32 Hodir              = static_cast<uint32>(instance->GetBossState(7)); // DATA_HODIR
-        uint32 Freya              = static_cast<uint32>(instance->GetBossState(9)); // DATA_FREYA
+        //uint32 FlameLeviathan     = static_cast<uint32>(instance->GetBossState(0)); //  DATA_FLAME_LEVIATHAN
+        //uint32 Hodir              = static_cast<uint32>(instance->GetBossState(7)); // DATA_HODIR
+        //uint32 Freya              = static_cast<uint32>(instance->GetBossState(9)); // DATA_FREYA
 
         // icc
-        uint32 LordMarrStart      = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
-        uint32 LadyDeathStart     = static_cast<uint32>(instance->GetBossState(1)); //  DATA_LADY_DEATHWHISPER
-        uint32 GunshipStart       = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE
-        uint32 DeathSaurfangStart = static_cast<uint32>(instance->GetBossState(3)); //  NPC_DEATHBRINGER_SAURFANG
-        uint32 RotfaceStart       = static_cast<uint32>(instance->GetBossState(5)); //  DATA_ROTFACE
-        uint32 PutricideStart     = static_cast<uint32>(instance->GetBossState(6)); // DATA_PROFESSOR_PUTRICIDE
-        uint32 PrinceCouncilStart = static_cast<uint32>(instance->GetBossState(7)); // DATA_BLOOD_PRINCE_COUNCIL
-        uint32 BloodQueenStart    = static_cast<uint32>(instance->GetBossState(8)); // DATA_BLOOD_QUEEN_LANA_THEL
-        uint32 ValithiaStart      = static_cast<uint32>(instance->GetBossState(9)); // DATA_VALITHRIA_DREAMWALKER
-        uint32 SindragosaStart    = static_cast<uint32>(instance->GetBossState(10)); // DATA_SINDRAGOSA
-        uint32 LichKingStart      = static_cast<uint32>(instance->GetBossState(11)); // DATA_THE_LICH_KING
+        //uint32 LordMarrStart      = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
+        //uint32 LadyDeathStart     = static_cast<uint32>(instance->GetBossState(1)); //  DATA_LADY_DEATHWHISPER
+        //uint32 GunshipStart       = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE
+        //uint32 DeathSaurfangStart = static_cast<uint32>(instance->GetBossState(3)); //  NPC_DEATHBRINGER_SAURFANG
+        //uint32 RotfaceStart       = static_cast<uint32>(instance->GetBossState(5)); //  DATA_ROTFACE
+        //uint32 PutricideStart     = static_cast<uint32>(instance->GetBossState(6)); // DATA_PROFESSOR_PUTRICIDE
+        //uint32 PrinceCouncilStart = static_cast<uint32>(instance->GetBossState(7)); // DATA_BLOOD_PRINCE_COUNCIL
+        //uint32 BloodQueenStart    = static_cast<uint32>(instance->GetBossState(8)); // DATA_BLOOD_QUEEN_LANA_THEL
+        //uint32 ValithiaStart      = static_cast<uint32>(instance->GetBossState(9)); // DATA_VALITHRIA_DREAMWALKER
+        //uint32 SindragosaStart    = static_cast<uint32>(instance->GetBossState(10)); // DATA_SINDRAGOSA
+        //uint32 LichKingStart      = static_cast<uint32>(instance->GetBossState(11)); // DATA_THE_LICH_KING
+
+        // RS
+        //uint32 Halion = static_cast<uint32>(instance->GetBossState(3)); // DATA_HALION
 
 
         if (mapId == 603) // ulduar
         {
+            uint32 FlameLeviathan = static_cast<uint32>(instance->GetBossState(0)); //  DATA_FLAME_LEVIATHAN
+            uint32 Hodir = static_cast<uint32>(instance->GetBossState(7)); // DATA_HODIR
+            uint32 Freya = static_cast<uint32>(instance->GetBossState(9)); // DATA_FREYA
+
             switch (areaId)
             {
                 case 4652: // Flame Leviathan
@@ -406,6 +413,18 @@ namespace KittBotAI
 
         if (mapId == 631)
         {
+            uint32 LordMarrStart = static_cast<uint32>(instance->GetBossState(0)); //  DATA_LORD_MARROWGAR
+            uint32 LadyDeathStart = static_cast<uint32>(instance->GetBossState(1)); //  DATA_LADY_DEATHWHISPER
+            uint32 GunshipStart = static_cast<uint32>(instance->GetBossState(2)); //  DATA_ICECROWN_GUNSHIP_BATTLE
+            uint32 DeathSaurfangStart = static_cast<uint32>(instance->GetBossState(3)); //  NPC_DEATHBRINGER_SAURFANG
+            uint32 RotfaceStart = static_cast<uint32>(instance->GetBossState(5)); //  DATA_ROTFACE
+            uint32 PutricideStart = static_cast<uint32>(instance->GetBossState(6)); // DATA_PROFESSOR_PUTRICIDE
+            uint32 PrinceCouncilStart = static_cast<uint32>(instance->GetBossState(7)); // DATA_BLOOD_PRINCE_COUNCIL
+            uint32 BloodQueenStart = static_cast<uint32>(instance->GetBossState(8)); // DATA_BLOOD_QUEEN_LANA_THEL
+            uint32 ValithiaStart = static_cast<uint32>(instance->GetBossState(9)); // DATA_VALITHRIA_DREAMWALKER
+            uint32 SindragosaStart = static_cast<uint32>(instance->GetBossState(10)); // DATA_SINDRAGOSA
+            uint32 LichKingStart = static_cast<uint32>(instance->GetBossState(11)); // DATA_THE_LICH_KING
+
             switch (areaId)
             {
                 case 4812: // Marrowgar
@@ -490,6 +509,26 @@ namespace KittBotAI
 
             }
         }
+
+        if (mapId == 724) // RS
+        {
+            uint32 Halion = static_cast<uint32>(instance->GetBossState(3)); // DATA_HALION
+
+            switch (areaId)
+            {
+                case 4987: // Flame Leviathan
+                {
+                    if (Halion == IN_PROGRESS)
+                    {
+                        KittHandleHalion(bot, master, ai); // Halion
+                    }
+                    //KittHandleHalion(bot, master, ai);
+                    break;
+                }
+
+            }
+        }
+
     }
 
     // ulduar start
@@ -4092,5 +4131,196 @@ namespace KittBotAI
         }
     }
     // icc end
+
+    // RS
+    void KittHandleHalion(Creature* bot, Player* master, bot_ai* ai)
+    {
+        if (!master || !master->IsInWorld() || !master->GetSession())
+            return;
+
+        if (!bot || !bot->IsInWorld() || !bot->IsAlive())
+            return;
+
+        Group* gr = master->GetGroup();
+        if (!gr)
+            return;
+
+        uint32 static const BossHalion = 39863;
+        uint32 static const npcMeteorStrikeMark = 40029;
+        uint32 static const npcMeteorStrikeFlame = 40055;
+        uint32 static const npcCombustion = 40001;
+        uint32 static const npcLivingEmber = 40683;
+        uint32 static const npcLivingInferno = 40681;
+        uint32 static const npcConsumption = 40135;
+
+
+        uint8 iconIndex5 = 5; // patrat
+        //uint8 iconIndex7 = 7; // skull
+
+        if (Creature* npcSwarShado3 = bot->FindNearestCreature(npcConsumption, 5.0f, true))
+        {
+            if (bot->IsNonMeleeSpellCast(true))
+            {
+                bot->InterruptNonMeleeSpells(true);
+            }
+
+            bot->AttackStop();
+            bot->GetMotionMaster()->Clear();
+            float angle = npcSwarShado3->GetAbsoluteAngle(bot);
+            float runDist = 7.0f;
+            float x = bot->GetPositionX() + (runDist * std::cos(angle));
+            float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+            {
+                bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+            }
+
+            return;
+        }
+
+        if (Creature* npcSwarShado1 = bot->FindNearestCreature(npcMeteorStrikeFlame, 5.0f, true))
+        {
+            if (bot->IsNonMeleeSpellCast(true))
+            {
+                bot->InterruptNonMeleeSpells(true);
+            }
+
+            bot->AttackStop();
+            bot->GetMotionMaster()->Clear();
+            float angle = npcSwarShado1->GetAbsoluteAngle(bot);
+            float runDist = 7.0f;
+            float x = bot->GetPositionX() + (runDist * std::cos(angle));
+            float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+            {
+                bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+            }
+
+            return;
+        }
+
+        if (Creature* npcSwarShado4 = bot->FindNearestCreature(npcMeteorStrikeMark, 5.0f, true))
+        {
+            if (bot->IsNonMeleeSpellCast(true))
+            {
+                bot->InterruptNonMeleeSpells(true);
+            }
+
+            bot->AttackStop();
+            bot->GetMotionMaster()->Clear();
+            float angle = npcSwarShado4->GetAbsoluteAngle(bot);
+            float runDist = 7.0f;
+            float x = bot->GetPositionX() + (runDist * std::cos(angle));
+            float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+            {
+                bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+            }
+
+            return;
+        }
+
+        if (Creature* npcSwarShado2 = bot->FindNearestCreature(npcCombustion, 5.0f, true))
+        {
+            if (bot->IsNonMeleeSpellCast(true))
+            {
+                bot->InterruptNonMeleeSpells(true);
+            }
+
+            bot->AttackStop();
+            bot->GetMotionMaster()->Clear();
+            float angle = npcSwarShado2->GetAbsoluteAngle(bot);
+            float runDist = 7.0f;
+            float x = bot->GetPositionX() + (runDist * std::cos(angle));
+            float y = bot->GetPositionY() + (runDist * std::sin(angle));
+
+            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() != POINT_MOTION_TYPE)
+            {
+                bot->GetMotionMaster()->MovePoint(1, x, y, bot->GetPositionZ());
+            }
+
+            return;
+        }
+
+        if (!ai->HasRole(BOT_ROLE_TANK) && !ai->HasRole(BOT_ROLE_HEAL))
+        {
+            std::list<Creature*> NpcList;
+            bot->GetCreatureListWithEntryInGrid(NpcList, npcLivingEmber, 50.0f); // prioritar
+            NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
+            if (NpcList.empty())
+            {
+                bot->GetCreatureListWithEntryInGrid(NpcList, npcLivingInferno, 50.0f); // urmatorul
+                NpcList.remove_if([](Creature* npc) { return !npc->IsAlive(); });
+            }
+
+            if (!NpcList.empty())
+            {
+                Creature* NpcTar = nullptr;
+                bool iconExist = false;
+                uint8 iconIndex = iconIndex5; // patrat
+                ObjectGuid currentIconGuid = gr->GetTargetIcons()[iconIndex];
+
+                NpcList.sort([](Creature* a, Creature* b) {
+                    return a->GetGUID() < b->GetGUID();
+                    });
+
+                for (Creature* s : NpcList)
+                {
+                    if (!s->IsAlive()) continue;
+
+                    if (s->GetGUID() == currentIconGuid)
+                    {
+                        iconExist = true;
+                        NpcTar = s;
+                        break;
+                    }
+                }
+
+                if (!iconExist && gr)
+                {
+                    for (Creature* s : NpcList)
+                    {
+                        s = NpcList.front();
+
+                        if (s->IsAlive())
+                        {
+                            NpcTar = s;
+                            gr->SetTargetIcon(iconIndex, bot->GetGUID(), NpcTar->GetGUID());
+                        }
+
+                        break;
+                    }
+                }
+
+                if (NpcTar && NpcTar->IsAlive())
+                {
+                    if (bot->GetVictim() && bot->GetVictim()->GetGUID() == NpcTar->GetGUID())
+                    {
+                        return;
+                    }
+
+                    if (bot->GetVictim() != NpcTar)
+                    {
+                        if (ai->HasRole(BOT_ROLE_RANGED))
+                        {
+                            bot->Attack(NpcTar, false);
+                        }
+                        else
+                        {
+                            bot->Attack(NpcTar, true);
+                        }
+                        ai->AttackStart(NpcTar);
+                        ai->SetBotCommandState(BOT_COMMAND_ATTACK);
+                    }
+                    //return;
+                }
+            }
+        }
+
+    }
+
 
 }

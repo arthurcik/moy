@@ -47,6 +47,8 @@ namespace KittBotAI
     void KittHandleLichKing(Creature* bot, Player* master, bot_ai* ai);
     // icc end
 
+    // rs
+    void KittHandleHalion(Creature* bot, Player* master, bot_ai* ai);
 }
 
 #endif
