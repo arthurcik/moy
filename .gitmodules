@@ -1,3 +1,6 @@
 [submodule "src/server/game/AI/NpcBots/kitt"]
 	path = src/server/game/AI/NpcBots/kitt
 	url = git@github.com:arthurcik/TC_npcbot_kitt_AI.git
+[submodule "src/server/scripts/kitt"]
+	path = src/server/scripts/kitt
+	url = git@github.com:arthurcik/TC_kitt_scripts.git
