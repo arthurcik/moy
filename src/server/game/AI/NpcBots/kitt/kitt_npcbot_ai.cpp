@@ -3739,7 +3739,7 @@ namespace KittBotAI
                 if (Creature* horror = bot->FindNearestCreature(npcShamblingHorror, 100.0f, true))
                 {
                     float x, y, z;
-                    // Raza dorit? (5 metri ?n fa?a lui)
+                    // Raza dorita (5 metri in fata lui)
                     float distantaInFata = 5.0f;
                     horror->GetClosePoint(x, y, z, horror->GetObjectScale(), distantaInFata);
 
