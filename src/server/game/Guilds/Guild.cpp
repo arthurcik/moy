@@ -450,19 +450,10 @@ void Guild::BankTab::SetInfo(std::string_view name, std::string_view icon)
 
 void Guild::BankTab::SetText(std::string_view text)
 {
-    std::string filteredText(text);
-
-    // C?ut?m breasla de care apar?ine acest tab pentru a apela scriptul
-    if (Guild* guild = sGuildMgr->GetGuildById(m_guildId))
-    {
-        // Apel?m noul hook (asigur?-te c? l-ai definit în ScriptMgr)
-        sScriptMgr->OnBankTabTextChanged(guild, m_tabId, filteredText);
-    }
-
-    if (m_text == filteredText)
+    if (m_text == text)
         return;
 
-    m_text = filteredText;
+    m_text = text;
     utf8truncate(m_text, MAX_GUILD_BANK_TAB_TEXT_LEN);          // DB and client size limitation
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_GUILD_BANK_TAB_TEXT);
@@ -1409,11 +1400,7 @@ void Guild::HandleSetBankTabInfo(WorldSession* session, uint8 tabId, std::string
         return;
     }
 
-    std::string filteredName(name);
-    std::string filteredIcon(icon);
-    sScriptMgr->OnBankTabInfoChanged(this, tabId, filteredName, filteredIcon);
-
-    tab->SetInfo(filteredName, icon);
+    tab->SetInfo(name, icon);
     _BroadcastEvent(GE_BANK_TAB_UPDATED, ObjectGuid::Empty, std::to_string(tabId), tab->GetName(), tab->GetIcon());
 }
 
@@ -1422,14 +1409,12 @@ void Guild::HandleSetMemberNote(WorldSession* session, std::string_view note, st
     // Player must have rights to set public/officer note
     if (!_HasRankRight(session->GetPlayer(), isPublic ? GR_RIGHT_EPNOTE : GR_RIGHT_EOFFNOTE))
         SendCommandResult(session, GUILD_COMMAND_PUBLIC_NOTE, ERR_GUILD_PERMISSIONS);
-    std::string filteredNote(note);
-    sScriptMgr->OnMemberNoteChanged(this, session->GetPlayer(), filteredNote, isPublic);
-    if (Member* member = GetMember(name))
+    else if (Member* member = GetMember(name))
     {
         if (isPublic)
-            member->SetPublicNote(filteredNote);
+            member->SetPublicNote(note);
         else
-            member->SetOfficerNote(filteredNote);
+            member->SetOfficerNote(note);
 
         HandleRoster(session);
     }
