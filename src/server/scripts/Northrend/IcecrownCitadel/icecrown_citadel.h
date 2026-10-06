@@ -21,6 +21,7 @@
 #include "CreatureAIImpl.h"
 #include "SpellDefines.h"
 #include "SpellScript.h"
+#include "kitt_npcbot_ai.h"
 
 #define ICCScriptName "instance_icecrown_citadel"
 #define DataHeader "IC"
