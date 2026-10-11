@@ -318,13 +318,13 @@ struct npc_amalgam_of_souls_lord_etheldrin_ravencrest : public ScriptedAI
             return;
 
         Milliseconds delay = 1s;
-        _scheduler.Schedule(1s, [this](TaskContext /*task*/)
+        _scheduler.Schedule(1s, [this](TaskContext const& /*task*/)
         {
             Talk(SAY_OUTRO);
         });
 
         delay += 4s;
-        _scheduler.Schedule(delay, [this](TaskContext /*task*/)
+        _scheduler.Schedule(delay, [this](TaskContext const& /*task*/)
         {
             if (Creature* velandras = me->FindNearestCreature(NPC_LADY_VELANDRAS_RAVENCREST, 100.0f))
             {
@@ -343,7 +343,7 @@ struct npc_amalgam_of_souls_lord_etheldrin_ravencrest : public ScriptedAI
         });
 
         delay += 6s;
-        _scheduler.Schedule(delay, [this](TaskContext /*task*/)
+        _scheduler.Schedule(delay, [this](TaskContext const& /*task*/)
         {
             if (GameObject* door = me->GetInstanceScript()->GetGameObject(DATA_BOSS_1_POST_BOSS_DOOR))
                 door->SetGoState(GO_STATE_ACTIVE);
@@ -432,19 +432,9 @@ class spell_amalgam_of_souls_soul_burst : public SpellScript
 
 // 195254 - Swirling Scythe
 // ID - 5167
-/* THIS AREATRIGGER SHOULD ROTATE, BUT IT DOESNT, BECAUSE ROLLPITCHYAW IS NYI */
 struct at_amalgam_of_souls_swirling_scythe : AreaTriggerAI
 {
     using AreaTriggerAI::AreaTriggerAI;
-
-    void OnInitialize() override
-    {
-        Position destPos = at->GetPosition();
-        PathGenerator path(at);
-        path.CalculatePath(destPos.GetPositionX(), destPos.GetPositionY(), destPos.GetPositionZ(), false);
-
-        at->InitSplines(path.GetPath());
-    }
 
     void OnUnitEnter(Unit* unit) override
     {

@@ -27,7 +27,7 @@
 #include "RBAC.h"
 #include "WorldSession.h"
 
-#if TRINITY_COMPILER == TRINITY_COMPILER_GNU
+#if TRINITY_COMPILER_IS_GCC
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
@@ -91,7 +91,7 @@ public:
         /// @todo Fix poor design
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
         MailDraft(subject, text)
-            .SendMailTo(trans, MailReceiver(target, targetGuid.GetCounter()), sender);
+            .SendMailTo(trans, MailReceiver(target, targetGuid.GetCounter()), sender, MAIL_CHECK_MASK_NOT_RETURNABLE);
 
         CharacterDatabase.CommitTransaction(trans);
 
@@ -201,7 +201,7 @@ public:
             }
         }
 
-        draft.SendMailTo(trans, MailReceiver(receiver, receiverGuid.GetCounter()), sender);
+        draft.SendMailTo(trans, MailReceiver(receiver, receiverGuid.GetCounter()), sender, MAIL_CHECK_MASK_NOT_RETURNABLE);
         CharacterDatabase.CommitTransaction(trans);
 
         std::string nameLink = handler->playerLink(receiverName);
@@ -220,7 +220,7 @@ public:
 
         MailDraft(subject, text)
             .AddMoney(money)
-            .SendMailTo(trans, MailReceiver(receiver.GetConnectedPlayer(), receiver.GetGUID().GetCounter()), sender);
+            .SendMailTo(trans, MailReceiver(receiver.GetConnectedPlayer(), receiver.GetGUID().GetCounter()), sender, MAIL_CHECK_MASK_NOT_RETURNABLE);
 
         CharacterDatabase.CommitTransaction(trans);
 

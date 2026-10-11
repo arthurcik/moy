@@ -342,10 +342,7 @@ void WorldSession::HandleDestroyItemOpcode(WorldPackets::Item::DestroyItem& dest
     }
 
     if (destroyItem.Count)
-    {
-        uint32 i_count = destroyItem.Count;
-        _player->DestroyItemCount(item, i_count, true);
-    }
+        _player->DestroyItemCount(item, destroyItem.Count, true);
     else
         _player->DestroyItem(destroyItem.ContainerId, destroyItem.SlotNum, true);
 }
@@ -508,7 +505,7 @@ void WorldSession::HandleBuybackItem(WorldPackets::Item::BuyBackItem& packet)
         uint32 price = _player->m_activePlayerData->BuybackPrice[packet.Slot - BUYBACK_SLOT_START];
         if (!_player->HasEnoughMoney(uint64(price)))
         {
-            _player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, creature, pItem->GetEntry(), 0);
+            _player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, creature, pItem->GetEntry());
             return;
         }
 
@@ -526,7 +523,7 @@ void WorldSession::HandleBuybackItem(WorldPackets::Item::BuyBackItem& packet)
         return;
     }
     else
-        _player->SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, 0, 0);
+        _player->SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, 0);
 }
 
 void WorldSession::HandleBuyItemOpcode(WorldPackets::Item::BuyItem& packet)
@@ -620,7 +617,7 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid)
             if (!itemTemplate)
                 continue;
 
-            int32 leftInStock = !vendorItem->maxcount ? -1 : vendor->GetVendorItemCurrentCount(vendorItem);
+            int32 leftInStock = !vendorItem->maxcount ? -1 : int32(vendor->GetVendorItemCurrentCount(vendorItem));
             if (!_player->IsGameMaster()) // ignore conditions if GM on
             {
                 // Respect allowed class
@@ -643,27 +640,33 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid)
                 continue;
             }
 
-            uint64 price = uint64(floor(itemTemplate->GetBuyPrice() * discountMod));
-            price = itemTemplate->GetBuyPrice() > 0 ? std::max(uint64(1), price) : price;
+            uint64 basePrice = itemTemplate->GetBuyPrice();
+            if (ItemExtendedCostEntry const* iece = sItemExtendedCostStore.LookupEntry(vendorItem->ExtendedCost))
+                basePrice = iece->Money;
 
-            if (int32 priceMod = _player->GetTotalAuraModifier(SPELL_AURA_MOD_VENDOR_ITEMS_PRICES))
+            uint64 price = uint64(floor(basePrice * discountMod));
+
+            if (float priceMod = _player->GetTotalAuraModifier(SPELL_AURA_MOD_VENDOR_ITEMS_PRICES))
                 price -= CalculatePct(price, priceMod);
 
-            item.MuID = slot + 1; // client expects counting to start at 1
-            item.ExtendedCostID = vendorItem->ExtendedCost;
-            item.Type = vendorItem->Type;
-            item.Quantity = leftInStock;
-            item.StackCount = itemTemplate->GetBuyCount();
-            item.Price = price;
-            item.DoNotFilterOnVendor = vendorItem->IgnoreFiltering;
-            item.Refundable = itemTemplate->HasFlag(ITEM_FLAG_ITEM_PURCHASE_RECORD) && vendorItem->ExtendedCost && itemTemplate->GetMaxStackSize() == 1;
+            if (basePrice > 0)
+                price = std::max(uint64(1), price);
 
+            item.MuID = slot + 1; // client expects counting to start at 1
+            item.Type = vendorItem->Type;
             item.Item.ItemID = vendorItem->item;
             if (!vendorItem->BonusListIDs.empty())
             {
                 item.Item.ItemBonus.emplace();
                 item.Item.ItemBonus->BonusListIDs = vendorItem->BonusListIDs;
             }
+            item.Quantity = leftInStock;
+            item.Price = price;
+            item.StackCount = itemTemplate->GetBuyCount();
+            item.ExtendedCostID = vendorItem->ExtendedCost;
+            item.DoNotFilterOnVendor = vendorItem->IgnoreFiltering;
+            item.Refundable = itemTemplate->HasFlag(ITEM_FLAG_ITEM_PURCHASE_RECORD) && vendorItem->ExtendedCost && itemTemplate->GetMaxStackSize() == 1;
+
         }
         else if (vendorItem->Type == ITEM_VENDOR_TYPE_CURRENCY)
         {
@@ -675,10 +678,10 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid)
                 continue; // there's no price defined for currencies, only extendedcost is used
 
             item.MuID = slot + 1; // client expects counting to start at 1
-            item.ExtendedCostID = vendorItem->ExtendedCost;
-            item.Item.ItemID = vendorItem->item;
             item.Type = vendorItem->Type;
+            item.Item.ItemID = vendorItem->item;
             item.StackCount = vendorItem->maxcount;
+            item.ExtendedCostID = vendorItem->ExtendedCost;
             item.DoNotFilterOnVendor = vendorItem->IgnoreFiltering;
         }
         else

@@ -87,19 +87,9 @@ void WorldSession::HandleWhoOpcode(WorldPackets::Who::WhoRequestPkt& whoRequest)
 {
     WorldPackets::Who::WhoRequest& request = whoRequest.Request;
 
-    TC_LOG_DEBUG("network", "WorldSession::HandleWhoOpcode: MinLevel: {}, MaxLevel: {}, Name: {} (VirtualRealmName: {}), Guild: {} (GuildVirtualRealmName: {}), RaceFilter: {}, ClassFilter: {}, Areas: {}, Words: {}.",
+    TC_LOG_DEBUG("network", "WorldSession::HandleWhoOpcode: MinLevel: {}, MaxLevel: {}, Name: {} (VirtualRealmName: {}), Guild: {} (GuildVirtualRealmName: {}), RaceFilter: 0x{:X}{:08X}, ClassFilter: {}, Areas: {}, Words: {}.",
         request.MinLevel, request.MaxLevel, request.Name, request.VirtualRealmName, request.Guild, request.GuildVirtualRealmName,
-        request.RaceFilter.RawValue, request.ClassFilter, whoRequest.Areas.size(), request.Words.size());
-
-    // zones count, client limit = 10 (2.0.10)
-    // can't be received from real client or broken packet
-    if (whoRequest.Areas.size() > 10)
-        return;
-
-    // user entered strings count, client limit=4 (checked on 2.0.10)
-    // can't be received from real client or broken packet
-    if (request.Words.size() > 4)
-        return;
+        request.RaceFilter.RawValue[1], request.RaceFilter.RawValue[0], request.ClassFilter, whoRequest.Areas.size(), request.Words.size());
 
     /// @todo: handle following packet values
     /// VirtualRealmNames
@@ -159,7 +149,7 @@ void WorldSession::HandleWhoOpcode(WorldPackets::Who::WhoRequestPkt& whoRequest)
                 continue;
 
         // check if target's level is in level range
-        uint8 lvl = target.GetLevel();
+        int32 lvl = target.GetLevel();
         if (lvl < request.MinLevel || lvl > request.MaxLevel)
             continue;
 
@@ -172,10 +162,8 @@ void WorldSession::HandleWhoOpcode(WorldPackets::Who::WhoRequestPkt& whoRequest)
             continue;
 
         if (!whoRequest.Areas.empty())
-        {
-            if (std::find(whoRequest.Areas.begin(), whoRequest.Areas.end(), int32(target.GetZoneId())) == whoRequest.Areas.end())
+            if (std::ranges::find(whoRequest.Areas, int32(target.GetZoneId())) == whoRequest.Areas.end())
                 continue;
-        }
 
         std::wstring const& wTargetName = target.GetWidePlayerName();
         if (!(wPlayerName.empty() || wTargetName.find(wPlayerName) != std::wstring::npos))
@@ -625,7 +613,11 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPackets::AreaTrigger::AreaTrigge
                 TC_LOG_DEBUG("maps", "MAP: Player '{}' has corpse in instance {} and can enter.", player->GetName(), at->Loc.GetMapId());
             }
             else
+            {
                 TC_LOG_DEBUG("maps", "Map::CanPlayerEnter - player '{}' is dead but does not have a corpse!", player->GetName());
+                SendPacket(WorldPackets::AreaTrigger::AreaTriggerNoCorpse().Write());
+                return;
+            }
         }
 
         if (TransferAbortParams denyReason = Map::PlayerCannotEnter(at->Loc.GetMapId(), player))
@@ -953,10 +945,6 @@ void WorldSession::HandleSetDungeonDifficultyOpcode(WorldPackets::Misc::SetDunge
         return;
     }
 
-    Difficulty difficultyID = Difficulty(difficultyEntry->ID);
-    if (difficultyID == _player->GetDungeonDifficultyID())
-        return;
-
     // cannot reset while in an instance
     Map* map = _player->FindMap();
     if (map && map->Instanceable())
@@ -966,9 +954,14 @@ void WorldSession::HandleSetDungeonDifficultyOpcode(WorldPackets::Misc::SetDunge
         return;
     }
 
+    Difficulty difficultyID = Difficulty(difficultyEntry->ID);
+
     Group* group = _player->GetGroup();
     if (group)
     {
+        if (difficultyID == group->GetDungeonDifficultyID())
+            return;
+
         if (!group->IsLeader(_player->GetGUID()))
             return;
 
@@ -979,12 +972,15 @@ void WorldSession::HandleSetDungeonDifficultyOpcode(WorldPackets::Misc::SetDunge
         group->ResetInstances(InstanceResetMethod::OnChangeDifficulty, _player);
         group->SetDungeonDifficultyID(difficultyID);
     }
-    else
-    {
+
+    if (difficultyID == _player->GetDungeonDifficultyID())
+        return;
+
+    if (!group)
         _player->ResetInstances(InstanceResetMethod::OnChangeDifficulty);
-        _player->SetDungeonDifficultyID(difficultyID);
-        _player->SendDungeonDifficulty();
-    }
+
+    _player->SetDungeonDifficultyID(difficultyID);
+    _player->SendDungeonDifficulty();
 }
 
 void WorldSession::HandleSetRaidDifficultyOpcode(WorldPackets::Misc::SetRaidDifficulty& setRaidDifficulty)
@@ -1018,10 +1014,6 @@ void WorldSession::HandleSetRaidDifficultyOpcode(WorldPackets::Misc::SetRaidDiff
         return;
     }
 
-    Difficulty difficultyID = Difficulty(difficultyEntry->ID);
-    if (difficultyID == (setRaidDifficulty.Legacy ?  _player->GetLegacyRaidDifficultyID() : _player->GetRaidDifficultyID()))
-        return;
-
     // cannot reset while in an instance
     Map* map = _player->FindMap();
     if (map && map->Instanceable())
@@ -1031,9 +1023,14 @@ void WorldSession::HandleSetRaidDifficultyOpcode(WorldPackets::Misc::SetRaidDiff
         return;
     }
 
+    Difficulty difficultyID = Difficulty(difficultyEntry->ID);
+
     Group* group = _player->GetGroup();
     if (group)
     {
+        if (difficultyID == (setRaidDifficulty.Legacy ? group->GetLegacyRaidDifficultyID() : group->GetRaidDifficultyID()))
+            return;
+
         if (!group->IsLeader(_player->GetGUID()))
             return;
 
@@ -1047,16 +1044,19 @@ void WorldSession::HandleSetRaidDifficultyOpcode(WorldPackets::Misc::SetRaidDiff
         else
             group->SetRaidDifficultyID(difficultyID);
     }
-    else
-    {
-        _player->ResetInstances(InstanceResetMethod::OnChangeDifficulty);
-        if (setRaidDifficulty.Legacy)
-            _player->SetLegacyRaidDifficultyID(difficultyID);
-        else
-            _player->SetRaidDifficultyID(difficultyID);
 
-        _player->SendRaidDifficulty(setRaidDifficulty.Legacy != 0);
-    }
+    if (difficultyID == (setRaidDifficulty.Legacy ? _player->GetLegacyRaidDifficultyID() : _player->GetRaidDifficultyID()))
+        return;
+
+    if (!group)
+        _player->ResetInstances(InstanceResetMethod::OnChangeDifficulty);
+
+    if (setRaidDifficulty.Legacy)
+        _player->SetLegacyRaidDifficultyID(difficultyID);
+    else
+        _player->SetRaidDifficultyID(difficultyID);
+
+    _player->SendRaidDifficulty(setRaidDifficulty.Legacy != 0);
 }
 
 void WorldSession::HandleSetTaxiBenchmark(WorldPackets::Misc::SetTaxiBenchmarkMode& packet)

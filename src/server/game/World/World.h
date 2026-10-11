@@ -194,6 +194,7 @@ enum WorldBoolConfigs : uint32
     CONFIG_RESPAWN_DYNAMIC_ESCORTNPC,
     CONFIG_REGEN_HP_CANNOT_REACH_TARGET_IN_RAID,
     CONFIG_ALLOW_LOGGING_IP_ADDRESSES_IN_DATABASE,
+    CONFIG_EXTENDED_ACCOUNT_NAME_LENGTH_LIMIT,
     CONFIG_CHARACTER_CREATING_DISABLE_ALLIED_RACE_ACHIEVEMENT_REQUIREMENT,
     CONFIG_BATTLEGROUNDMAP_LOAD_GRIDS,
     CONFIG_ENABLE_AE_LOOT,
@@ -264,7 +265,6 @@ enum WorldIntConfigs : uint32
     CONFIG_START_PLAYER_LEVEL,
     CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL,
     CONFIG_START_DEMON_HUNTER_PLAYER_LEVEL,
-    CONFIG_START_EVOKER_PLAYER_LEVEL,
     CONFIG_START_ALLIED_RACE_LEVEL,
     CONFIG_CURRENCY_RESET_HOUR,
     CONFIG_CURRENCY_RESET_DAY,
@@ -346,6 +346,7 @@ enum WorldIntConfigs : uint32
     CONFIG_ARENA_START_PERSONAL_RATING,
     CONFIG_ARENA_START_MATCHMAKER_RATING,
     CONFIG_MAX_WHO,
+    CONFIG_WHO_LIST_UPDATE_INTERVAL,
     CONFIG_HONOR_AFTER_DUEL,
     CONFIG_PVP_TOKEN_MAP_TYPE,
     CONFIG_PVP_TOKEN_ID,
@@ -438,6 +439,10 @@ enum WorldInt64Configs : uint32
 {
     CONFIG_CHARACTER_CREATING_DISABLED_RACEMASK,
     CONFIG_START_PLAYER_MONEY,
+    CONFIG_START_DEATH_KNIGHT_PLAYER_MONEY,
+    CONFIG_START_DEMON_HUNTER_PLAYER_MONEY,
+    CONFIG_START_EVOKER_PLAYER_MONEY,
+    CONFIG_START_ALLIED_RACE_MONEY,
     INT64_CONFIG_VALUE_COUNT
 };
 
@@ -654,8 +659,6 @@ class TC_GAME_API World
         void SendServerMessage(ServerMessageType messageID, std::string_view stringParam = {}, Player const* player = nullptr);
         void SendGlobalMessage(WorldPacket const* packet, WorldSession* self = nullptr, Optional<Team> team = { });
         void SendGlobalGMMessage(WorldPacket const* packet, WorldSession* self = nullptr, Optional<Team> team = { });
-        bool SendZoneMessage(uint32 zone, WorldPacket const* packet, WorldSession* self = nullptr, Optional<Team> team = { });
-        void SendZoneText(uint32 zone, const char *text, WorldSession* self = nullptr, Optional<Team> team = { });
 
         /// Are we in the middle of a shutdown?
         bool IsShuttingDown() const { return m_ShutdownTimer > 0; }

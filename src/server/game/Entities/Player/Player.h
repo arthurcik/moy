@@ -29,6 +29,7 @@
 #include "ItemDefines.h"
 #include "ItemEnchantmentMgr.h"
 #include "MapReference.h"
+#include "MirrorTimer.h"
 #include "PetDefines.h"
 #include "PlayerTaxi.h"
 #include "QuestDef.h"
@@ -189,8 +190,6 @@ enum PlayerUnderwaterState
     UNDERWATER_INLAVA                   = 0x02,             // terrain type is lava and player is afflicted by it
     UNDERWATER_INSLIME                  = 0x04,             // terrain type is lava and player is afflicted by it
     UNDERWATER_INDARKWATER              = 0x08,             // terrain type is dark water and player is afflicted by it
-
-    UNDERWATER_EXIST_TIMERS             = 0x10
 };
 
 enum BuyBankSlotResult
@@ -251,7 +250,8 @@ enum SpecResetType
 // Spell modifier (used for modify other spells)
 struct SpellModifier
 {
-    SpellModifier(Aura* _ownerAura) : op(SpellModOp::HealingAndDamage), type(SPELLMOD_FLAT), spellId(0), ownerAura(_ownerAura) { }
+    SpellModifier(SpellModOp _op, SpellModType _type, uint32 _spellId, Aura* _ownerAura)
+        : op(_op), type(_type), spellId(_spellId), ownerAura(_ownerAura) { }
     virtual ~SpellModifier() = default;
 
     SpellModOp op;
@@ -263,22 +263,53 @@ struct SpellModifier
 
 struct SpellModifierByClassMask : SpellModifier
 {
-    SpellModifierByClassMask(Aura* _ownerAura) : SpellModifier(_ownerAura), value(0), mask() { }
+    SpellModifierByClassMask(SpellModOp _op, SpellModType _type, uint32 _spellId, Aura* _ownerAura, flag128 const& _mask)
+        : SpellModifier(_op, _type, _spellId, _ownerAura), mask(_mask) { }
 
-    int32 value;
     flag128 mask;
 };
 
-template<typename T>
-struct SpellModifierByLabel : SpellModifier
+struct SpellFlatModifierByClassMask : SpellModifierByClassMask
 {
-    SpellModifierByLabel(Aura* _ownerAura) : SpellModifier(_ownerAura) { }
+    SpellFlatModifierByClassMask(SpellModOp _op, uint32 _spellId, Aura* _ownerAura, flag128 _mask)
+        : SpellModifierByClassMask(_op, SPELLMOD_FLAT, _spellId, _ownerAura, _mask) { }
 
-    T value;
+    int32 value = { };
 };
 
-using SpellFlatModifierByLabel = SpellModifierByLabel<UF::SpellFlatModByLabel>;
-using SpellPctModifierByLabel = SpellModifierByLabel<UF::SpellPctModByLabel>;
+struct SpellPctModifierByClassMask : SpellModifierByClassMask
+{
+    SpellPctModifierByClassMask(SpellModOp _op, uint32 _spellId, Aura* _ownerAura, flag128 _mask)
+        : SpellModifierByClassMask(_op, SPELLMOD_PCT, _spellId, _ownerAura, _mask) { }
+
+    float value = { };
+};
+
+struct SpellFlatModifierByLabel : SpellModifier
+{
+    SpellFlatModifierByLabel(SpellModOp _op, uint32 _spellId, Aura* _ownerAura, uint32 _label)
+        : SpellModifier(_op, SPELLMOD_LABEL_FLAT, _spellId, _ownerAura)
+    {
+        value.ModIndex = int32(_op);
+        value.ModifierValue = 0;
+        value.LabelID = _label;
+    }
+
+    UF::SpellFlatModByLabel value = { };
+};
+
+struct SpellPctModifierByLabel : SpellModifier
+{
+    SpellPctModifierByLabel(SpellModOp _op, uint32 _spellId, Aura* _ownerAura, int32 _label)
+        : SpellModifier(_op, SPELLMOD_LABEL_PCT, _spellId, _ownerAura)
+    {
+        value.ModIndex = int32(_op);
+        value.ModifierValue = 0.0f;
+        value.LabelID = _label;
+    }
+
+    UF::SpellPctModByLabel value;
+};
 
 struct SpellModifierCompare
 {
@@ -320,8 +351,6 @@ typedef std::array<uint32, MAX_PVP_TALENT_SLOTS> PlayerPvpTalentMap;
 typedef std::unordered_map<uint32, PlayerSpell> PlayerSpellMap;
 typedef Trinity::Containers::FlatSet<SpellModifier*, SpellModifierCompare> SpellModContainer;
 typedef std::unordered_map<uint32, PlayerCurrency> PlayerCurrenciesMap;
-
-typedef std::unordered_map<uint32 /*instanceId*/, time_t/*releaseTime*/> InstanceTimeMap;
 
 enum ActionButtonUpdateState
 {
@@ -445,15 +474,10 @@ struct Areas
 #define MAX_RUNES 7
 #define MAX_RECHARGING_RUNES 3
 
-enum RuneCooldowns
-{
-    RUNE_BASE_COOLDOWN  = 10000
-};
-
 struct Runes
 {
     std::deque<uint8> CooldownOrder;
-    uint32 Cooldown[MAX_RUNES];
+    std::array<float, MAX_RUNES> Cooldown;                  // cooldown progress [0,1] where 1 means rune is ready
     uint8 RuneState;                                        // mask of available runes
 
     void SetRuneState(uint8 index, bool set = true);
@@ -569,15 +593,6 @@ enum PlayerFieldByte2Flags
     PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW    = 0x40
 };
 
-enum MirrorTimerType
-{
-    FATIGUE_TIMER      = 0,
-    BREATH_TIMER       = 1,
-    FIRE_TIMER         = 2 // feign death
-};
-#define MAX_TIMERS      3
-#define DISABLED_MIRROR_TIMER   -1
-
 // 2^n values
 enum PlayerExtraFlags
 {
@@ -688,8 +703,11 @@ enum PlayerSlots
 
 static_assert(UF::size<decltype(UF::ActivePlayerData::InvSlots)>() == PLAYER_SLOT_END);
 
-#define INVENTORY_SLOT_BAG_0    255
-#define INVENTORY_DEFAULT_SIZE  16
+inline constexpr uint8 INVENTORY_SLOT_BAG_0 = 255;
+inline constexpr uint8 INVENTORY_DEFAULT_SIZE = 16;
+inline constexpr uint8 INVENTORY_ACCOUNT_SECURED_BONUS_SIZE = 4;
+
+inline constexpr uint32 SPELL_ALPACA_SADDLEBAGS = 317795;
 
 enum EquipmentSlots : uint8                                 // 19 slots
 {
@@ -872,6 +890,19 @@ enum ArenaTeamInfoType
     ARENA_TEAM_END               = 7
 };
 
+enum class TeleportState
+{
+    NotTeleporting,
+    Initiated,
+    // destination is on same map and instance
+    DelayedTeleport,
+    WaitingForTeleportAck,
+    // destination is on different map or different instance of the same map
+    DelayedWorldPort,
+    WaitingForSuspendTokenResponse,
+    WaitingForWorldPortAck
+};
+
 enum TeleportToOptions
 {
     TELE_TO_NONE                = 0x00,
@@ -962,7 +993,6 @@ enum PlayerLoginQueryIndex
     PLAYER_LOGIN_QUERY_LOAD_RANDOM_BG,
     PLAYER_LOGIN_QUERY_LOAD_BANNED,
     PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS_REW,
-    PLAYER_LOGIN_QUERY_LOAD_INSTANCE_LOCK_TIMES,
     PLAYER_LOGIN_QUERY_LOAD_SEASONAL_QUEST_STATUS,
     PLAYER_LOGIN_QUERY_LOAD_MONTHLY_QUEST_STATUS,
     PLAYER_LOGIN_QUERY_LOAD_CURRENCY,
@@ -989,7 +1019,6 @@ enum PlayerDelayedOperations
     DELAYED_SPELL_CAST_DESERTER = 0x04,
     DELAYED_BG_MOUNT_RESTORE    = 0x08,                     ///< Flag to restore mount state after teleport from BG
     DELAYED_BG_TAXI_RESTORE     = 0x10,                     ///< Flag to restore taxi state after teleport from BG
-    DELAYED_BG_GROUP_RESTORE    = 0x20,                     ///< Flag to restore group state after teleport from BG
     DELAYED_END
 };
 
@@ -1237,7 +1266,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void ToggleDND();
         bool isAFK() const { return HasPlayerFlag(PLAYER_FLAGS_AFK); }
         bool isDND() const { return HasPlayerFlag(PLAYER_FLAGS_DND); }
-        uint16 GetChatFlags() const;
+        uint32 GetChatFlags() const;
         std::string autoReplyMsg;
 
         int64 GetBarberShopCost(Trinity::IteratorPair<UF::ChrCustomizationChoice const*> newCustomizations) const;
@@ -1453,6 +1482,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         bool IsValidPos(uint8 bag, uint8 slot, bool explicit_pos) const;
         uint8 GetInventorySlotCount() const { return m_activePlayerData->NumBackpackSlots; }
         void SetInventorySlotCount(uint8 slots);
+        void UpdateInventorySlotCount();
         uint8 GetBankBagSlotCount() const { return m_activePlayerData->NumBankSlots; }
         void SetBankBagSlotCount(uint8 count) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_activePlayerData).ModifyValue(&UF::ActivePlayerData::NumBankSlots), count); }
         uint8 GetCharacterBankTabCount() const { return m_activePlayerData->NumCharacterBankTabs; }
@@ -1526,8 +1556,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void EquipChildItem(uint8 parentBag, uint8 parentSlot, Item* parentItem);
         void AutoUnequipChildItem(Item* parentItem);
         bool StoreNewItemInBestSlots(uint32 itemId, uint32 amount, ItemContext context);
-        void AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore const& store, ItemContext context = ItemContext::NONE, bool broadcast = false, bool createdByPlayer = false);
-        void AutoStoreLoot(uint32 loot_id, LootStore const& store, ItemContext context = ItemContext::NONE, bool broadcast = false, bool createdByPlayer = false) { AutoStoreLoot(NULL_BAG, NULL_SLOT, loot_id, store, context, broadcast, createdByPlayer); }
+        void AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore const& store, ItemContext context = ItemContext::NONE, bool broadcast = false, bool pushed = false, bool createdByPlayer = false);
+        void AutoStoreLoot(uint32 loot_id, LootStore const& store, ItemContext context = ItemContext::NONE, bool broadcast = false, bool pushed = false, bool createdByPlayer = false) { AutoStoreLoot(NULL_BAG, NULL_SLOT, loot_id, store, context, broadcast, pushed, createdByPlayer); }
         void StoreLootItem(ObjectGuid lootWorldObjectGuid, uint8 lootSlot, Loot* loot, AELootResult* aeResult = nullptr);
 
         InventoryResult CanTakeMoreSimilarItems(uint32 entry, uint32 count, Item* pItem, uint32* no_space_count = nullptr, uint32* offendingItemId = nullptr) const;
@@ -1587,8 +1617,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         Item* GetItemFromBuyBackSlot(uint32 slot);
         void RemoveItemFromBuyBackSlot(uint32 slot, bool del);
         void SendEquipError(InventoryResult msg, Item const* item1 = nullptr, Item const* item2 = nullptr, uint32 itemId = 0) const;
-        void SendBuyError(BuyResult msg, Creature* creature, uint32 item, uint32 param) const;
-        void SendSellError(SellResult msg, Creature* creature, ObjectGuid guid) const;
+        void SendBuyError(BuyResult msg, Creature const* creature, uint32 item) const;
+        void SendSellError(SellResult msg, Creature const* creature, ObjectGuid guid) const;
         void AddWeaponProficiency(uint32 newflag) { m_WeaponProficiency |= newflag; }
         void AddArmorProficiency(uint32 newflag) { m_ArmorProficiency |= newflag; }
         uint32 GetWeaponProficiency() const { return m_WeaponProficiency; }
@@ -1596,7 +1626,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         bool IsUseEquipedWeapon(bool mainhand) const;
         bool IsTwoHandUsed() const;
         bool IsUsingTwoHandedWeaponInOneHand() const;
-        void SendNewItem(Item* item, uint32 quantity, bool received, bool created, bool broadcast = false, uint32 dungeonEncounterId = 0);
+        void SendNewItem(Item* item, uint32 quantity, bool pushed, bool created, bool broadcast = false, uint32 dungeonEncounterId = 0);
         bool BuyItemFromVendorSlot(ObjectGuid vendorguid, uint32 vendorslot, uint32 item, uint32 count, uint8 bag, uint8 slot);
         Optional<SellResult> CanSellItemToVendor(Item const* item, uint32 amount) const;
         Optional<SellResult> SellItemToVendor(Item* item, uint32 amount);
@@ -1608,7 +1638,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         Player* GetTrader() const;
         TradeData* GetTradeData() const { return m_trade; }
-        void TradeCancel(bool sendback);
+        void TradeCancel(bool sendback, TradeStatus status = TRADE_STATUS_CANCELLED);
 
         CinematicMgr* GetCinematicMgr() const { return _cinematicMgr.get(); }
 
@@ -1828,7 +1858,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         static bool IsValidGender(uint8 Gender) { return Gender <= GENDER_FEMALE; }
         static bool IsValidClass(uint8 Class) { return ((1 << (Class - 1)) & CLASSMASK_ALL_PLAYABLE) != 0; }
-        static bool IsValidRace(uint8 Race) { return Trinity::RaceMask<uint64>{ RACEMASK_ALL_PLAYABLE }.HasRace(Race); }
+        static bool IsValidRace(uint8 Race) { return RACEMASK_ALL_PLAYABLE.HasRace(Race); }
 
         /*********************************************************/
         /***                   SAVE SYSTEM                     ***/
@@ -1970,6 +2000,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         bool ResetTalents(bool noCost = false);
         void ResetPvpTalents();
         uint32 GetNextResetTalentsCost() const;
+        void IncreaseResetTalentsCostAndCounters(uint32 lastResetTalentsCost);
         void InitTalentForLevel();
         void SendTalentsInfoData();
         TalentLearnResult LearnTalent(uint32 talentId, int32* spellOnCooldown);
@@ -2026,9 +2057,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         PlayerSpellMap      & GetSpellMap()       { return m_spells; }
 
         void AddSpellMod(SpellModifier* mod, bool apply);
-        static uint32 IsAffectedBySpellmod(SpellInfo const* spellInfo, SpellModifier const* mod, Spell const* spell = nullptr);
-        template <class T>
-        void GetSpellModValues(SpellInfo const* spellInfo, SpellModOp op, Spell* spell, T base, int32* flat, float* pct) const;
+        static int32 IsAffectedBySpellmod(SpellInfo const* spellInfo, SpellModifier const* mod, Spell const* spell = nullptr);
+        void GetSpellModValues(SpellInfo const* spellInfo, SpellModOp op, Spell* spell, double base, int32* flat, float* pct) const;
         template <class T>
         void ApplySpellMod(SpellInfo const* spellInfo, SpellModOp op, T& basevalue, Spell* spell = nullptr) const;
         static void ApplyModToSpell(SpellModifier* mod, Spell* spell);
@@ -2036,9 +2066,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void SendSpellModifiers() const;
 
         void RemoveArenaSpellCooldowns(bool removeActivePetCooldowns = false);
-        uint32 GetLastPotionId() const { return m_lastPotionId; }
-        void SetLastPotionId(uint32 item_id) { m_lastPotionId = item_id; }
-        void UpdatePotionCooldown(Spell* spell = nullptr);
 
         float GetEmpowerMinHoldStagePercent() const { return m_empowerMinHoldStagePercent; }
         void SetEmpowerMinHoldStagePercent(float empowerMinHoldStagePercent) { m_empowerMinHoldStagePercent = empowerMinHoldStagePercent; }
@@ -2165,6 +2192,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void UpdateMaxHealth() override;
         void UpdateMaxPower(Powers power) override;
         uint32 GetPowerIndex(Powers power) const override;
+        ClassPowerTypes GetPowerTypes() const override;
         void UpdateAttackPowerAndDamage(bool ranged = false) override;
         void ApplySpellPowerBonus(int32 amount, bool apply);
         void UpdateSpellDamageAndHealingBonus();
@@ -2210,8 +2238,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void UpdateExpertise(WeaponAttackType attType);
         void ApplyManaRegenBonus(int32 amount, bool apply);
         void ApplyHealthRegenBonus(int32 amount, bool apply);
-        void UpdateManaRegen();
-        void UpdateAllRunesRegen();
+        void UpdatePowerRegen(Powers power);
+        float GetPowerRegen(Powers power) const;
 
         void SetPetSpellPower(uint32 spellPower) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_activePlayerData).ModifyValue(&UF::ActivePlayerData::PetSpellPower), spellPower); }
 
@@ -2262,8 +2290,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void SendAutoRepeatCancel(Unit* target);
         void SendExplorationExperience(uint32 Area, uint32 Experience) const;
 
-        void SendDungeonDifficulty(int32 forcedDifficulty = -1) const;
-        void SendRaidDifficulty(bool legacy, int32 forcedDifficulty = -1) const;
+        void SendDungeonDifficulty() const;
+        void SendRaidDifficulty(bool legacy) const;
         void ResetInstances(InstanceResetMethod method);
         void SendResetInstanceSuccess(uint32 MapId) const;
         void SendResetInstanceFailed(ResetFailedReason reason, uint32 mapID) const;
@@ -2273,7 +2301,9 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         bool UpdatePosition(float x, float y, float z, float orientation, bool teleport = false) override;
         bool UpdatePosition(Position const& pos, bool teleport = false) override { return UpdatePosition(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation(), teleport); }
-        void ProcessTerrainStatusUpdate(ZLiquidStatus oldLiquidStatus, Optional<LiquidData> const& newLiquidData) override;
+        void ProcessPositionDataChanged(PositionFullTerrainStatus const& data) override;
+        void UpdateLiquidMirrorTimerFlagsOnPositionChange(Optional<LiquidData> const& newLiquidData);
+        void UpdateLiquidMirrorTimerValuesOnAura();
         void AtEnterCombat() override;
         void AtExitCombat() override;
 
@@ -2304,8 +2334,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void DurabilityRepairAll(bool takeCost, float discountMod, bool guildBank);
         void DurabilityRepair(uint16 pos, bool takeCost, float discountMod);
 
-        void UpdateMirrorTimers();
-        void StopMirrorTimers();
         bool IsMirrorTimerActive(MirrorTimerType type) const;
 
         bool CanJoinConstantChannelInZone(ChatChannelsEntry const* channel, AreaTableEntry const* zone) const;
@@ -2350,14 +2378,16 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void SetSkillPermBonus(uint32 pos, uint16 bonus) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_activePlayerData).ModifyValue(&UF::ActivePlayerData::Skill).ModifyValue(&UF::SkillInfo::SkillPermBonus, pos), bonus); }
 
         TeleportLocation& GetTeleportDest() { return m_teleport_dest; }
-        uint32 GetTeleportOptions() const { return m_teleport_options; }
+        TeleportState GetTeleportState() const { return m_teleport_state; }
+        void SetTeleportState(TeleportState state) { m_teleport_state = state; }
+        EnumFlag<TeleportToOptions> GetTeleportOptions() const { return m_teleport_options; }
         int32 GetNewWorldCounter() const { return m_newWorldCounter; }
-        bool IsBeingTeleported() const { return IsBeingTeleportedNear() || IsBeingTeleportedFar(); }
-        bool IsBeingTeleportedNear() const { return mSemaphoreTeleport_Near; }
-        bool IsBeingTeleportedFar() const { return mSemaphoreTeleport_Far; }
-        bool IsBeingTeleportedSeamlessly() const { return IsBeingTeleportedFar() && m_teleport_options & TELE_TO_SEAMLESS; }
-        void SetSemaphoreTeleportNear(bool semphsetting) { mSemaphoreTeleport_Near = semphsetting; }
-        void SetSemaphoreTeleportFar(bool semphsetting) { mSemaphoreTeleport_Far = semphsetting; }
+        bool IsBeingTeleported() const { return m_teleport_state != TeleportState::NotTeleporting; }
+        bool IsBeingTeleportedNear() const { return m_teleport_state == TeleportState::DelayedTeleport
+            || m_teleport_state == TeleportState::WaitingForTeleportAck; }
+        bool IsBeingTeleportedFar() const { return m_teleport_state == TeleportState::DelayedWorldPort
+            || m_teleport_state == TeleportState::WaitingForSuspendTokenResponse
+            || m_teleport_state == TeleportState::WaitingForWorldPortAck; }
         void ProcessDelayedOperations();
 
         void CheckAreaExplore();
@@ -2430,6 +2460,9 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         void SetDrunkValue(uint8 newDrunkValue, uint32 itemId = 0);
         uint8 GetDrunkValue() const { return m_playerData->Inebriation; }
+        void ApplyModFakeDrunkValue(int32 mod, bool apply) { ApplyModUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::FakeInebriation), mod, apply); }
+        int32 GetFakeDrunkValue() const { return m_playerData->FakeInebriation; }
+        void UpdateInvisibilityDrunkDetect();
         static DrunkenState GetDrunkenstateByValue(uint8 value);
 
         uint32 GetDeathTimer() const { return m_deathTimer; }
@@ -2443,8 +2476,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void SetCanParry(bool value);
         bool CanBlock() const { return m_canBlock; }
         void SetCanBlock(bool value);
-        bool CanTitanGrip() const { return m_canTitanGrip; }
-        void SetCanTitanGrip(bool value, uint32 penaltySpellId = 0);
+        bool CanTitanGrip(Item const* item) const;
+        void SetCanTitanGrip(bool value, uint32 penaltySpellId = 0, int32 allowedItemClass = 0, int32 allowedItemSubClassMask = 0);
         void CheckTitanGripPenalty();
         bool CanTameExoticPets() const { return IsGameMaster() || HasAuraType(SPELL_AURA_ALLOW_TAME_PET_TYPE); }
 
@@ -2506,7 +2539,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         void CastItemCombatSpell(DamageInfo const& damageInfo);
         void CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemTemplate const* proto);
-        void CastItemUseSpell(Item* item, SpellCastTargets const& targets, ObjectGuid castCount, std::array<int32, 3> const& misc);
+        void CastItemUseSpell(Item* item, uint32 spellId, SpellCastTargets const& targets, ObjectGuid castCount, std::array<int32, 3> const& misc);
         void ApplyItemLootedSpell(Item* item, bool apply);
         void ApplyItemLootedSpell(ItemTemplate const* itemTemplate);
 
@@ -2514,7 +2547,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void SetEquipmentSet(EquipmentSetInfo::EquipmentSetData const& newEqSet);
         void DeleteEquipmentSet(uint64 id);
 
-        void SendInitWorldStates(uint32 zoneId, uint32 areaId);
+        void SendInitWorldStates(uint32 zoneId, uint32 areaId) const;
         void SendUpdateWorldState(uint32 variable, uint32 value, bool hidden = false) const;
         void SendDirectMessage(WorldPacket const* data) const;
 
@@ -2563,7 +2596,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void SetBGTeam(Team team);
         Team GetBGTeam() const;
 
-        void LeaveBattleground(bool teleportToEntryPoint = true);
+        void LeaveBattleground(bool teleportToEntryPoint = true, bool withoutDeserterDebuff = false);
         bool CanJoinToBattleground(BattlegroundTemplate const* bg) const;
         bool CanReportAfkDueToLimit();
         void ReportedAfkBy(Player* reporter);
@@ -2618,7 +2651,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         // only changed for direct client control (possess, vehicle etc.), not stuff you control using pet commands
         WorldObject* m_seer;
         void SetFallInformation(uint32 time, float z);
-        void HandleFall(MovementInfo const& movementInfo);
+        void HandleFall();
 
         void SetClientControl(Unit* target, bool allowMove);
 
@@ -2647,6 +2680,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         uint16 m_homebindAreaId;
 
         uint8 GetStartLevel(uint8 race, uint8 playerClass, Optional<int32> characterTemplateId) const;
+        static uint64 GetStartMoney(uint8 race, uint8 playerClass);
 
         // currently visible objects at player client
         GuidUnorderedSet m_clientGUIDs;
@@ -2654,7 +2688,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         bool HaveAtClient(BaseEntity const* u) const;
 
-        bool IsNeverVisibleFor(WorldObject const* seer, bool allowServersideObjects = false) const override;
+        bool IsNeverVisibleFor(WorldObject const* seer, bool allowServersideObjects) const override;
 
         bool IsVisibleGloballyFor(Player const* player) const;
 
@@ -2731,8 +2765,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void SendRaidInfo();
         bool Satisfy(AccessRequirement const* ar, uint32 target_map, TransferAbortParams* params = nullptr, bool report = false);
         bool CheckInstanceValidity(bool /*isLogin*/);
-        bool CheckInstanceCount(uint32 instanceId) const;
-        void AddInstanceEnterTime(uint32 instanceId, time_t enterTime);
         WorldSafeLocsEntry const* GetInstanceEntrance(uint32 targetMapId);
 
         // last used pet number (for BG's)
@@ -2783,9 +2815,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         UF::DeclinedNames const* GetDeclinedNames() const { return m_playerData->DeclinedNames.has_value() ? &*m_playerData->DeclinedNames : nullptr; }
         uint8 GetRunesState() const;
-        uint32 GetRuneCooldown(uint8 index) const { return m_runes->Cooldown[index]; }
-        uint32 GetRuneBaseCooldown() const;
-        void SetRuneCooldown(uint8 index, uint32 cooldown);
+        float GetRuneCooldown(uint8 index) const { return m_runes->Cooldown[index]; }
+        void SetRuneCooldown(uint8 index, float cooldown);
         void ResyncRunes() const;
         void InitRunes();
 
@@ -2822,15 +2853,10 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         bool IsInWhisperWhiteList(ObjectGuid guid);
         void RemoveFromWhisperWhiteList(ObjectGuid guid) { WhisperList.remove(guid); }
 
-        void ValidateMovementInfo(MovementInfo* mi);
-
         void SendMovementSetCollisionHeight(float height, WorldPackets::Movement::UpdateCollisionHeightReason reason);
 
         bool CanFly() const override { return m_movementInfo.HasMovementFlag(MOVEMENTFLAG_CAN_FLY); }
         bool CanEnterWater() const override { return true; }
-
-        std::string GetMapAreaAndZoneString() const;
-        std::string GetCoordsMapAreaAndZoneString() const;
 
         // Reagent Bank
         bool IsReagentBankUnlocked() const { return HasPlayerFlagEx(PLAYER_FLAGS_EX_REAGENT_BANK_UNLOCKED); }
@@ -2906,7 +2932,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         }
         void SetPvpTitle(uint8 pvpTitle) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::PvpTitle), pvpTitle); }
         void SetArenaFaction(uint8 arenaFaction) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::ArenaFaction), arenaFaction); }
-        void ApplyModFakeInebriation(int32 mod, bool apply) { ApplyModUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::FakeInebriation), mod, apply); }
         void SetVirtualPlayerRealm(uint32 virtualRealmAddress) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::VirtualPlayerRealm), virtualRealmAddress); }
         void SetCurrentBattlePetBreedQuality(uint8 battlePetBreedQuality) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::CurrentBattlePetBreedQuality), battlePetBreedQuality);  }
 
@@ -3003,6 +3028,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         bool CanEnableWarModeInArea() const;
         void UpdateWarModeAuras();
 
+        void SetAccountSecured(bool secured);
+
         void AddUnlockedTransmogOutfits(std::span<int32 const> transmogOutfitIds);
         void AddUnlockedTransmogOutfit(int32 transmogOutfitIds) { AddUnlockedTransmogOutfits(std::span(&transmogOutfitIds, 1)); }
 
@@ -3013,7 +3040,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void UpdateTransmogOutfitSituations(uint32 id, bool situationsEnabled, std::span<WorldPackets::Transmogrification::TransmogOutfitSituationInfo const> situations);
         void UpdateTransmogOutfitSlots(uint32 id, std::span<WorldPackets::Transmogrification::TransmogOutfitSlotData const> slots);
         void EquipTransmogOutfit(uint32 id, TransmogSituationTrigger trigger, Optional<bool> locked);
-        std::string GetCharacterSelectOutfit() const;
 
         std::string GetDebugInfo() const override;
 
@@ -3031,6 +3057,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         GuidList WhisperList;
         TimePoint m_regenInterruptTimestamp;
         uint32 m_regenTimerCount;
+        float m_healthFraction;
         std::array<float, MAX_POWERS_PER_CLASS> m_powerFraction;
         uint32 m_contestedPvPTimer;
 
@@ -3111,7 +3138,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void _LoadTalents(PreparedQueryResult result);
         void _LoadPvpTalents(PreparedQueryResult result);
         void _LoadTraits(PreparedQueryResult configsResult, PreparedQueryResult entriesResult);
-        void _LoadInstanceTimeRestrictions(PreparedQueryResult result);
         void _LoadPetStable(uint32 summonedPetNumber, PreparedQueryResult result);
         void _LoadCurrency(PreparedQueryResult result);
         void _LoadCUFProfiles(PreparedQueryResult result);
@@ -3137,12 +3163,12 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void _SaveStoredAuraTeleportLocations(CharacterDatabaseTransaction trans);
         void _SaveEquipmentSets(CharacterDatabaseTransaction trans);
         void _SaveTransmogOutfits(CharacterDatabaseTransaction trans);
+        void _SaveCharacterSelectOutfit(CharacterDatabaseTransaction trans) const;
         void _SaveBGData(CharacterDatabaseTransaction trans);
         void _SaveGlyphs(CharacterDatabaseTransaction trans) const;
         void _SaveTalents(CharacterDatabaseTransaction trans);
         void _SaveTraits(CharacterDatabaseTransaction trans);
         void _SaveStats(CharacterDatabaseTransaction trans) const;
-        void _SaveInstanceTimeRestrictions(CharacterDatabaseTransaction trans);
         void _SaveCurrency(CharacterDatabaseTransaction trans);
         void _SaveCUFProfiles(CharacterDatabaseTransaction trans);
         void _SavePlayerData(CharacterDatabaseTransaction trans);
@@ -3152,10 +3178,11 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         /***              ENVIRONMENTAL SYSTEM                 ***/
         /*********************************************************/
         void HandleSobering();
-        void SendMirrorTimer(MirrorTimerType Type, uint32 MaxValue, uint32 CurrentValue, int32 Regen);
-        void StopMirrorTimer(MirrorTimerType Type);
-        void HandleDrowning(uint32 time_diff);
-        int32 getMaxTimer(MirrorTimerType timer) const;
+        void SendMirrorTimer(MirrorTimerType type, int32 value, int32 maxValue, int32 scale, int32 spellId, bool paused);
+        void PauseMirrorTimer(MirrorTimerType type, bool paused);
+        void StopMirrorTimer(MirrorTimerType type);
+        void UpdateMirrorTimers(uint32 diff);
+        int32 GetMirrorTimerMaxValue(MirrorTimerType type) const;
 
         /*********************************************************/
         /***                  HONOR SYSTEM                     ***/
@@ -3199,7 +3226,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         PlayerMails m_mail;
         PlayerSpellMap m_spells;
         std::unordered_map<uint32 /*overridenSpellId*/, std::unordered_set<uint32> /*newSpellId*/> m_overrideSpells;
-        uint32 m_lastPotionId;                              // last used health/mana potion in combat, that block next potion use
         std::unordered_map<uint32, StoredAuraTeleportLocation> m_storedAuraTeleportLocations;
         float m_empowerMinHoldStagePercent;
 
@@ -3259,6 +3285,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         bool m_canParry;
         bool m_canBlock;
         bool m_canTitanGrip;
+        uint32 m_titanGripWeaponSubclasses;
+        uint32 m_titanGripArmorSubclasses;
         uint32 m_titanGripPenaltySpellId;
         Optional<AttackSwingErr> m_swingErrorMsg;
 
@@ -3315,8 +3343,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         bool IsCanDelayTeleport() const { return m_bCanDelayTeleport; }
         void SetCanDelayTeleport(bool setting) { m_bCanDelayTeleport = setting; }
-        bool IsHasDelayedTeleport() const { return m_bHasDelayedTeleport; }
-        void SetDelayedTeleportFlag(bool setting) { m_bHasDelayedTeleport = setting; }
         void ScheduleDelayedOperation(uint32 operation) { if (operation < DELAYED_END) m_DelayedOperations |= operation; }
 
         bool IsInstanceLoginGameMasterException() const;
@@ -3326,21 +3352,19 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         uint32 m_lastFallTime;
         float  m_lastFallZ;
 
-        std::array<int32, MAX_TIMERS> m_MirrorTimer;
+        std::array<MirrorTimer, MIRROR_TIMER_MAX> m_mirrorTimers;
+        int32 m_environmentalDamageTimer;
         uint8 m_MirrorTimerFlags;
-        uint8 m_MirrorTimerFlagsLast;
 
         // Current teleport data
         TeleportLocation m_teleport_dest;
+        TeleportState m_teleport_state;
         TeleportToOptions m_teleport_options;
         uint32 m_teleportSpellId;
         int32 m_newWorldCounter;
-        bool mSemaphoreTeleport_Near;
-        bool mSemaphoreTeleport_Far;
 
         uint32 m_DelayedOperations;
         bool m_bCanDelayTeleport;
-        bool m_bHasDelayedTeleport;
 
         std::unique_ptr<PetStable> m_petStable;
 
@@ -3356,7 +3380,6 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
 
         uint32 m_ChampioningFaction;
 
-        InstanceTimeMap _instanceResetTimes;
         uint32 _pendingBindId;
         uint32 _pendingBindTimer;
 

@@ -265,7 +265,7 @@ public:
                 }
                 break;
             case AccountOpResult::AOR_NAME_TOO_LONG:
-                handler->SendSysMessage(LANG_ACCOUNT_NAME_TOO_LONG);
+                handler->PSendSysMessage(LANG_ACCOUNT_NAME_TOO_LONG, MAX_ACCOUNT_STR[sWorld->getBoolConfig(CONFIG_EXTENDED_ACCOUNT_NAME_LENGTH_LIMIT)]);
                 handler->SetSentErrorMessage(true);
                 return false;
             case AccountOpResult::AOR_PASS_TOO_LONG:
@@ -782,7 +782,8 @@ public:
             return false;
         }
 
-        sAccountMgr->UpdateAccountAccess(nullptr, accountId, securityLevel, realmID);
+        WorldSession const* session = sWorld->FindSession(accountId);
+        sAccountMgr->UpdateAccountAccess(session ? session->GetRBACData() : nullptr, accountId, securityLevel, realmID);
 
         handler->PSendSysMessage(LANG_YOU_CHANGE_SECURITY, accountName->c_str(), securityLevel);
         return true;

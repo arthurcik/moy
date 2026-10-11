@@ -98,7 +98,7 @@ bool OutdoorPvPSI::HandleAreaTrigger(Player* player, uint32 trigger, bool /*ente
             {
                 TeamApplyBuff(TEAM_ALLIANCE, SI_CENARION_FAVOR);
                 /// @todo: confirm this text
-                sWorld->SendZoneText(OutdoorPvPSIBuffZones[0], sObjectMgr->GetTrinityStringForDBCLocale(LANG_OPVP_SI_CAPTURE_A));
+                m_map->SendZoneText(OutdoorPvPSIBuffZones[0], sObjectMgr->GetTrinityStringForDBCLocale(LANG_OPVP_SI_CAPTURE_A));
                 m_LastController = ALLIANCE;
                 newScore = 0;
                 SetWorldState(SI_GATHERED_H, 0);
@@ -124,7 +124,7 @@ bool OutdoorPvPSI::HandleAreaTrigger(Player* player, uint32 trigger, bool /*ente
             {
                 TeamApplyBuff(TEAM_HORDE, SI_CENARION_FAVOR);
                 /// @todo: confirm this text
-                sWorld->SendZoneText(OutdoorPvPSIBuffZones[0], sObjectMgr->GetTrinityStringForDBCLocale(LANG_OPVP_SI_CAPTURE_H));
+                m_map->SendZoneText(OutdoorPvPSIBuffZones[0], sObjectMgr->GetTrinityStringForDBCLocale(LANG_OPVP_SI_CAPTURE_H));
                 m_LastController = HORDE;
                 SetWorldState(SI_GATHERED_A, 0);
                 newScore = 0;
@@ -156,7 +156,7 @@ bool OutdoorPvPSI::HandleDropFlag(Player* player, uint32 spellId)
             {
                 // he dropped it further, summon mound
                 Map* map = player->GetMap();
-                if (GameObject* go = GameObject::CreateGameObject(SI_SILITHYST_MOUND, map, *player, QuaternionData::fromEulerAnglesZYX(player->GetOrientation(), 0.0f, 0.0f), 255, GO_STATE_READY))
+                if (GameObject* go = GameObject::CreateGameObject(SI_SILITHYST_MOUND, map, *player, QuaternionData::fromOrientation(player->GetOrientation()), 255, GO_STATE_READY))
                 {
                     PhasingHandler::InheritPhaseShift(go, player);
                     go->SetRespawnTime(0);
