@@ -259,7 +259,7 @@ struct boss_sindragosa : public BossAI
             me->SetDisableGravity(true);
         }
 
-        //sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
+        sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
     }
 
     void JustDied(Unit* /* killer */) override
@@ -270,7 +270,7 @@ struct boss_sindragosa : public BossAI
         if (Is25ManRaid() && me->HasAura(SPELL_SHADOWS_FATE))
             DoCastAOE(SPELL_FROST_INFUSION_CREDIT, true);
 
-        //sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
+        sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
     }
 
     void JustEngagedWith(Unit* victim) override
@@ -290,6 +290,8 @@ struct boss_sindragosa : public BossAI
         me->setActive(true);
         me->SetFarVisible(true);
         DoZoneInCombat();
+
+        sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
     }
 
     void EnterEvadeMode(EvadeReason why) override
@@ -298,7 +300,7 @@ struct boss_sindragosa : public BossAI
             return;
         BossAI::EnterEvadeMode(why);
 
-        //sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
+        sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
     }
 
     void JustReachedHome() override
@@ -308,6 +310,8 @@ struct boss_sindragosa : public BossAI
         me->SetCanFly(false);
         me->SetDisableGravity(false);
         me->SetReactState(REACT_DEFENSIVE);
+
+        sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
     }
 
     void KilledUnit(Unit* victim) override
@@ -372,7 +376,7 @@ struct boss_sindragosa : public BossAI
 
                 // Sindragosa enters combat as soon as she lands
                 DoZoneInCombat();
-                //sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
+                sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
                 break;
             case POINT_TAKEOFF:
                 events.ScheduleEvent(EVENT_AIR_MOVEMENT, 1ms);
@@ -385,12 +389,13 @@ struct boss_sindragosa : public BossAI
                 me->SetFacingTo(float(M_PI), true);
                 events.ScheduleEvent(EVENT_AIR_MOVEMENT_FAR, 1ms);
                 events.ScheduleEvent(EVENT_FROST_BOMB, 9s);
-                //sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_AIR_PHASE);
+                sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_AIR_PHASE);
                 break;
             }
             case POINT_AIR_PHASE_FAR:
                 me->SetFacingTo(float(M_PI), true);
                 events.ScheduleEvent(EVENT_LAND, 30s);
+                sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
                 break;
             case POINT_LAND:
                 events.ScheduleEvent(EVENT_LAND_GROUND, 1ms);
@@ -402,7 +407,7 @@ struct boss_sindragosa : public BossAI
                 me->SetReactState(REACT_DEFENSIVE);
 
                 _isInAirPhase = false;
-                //sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
+                sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
                 // trigger Asphyxiation
                 EntryCheckPredicate pred(NPC_ICE_TOMB);
                 summons.DoAction(ACTION_TRIGGER_ASPHYXIATION, pred);
@@ -546,6 +551,7 @@ struct boss_sindragosa : public BossAI
                     me->UpdateGroundPositionZ(destX, destY, destZ);
                     me->CastSpell(Position{ destX, destY, destZ }, SPELL_FROST_BOMB_TRIGGER, false);
                     events.ScheduleEvent(EVENT_FROST_BOMB, 6s, 8s);
+                    sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_AIR_PHASE);
                     break;
                 }
                 case EVENT_LAND:
@@ -559,6 +565,7 @@ struct boss_sindragosa : public BossAI
                 case EVENT_START_DESCENDING:
                 {
                     me->GetMotionMaster()->MovePoint(POINT_LAND, SindragosaFlyInPos);
+                    sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
                     break;
                 }
                 case EVENT_LAND_GROUND:
