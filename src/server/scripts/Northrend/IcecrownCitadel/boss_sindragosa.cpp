@@ -530,9 +530,11 @@ struct boss_sindragosa : public BossAI
                 }
                 case EVENT_AIR_MOVEMENT:
                     me->GetMotionMaster()->MovePoint(POINT_AIR_PHASE, SindragosaAirPos);
+                    sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_AIR_PHASE);
                     break;
                 case EVENT_AIR_MOVEMENT_FAR:
                     me->GetMotionMaster()->MovePoint(POINT_AIR_PHASE_FAR, SindragosaAirPosFar);
+                    sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_AIR_PHASE);
                     break;
                 case EVENT_ICE_TOMB:
                 {
