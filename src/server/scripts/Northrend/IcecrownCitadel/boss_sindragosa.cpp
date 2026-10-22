@@ -395,7 +395,7 @@ struct boss_sindragosa : public BossAI
             case POINT_AIR_PHASE_FAR:
                 me->SetFacingTo(float(M_PI), true);
                 events.ScheduleEvent(EVENT_LAND, 30s);
-                sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
+                sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_AIR_PHASE);
                 break;
             case POINT_LAND:
                 events.ScheduleEvent(EVENT_LAND_GROUND, 1ms);

@@ -459,6 +459,18 @@ void bot_ai::UpdateItemDurations(uint32 diff)
         }
     }
 }
+
+void bot_ai::SetForcedAttackTarget(ObjectGuid guid)
+{
+    _forcedTargetGuid = guid;
+    _forceAttackTarget = !guid.IsEmpty();
+}
+
+void bot_ai::ClearForcedAttackTarget()
+{
+    _forceAttackTarget = false;
+    _forcedTargetGuid.Clear();
+}
 // kitt end
 
 
@@ -4839,6 +4851,28 @@ bool bot_ai::CheckAttackTarget()
     bool ranged = HasRole(BOT_ROLE_RANGED);
     bool byspell = false;
     bool reset = false;
+
+    // === BYPASS FOR?AT ===
+    if (_forceAttackTarget && !_forcedTargetGuid.IsEmpty())
+    {
+        Unit* forcedTarget = ObjectAccessor::GetUnit(*me, _forcedTargetGuid);
+        if (forcedTarget && forcedTarget->IsAlive() && forcedTarget->IsInWorld())
+        {
+            opponent = forcedTarget;
+            disttarget = forcedTarget;
+
+            if (me->GetVictim() != forcedTarget)
+                me->Attack(forcedTarget, !ranged);
+
+            SetBotCommandState(BOT_COMMAND_ATTACK);
+            return true;
+        }
+        else
+        {
+            ClearForcedAttackTarget();
+        }
+    }
+    // === END BYPASS ===
 
     switch (_botclass)
     {

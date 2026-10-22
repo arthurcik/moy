@@ -59,8 +59,6 @@ class bot_ai : public CreatureAI
         NpcBotExtras const* GetBotExtras() const { return _botExtras; }
 
         void JustDied(Unit*) override;
-        void RecoverDisabledItems(); // kitt
-
         void KilledUnit(Unit* u) override;
         void AttackStart(Unit* u) override;
         void JustEnteredCombat(Unit* u) override;
@@ -797,12 +795,20 @@ class bot_ai : public CreatureAI
         // kitt start
         Item* GetEquippedItem(uint8 slot) const { return (slot < BOT_INVENTORY_SIZE) ? _equips[slot] : nullptr; }
         void UpdateItemDurations(uint32 diff);
+        // Flag generic de for?are a ?intei (bypass complet al selec?iei)
+        void SetForcedAttackTarget(ObjectGuid guid);
+        void ClearForcedAttackTarget();
+        bool HasForcedAttackTarget() const { return _forceAttackTarget; }
         // kitt end
 
 
 
     private:
         BotSpellMap _spells;
+        // kitt
+        bool _forceAttackTarget = false;
+        ObjectGuid _forcedTargetGuid;
+
 
     public:
         //much simplier than SmartAI I guess...
