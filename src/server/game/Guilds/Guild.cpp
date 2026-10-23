@@ -1477,10 +1477,10 @@ void Guild::HandleInviteMember(WorldSession* session, std::string_view name)
     {
         if (sWorld->getBoolConfig(CONFIG_FAKE_WHO_LIST))
         {
-            m_name = name;
+            std::string searchName(name);
             CharacterDatabasePreparedStatement* fake = CharacterDatabase.GetPreparedStatement(FAKE_CHAR_SEL_RACE_BY_NAME_IS_ONLINE);
             fake->setUInt32(0, sWorld->getIntConfig(CONFIG_FAKE_WHO_ONLINE_INTERVAL));
-            fake->setString(1, m_name);
+            fake->setString(1, searchName);
             PreparedQueryResult fakeresult = CharacterDatabase.Query(fake);
             
                 if (fakeresult)
