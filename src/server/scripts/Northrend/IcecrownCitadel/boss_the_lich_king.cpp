@@ -530,6 +530,8 @@ struct boss_the_lich_king : public BossAI
 
         if (!ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_HIGHLORD_TIRION_FORDRING)))
             me->SummonCreature(NPC_HIGHLORD_TIRION_FORDRING_LK, TirionSpawn, TEMPSUMMON_MANUAL_DESPAWN);
+
+        sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -546,6 +548,8 @@ struct boss_the_lich_king : public BossAI
         if (Is25ManRaid())
             if (Player* player = me->GetLootRecipient())
                 player->RewardPlayerAndGroupAtEvent(NPC_THE_LICH_KING_QUEST, player);
+
+        sKittNpcBotAiSync->UnregisterBoss(me->GetInstanceId(), me->GetEntry());
     }
 
     void JustEngagedWith(Unit* target) override
@@ -569,6 +573,8 @@ struct boss_the_lich_king : public BossAI
         events.ScheduleEvent(EVENT_BERSERK, 15min, EVENT_GROUP_BERSERK);
         if (IsHeroic())
             events.ScheduleEvent(EVENT_SHADOW_TRAP, 15500ms, 0, PHASE_ONE);
+
+        sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
     }
 
     bool CanAIAttack(Unit const* target) const override
@@ -1082,7 +1088,11 @@ struct boss_the_lich_king : public BossAI
                 case EVENT_START_ATTACK:
                     me->SetReactState(REACT_AGGRESSIVE);
                     if (events.IsInPhase(PHASE_FROSTMOURNE))
+                    {
                         events.SetPhase(PHASE_THREE);
+                        sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_3);
+                    }
+                    sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_PHASE_1);
                     break;
                 case EVENT_VILE_SPIRITS:
                     me->GetMap()->SetZoneMusic(AREA_ICECROWN_CITADEL, MUSIC_SPECIAL);
@@ -1119,6 +1129,7 @@ struct boss_the_lich_king : public BossAI
                                 summon->AI()->DoAction(ACTION_DISABLE_RAGING);
                         }
                     }
+                    sKittNpcBotAiSync->SetPhase(me->GetInstanceId(), me->GetEntry(), KITT_BOSS_ROOM_FROSTMOURNE_HC);
                     break;
                 case EVENT_FROSTMOURNE_HEROIC:
                     if (TempSummon* terenas = me->GetMap()->SummonCreature(NPC_TERENAS_MENETHIL_FROSTMOURNE_H, TerenasSpawnHeroic, nullptr, 50000))
