@@ -31,6 +31,9 @@
 #include "SpellScript.h"
 #include "TemporarySummon.h"
 #include "Vehicle.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
+#include "CellImpl.h"
 
 enum HalionTexts
 {
@@ -748,6 +751,20 @@ struct npc_halion_controller : public ScriptedAI
                 if (player->IsAlive() && IsInBoundary(player) && !player->IsGameMaster())
                     return;
 
+        // start --- daca sunt boti in viata sau nu
+        std::list<Creature*> allCreatures;
+        Trinity::AnyUnitInObjectRangeCheck check(me, 100.0f);
+        Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> searcher(me, allCreatures, check);
+        Cell::VisitAllObjects(me, searcher, 100.0f);
+
+        for (Creature* creature : allCreatures)
+        {
+            if (creature->IsNPCBotOrPet() && creature->IsAlive())
+                return;
+        }
+        // end ---
+
+        me->GetThreatManager().ClearAllThreat(); // kitt
         EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
     }
 
@@ -1104,7 +1121,7 @@ struct npc_meteor_strike_flame : public ScriptedAI
             return;
 
         meteorStrike->AI()->SetData(DATA_SPAWNED_FLAMES, 1);
-        if (meteorStrike->AI()->GetData(DATA_SPAWNED_FLAMES) > 5)
+        if (meteorStrike->AI()->GetData(DATA_SPAWNED_FLAMES) > 0) // 5 // nu mai face replici deloc 1 = face inca o replica
             return;
 
         Position pos = me->GetNearPosition(5.0f, frand(-static_cast<float>(M_PI / 6.0f), static_cast<float>(M_PI / 6.0f)));
@@ -1632,7 +1649,7 @@ class spell_halion_spawn_living_embers : public SpellScript
     void SelectMeteorFlames(std::list<WorldObject*>& unitList)
     {
         if (!unitList.empty())
-            Trinity::Containers::RandomResize(unitList, 10);
+            Trinity::Containers::RandomResize(unitList, 3); //def: 10
     }
 
     void HandleScript(SpellEffIndex /* effIndex */)
@@ -1655,6 +1672,14 @@ class spell_halion_blazing_aura : public SpellScript
     void HandleScript(SpellEffIndex effIndex)
     {
         PreventHitDefaultEffect(effIndex);
+        // kitt
+        Unit* target = GetHitUnit();
+        if (!target)
+            return;
+        // Exclude Living Inferno
+        if (target->GetEntry() == NPC_LIVING_INFERNO)
+            return;
+        // kitt end
         GetHitUnit()->CastSpell(GetHitUnit(), GetEffectInfo().TriggerSpell);
     }
 
