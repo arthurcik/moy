@@ -1598,6 +1598,9 @@ void World::LoadConfigSettings(bool reload)
     // kitt Prevent players AFK from being logged out
     m_int_configs[CONFIG_AFK_PREVENT_LOGOUT] = sConfigMgr->GetIntDefault("PreventAFKLogout", 0);
 
+    // kitt cross-faction guild id, if 0 = disabled
+    m_int_configs[CONFIG_KITT_CROSS_FACTION_GUILD_ID] = sConfigMgr->GetIntDefault("CrossFaction.Guild.ID", 0);
+
     // call ScriptMgr if we're reloading the configuration
     if (reload)
         sScriptMgr->OnConfigLoad(reload);

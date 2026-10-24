@@ -162,8 +162,15 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                         break;
                     case CHAT_MSG_GUILD:
                     case CHAT_MSG_OFFICER:
+                        // kitt Permit cross-faction language in the configured guild only
+                        if (sWorld->getIntConfig(CONFIG_KITT_CROSS_FACTION_GUILD_ID) != 0 &&
+                            sender->GetGuildId() == uint32(sWorld->getIntConfig(CONFIG_KITT_CROSS_FACTION_GUILD_ID)))
+                        {
+                            lang = LANG_UNIVERSAL;
+                        }
+
                         // allow two side chat at guild channel if two side guild allowed
-                        if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GUILD))
+                        else if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GUILD))
                             lang = LANG_UNIVERSAL;
                         break;
                 }
