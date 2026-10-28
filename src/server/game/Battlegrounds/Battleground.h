@@ -446,6 +446,8 @@ class TC_GAME_API Battleground
         virtual void HandleKillUnit(Creature* /*creature*/, Player* /*killer*/) { }
 
         //npcbot
+        uint32 GetBotsCountByTeam(uint32 team) const; // kitt
+        bool RemoveOneBotFromTeam(uint32 team); // kitt
         uint32 GetBotScoresSize() const { return BotScores.size(); }
         void RemoveBotFromResurrectQueue(ObjectGuid guid);
         uint32 GetBotTeam(ObjectGuid guid) const;

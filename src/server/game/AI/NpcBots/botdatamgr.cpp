@@ -1708,13 +1708,40 @@ bool BotDataMgr::GenerateBattlegroundBots(Player const* groupLeader, [[maybe_unu
         {
             for (auto const& real_bg_pair : kv.second.m_Battlegrounds)
             {
-                Battleground const* real_bg = real_bg_pair.second.get();
+                Battleground* real_bg = real_bg_pair.second.get();  // non-const pentru a putea scoate bo?i
                 if (real_bg->GetInstanceID() != 0 && real_bg->GetBracketId() == bracketId && real_bg->GetStatus() < STATUS_WAIT_LEAVE && real_bg->HasFreeSlots())
                 {
-                    if (real_bg->GetFreeSlotsForTeam(groupLeader->GetTeam()) < gqinfo->Players.size())
+                    uint32 team = groupLeader->GetTeam();
+                    uint32 freeSlots = real_bg->GetFreeSlotsForTeam(team);
+                    uint32 groupSize = uint32(gqinfo->Players.size());
+
+                    if (freeSlots < groupSize)
                     {
-                        BOT_LOG_INFO("npcbots", "[Already running 1] Found running non-full BG {} instance {}. Not generating bots: queuing group or player (leader {}) CANNOT join existing BG, prevent borrowing bots",
-                            uint32(bgTypeId), real_bg->GetInstanceID(), groupLeader->GetGUID().GetCounter());
+                        // Încearc? s? eliberezi sloturi sco?ând bo?i wandering din echipa grupului
+                        uint32 needed = groupSize - freeSlots;
+                        uint32 removed = 0;
+                        for (uint32 i = 0; i < needed; ++i)
+                        {
+                            if (!real_bg->RemoveOneBotFromTeam(team))
+                                break;  // nu mai exist? bo?i de scos
+                            ++removed;
+                        }
+
+                        // Recalculeaz? sloturile libere dup? scoatere
+                        freeSlots = real_bg->GetFreeSlotsForTeam(team);
+
+                        if (freeSlots < groupSize)
+                        {
+                            BOT_LOG_INFO("npcbots", "[Already running 1] Found running non-full BG {} instance {}. Removed {} bots, still not enough slots ({} free, need {}). Leader {} CANNOT join existing BG",
+                                uint32(bgTypeId), real_bg->GetInstanceID(), removed, freeSlots, groupSize, groupLeader->GetGUID().GetCounter());
+                            return true;  // nu genera bo?i noi, las? grupul s? a?tepte
+                        }
+                        else
+                        {
+                            BOT_LOG_INFO("npcbots", "[Already running 2] Found running non-full BG {} instance {}. Removed {} bots to make room ({} free, need {}). Leader {} CAN join existing BG",
+                                uint32(bgTypeId), real_bg->GetInstanceID(), removed, freeSlots, groupSize, groupLeader->GetGUID().GetCounter());
+                            return true;
+                        }
                     }
                     else
                     {

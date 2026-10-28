@@ -1082,6 +1082,43 @@ void Battleground::RemovePlayerAtLeave(ObjectGuid guid, bool Transport, bool Sen
 }
 
 //npcbot
+// kitt start
+uint32 Battleground::GetBotsCountByTeam(uint32 team) const
+{
+    uint32 count = 0;
+    for (auto const& kv : m_Bots)
+        if (kv.second.Team == team)
+            ++count;
+    return count;
+}
+
+bool Battleground::RemoveOneBotFromTeam(uint32 team)
+{
+    for (auto itr = m_Bots.begin(); itr != m_Bots.end(); ++itr)
+    {
+        if (itr->second.Team != team)
+            continue;
+
+        Creature const* bot = BotDataMgr::FindBot(itr->first.GetEntry());
+        if (!bot || !bot->IsInWorld())
+            continue;
+        if (bot->GetVehicle())
+            continue;
+        if (!bot->IsWandererBot())
+            continue;
+
+        BOT_LOG_ERROR("npcbots", "RemoveOneBotFromTeam: removing bot {} ({}) from team {}",
+            bot->GetName(), itr->first.GetEntry(), team);
+
+        RemoveBotAtLeave(itr->first);
+        return true;
+    }
+
+    BOT_LOG_ERROR("npcbots", "RemoveOneBotFromTeam: NO BOT FOUND to remove from team {}", team);
+    return false;
+}
+// kitt end
+
 void Battleground::RemoveBotAtLeave(ObjectGuid guid)
 {
     uint32 team = GetBotTeam(guid);
@@ -1244,6 +1281,26 @@ void Battleground::AddPlayer(Player* player)
         }
     }
     //end npcbot
+
+// === REBALANSARE NPCBOTS ===
+    if (isBattleground() && (GetStatus() == STATUS_WAIT_JOIN || GetStatus() == STATUS_IN_PROGRESS))
+    {
+        uint32 otherTeam = GetOtherTeam(team);
+        uint32 thisTotal = GetPlayersCountByTeam(team);
+        uint32 otherTotal = GetPlayersCountByTeam(otherTeam);
+
+        BOT_LOG_ERROR("npcbots", "REBALANCE CHECK: team {} total {}, other team {} total {}",
+            team, thisTotal, otherTeam, otherTotal);
+
+        while (thisTotal > otherTotal)
+        {
+            BOT_LOG_ERROR("npcbots", "REBALANCE: removing one bot from team {}", team);
+            if (!RemoveOneBotFromTeam(team))
+                break;   // nu mai exist? bo?i de scos
+            thisTotal = GetPlayersCountByTeam(team);   // recalculeaz? dup? scoatere
+        }
+    }
+    // === END REBALANSARE ===
 
     WorldPackets::Battleground::BattlegroundPlayerJoined playerJoined;
     playerJoined.Guid = player->GetGUID();
