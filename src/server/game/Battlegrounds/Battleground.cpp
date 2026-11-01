@@ -1107,21 +1107,14 @@ bool Battleground::RemoveOneBotFromTeam(uint32 team)
         if (!bot->IsWandererBot())
             continue;
 
-        if (bot->GetBotAI()->GetBG() == nullptr)
-        {
-            BOT_LOG_INFO("npcbots", "RemoveOneBotFromTeam: skipping bot {} ({}) - still in queue, not entered BG",
-                bot->GetName(), itr->first.GetEntry());
-            continue;
-        }
-
-        BOT_LOG_INFO("npcbots", "RemoveOneBotFromTeam: removing bot {} ({}) from team {}",
+        TC_LOG_INFO("npcbots", "RemoveOneBotFromTeam: removing bot {} ({}) from team {}",
             bot->GetName(), itr->first.GetEntry(), team);
 
         RemoveBotAtLeave(itr->first);
         return true;
     }
 
-    BOT_LOG_INFO("npcbots", "RemoveOneBotFromTeam: NO BOT FOUND to remove from team {}", team);
+    TC_LOG_INFO("npcbots", "RemoveOneBotFromTeam: NO BOT FOUND to remove from team {}", team);
     return false;
 }
 // kitt end
@@ -1289,19 +1282,19 @@ void Battleground::AddPlayer(Player* player)
     }
     //end npcbot
 
-// === REBALANSARE NPCBOTS ===
+    // === REBALANSARE NPCBOTS ===
     if (isBattleground() && (GetStatus() == STATUS_WAIT_JOIN || GetStatus() == STATUS_IN_PROGRESS))
     {
         uint32 otherTeam = GetOtherTeam(team);
         uint32 thisTotal = GetPlayersCountByTeam(team);
         uint32 otherTotal = GetPlayersCountByTeam(otherTeam);
 
-        BOT_LOG_ERROR("npcbots", "REBALANCE CHECK: team {} total {}, other team {} total {}",
+        TC_LOG_INFO("npcbots", "REBALANCE CHECK: team {} total {}, other team {} total {}",
             team, thisTotal, otherTeam, otherTotal);
 
         while (thisTotal > otherTotal)
         {
-            BOT_LOG_ERROR("npcbots", "REBALANCE: removing one bot from team {}", team);
+            TC_LOG_INFO("npcbots", "REBALANCE: removing one bot from team {}", team);
             if (!RemoveOneBotFromTeam(team))
                 break;   // nu mai exist? bo?i de scos
             thisTotal = GetPlayersCountByTeam(team);   // recalculeaz? dup? scoatere
