@@ -1107,14 +1107,21 @@ bool Battleground::RemoveOneBotFromTeam(uint32 team)
         if (!bot->IsWandererBot())
             continue;
 
-        BOT_LOG_ERROR("npcbots", "RemoveOneBotFromTeam: removing bot {} ({}) from team {}",
+        if (bot->GetBotAI()->GetBG() == nullptr)
+        {
+            BOT_LOG_INFO("npcbots", "RemoveOneBotFromTeam: skipping bot {} ({}) - still in queue, not entered BG",
+                bot->GetName(), itr->first.GetEntry());
+            continue;
+        }
+
+        BOT_LOG_INFO("npcbots", "RemoveOneBotFromTeam: removing bot {} ({}) from team {}",
             bot->GetName(), itr->first.GetEntry(), team);
 
         RemoveBotAtLeave(itr->first);
         return true;
     }
 
-    BOT_LOG_ERROR("npcbots", "RemoveOneBotFromTeam: NO BOT FOUND to remove from team {}", team);
+    BOT_LOG_INFO("npcbots", "RemoveOneBotFromTeam: NO BOT FOUND to remove from team {}", team);
     return false;
 }
 // kitt end
