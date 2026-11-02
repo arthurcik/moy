@@ -1232,6 +1232,14 @@ bool Guild::SetName(std::string_view name)
     return true;
 }
 
+// kitt
+void Guild::SetMemberPublicNote(ObjectGuid guid, std::string_view note)
+{
+    if (Member* member = GetMember(guid))
+        member->SetPublicNote(note);
+}
+// end ------------
+
 void Guild::HandleRoster(WorldSession* session)
 {
     WorldPackets::Guild::GuildRoster roster;

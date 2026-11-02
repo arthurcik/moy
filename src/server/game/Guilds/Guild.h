@@ -646,6 +646,11 @@ class TC_GAME_API Guild
 
         bool SetName(std::string_view name);
 
+        // kitt ------
+        void SetMemberPublicNote(ObjectGuid guid, std::string_view note);
+
+        // end ----------
+
         // Handle client commands
         void HandleRoster(WorldSession* session);
         void HandleQuery(WorldSession* session);
